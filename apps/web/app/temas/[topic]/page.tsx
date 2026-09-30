@@ -9,20 +9,38 @@ import { OutcomeBadge } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
-export default async function TemaPage({ params }: { params: Promise<{ topic: string }> }) {
+export default async function TemaPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ topic: string }>;
+  searchParams: Promise<{ sort?: string; dir?: string }>;
+}) {
   const { topic } = await params;
+  const sp = await searchParams;
   const actor = await requireActor();
   const orgId = await defaultOrgId();
   const grants = await authorizationGrants();
   const ficha = await getTema(topic, (caseId) => canViewCase(actor, caseId, orgId, grants));
   if (!ficha) redirect("/evolucion");
+
+  const sort = ["fecha", "caso", "resultado"].includes(sp.sort ?? "") ? (sp.sort as string) : "fecha";
+  const dir = sp.dir === "desc" ? "desc" : "asc";
+  const entradas = [...ficha.tema.entries].sort((a, b) => {
+    let cmp = 0;
+    if (sort === "caso") cmp = a.caseId.localeCompare(b.caseId);
+    else if (sort === "resultado") cmp = a.outcome.localeCompare(b.outcome);
+    else cmp = a.fecha.localeCompare(b.fecha);
+    return dir === "asc" ? cmp : -cmp;
+  });
   const { tema, argumentos, leyes } = ficha;
 
   return (
     <article className="print-sheet">
       <p className="small muted no-print">
         <Link href="/evolucion">← Evolución</Link> · <Link href="/patterns">Patrones</Link> ·{" "}
-        <Link href="/alertas">Alertas</Link>
+        <Link href="/alertas">Alertas</Link> ·{" "}
+        <a href={`/api/export/tema?tema=${encodeURIComponent(tema.topic)}`}>descargar CSV</a>
       </p>
       <PrintButton text="Imprimir la ficha del tema" />
 
@@ -43,14 +61,26 @@ export default async function TemaPage({ params }: { params: Promise<{ topic: st
         <table>
           <thead>
             <tr>
-              <th style={{ width: 110 }}>Fecha</th>
-              <th>Caso</th>
-              <th style={{ width: 150 }}>Resultado</th>
+              <th style={{ width: 110 }}>
+                <Link href={`/temas/${encodeURIComponent(tema.topic)}?sort=fecha&dir=${dir === "asc" && sort === "fecha" ? "desc" : "asc"}`}>
+                  Fecha
+                </Link>
+              </th>
+              <th>
+                <Link href={`/temas/${encodeURIComponent(tema.topic)}?sort=caso&dir=${dir === "asc" && sort === "caso" ? "desc" : "asc"}`}>
+                  Caso
+                </Link>
+              </th>
+              <th style={{ width: 150 }}>
+                <Link href={`/temas/${encodeURIComponent(tema.topic)}?sort=resultado&dir=${dir === "asc" && sort === "resultado" ? "desc" : "asc"}`}>
+                  Resultado
+                </Link>
+              </th>
               <th>Frase del tribunal</th>
             </tr>
           </thead>
           <tbody>
-            {tema.entries.map((entry) => (
+            {entradas.map((entry) => (
               <tr key={entry.caseId}>
                 <td className="mono small">{entry.fecha || "—"}</td>
                 <td className="small">

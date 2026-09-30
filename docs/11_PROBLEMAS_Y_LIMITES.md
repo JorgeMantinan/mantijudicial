@@ -300,3 +300,21 @@ revisadas manualmente) y tests de extracción.
 > nota". Todo dato tiene: fuente, fecha, base de uso y, cuando toque,
 > licencia. Si un paso legal es ambiguo: paramos, documentamos la
 > ambigüedad y consultamos.
+
+
+## Estado de los lÃ­mites (2026-09-30)
+
+- **Sin despliegue**: Render preparado (`render.yaml`, `scripts/render-bootstrap.sh`
+  y rama `data` con el corpus) sin contratar; Vercel descartado (proyecto
+  eliminado). Todo corre en local (`pnpm web`).
+- **Identidad** en `data/identity.json` sobre el disco: Supabase sin cupo;
+  `supabase/schema.sql` listo para cuando haya proyecto (el cambio es solo la
+  capa `IdentityStore`; `lib/authorization.ts` no cambia).
+- **IA**: proveedor `opencode` en local; coste visible en `/eval` ("Coste en
+  vivo"). Para servidor ya existe el proveedor HTTP compatible con OpenAI
+  (`AI_API_KEY` + `AI_BASE_URL` + `AI_MODEL` en `render.yaml`).
+- **Embeddings / bÃºsqueda semÃ¡ntica**: pendiente de proveedor.
+- **Copias de seguridad**: `scripts/backup.ps1` (retenciÃ³n) y
+  `scripts/restore.ps1` (verificado: 80 casos, identidad OK), fuera de git.
+- **VerificaciÃ³n**: `scripts/smoke.ps1` (31 comprobaciones de rutas, CSV y
+  aislamiento) + `pnpm typecheck` + `pnpm test` + `next build`.

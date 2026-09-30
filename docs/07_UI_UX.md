@@ -525,3 +525,28 @@ Añadir una señal visual inequívoca para:
 `DEMO`
 
 Los datos demo no deben confundirse con expedientes reales.
+
+
+## Funcionalidad aÃ±adida (2026-09-30)
+
+Vista de conjunto de lo implementado en la interfaz (ademÃ¡s del diseÃ±o original):
+
+- **NavegaciÃ³n**: grupos Principal | AnÃ¡lisis | Herramientas, tema claro/oscuro
+  con persistencia y atajos globales (`/` bÃºsqueda, `a` alertas, `i` informes,
+  `r` revisiÃ³n, `N` siguiente pendiente, `?` ayuda).
+- **Casos**: lista con filtros + CSV, ingesta mÃºltiple con anti-duplicados
+  (SHA-256), archivar/restaurar, secciones plegables, bloque "quÃ© falta por
+  concretar", actividad del caso, notas, compartir, comparar con cualquier caso,
+  impresiÃ³n (ficha, dossier para el cliente, informe comparativo) y export JSON.
+- **AnÃ¡lisis**: bÃºsqueda con identificadores exactos (ECLI/ROJ/nÂº recurso),
+  bÃºsquedas guardadas con resaltado, ficha de tema imprimible con desglose de
+  argumentos, evoluciÃ³n, patrones con criterio dividido, legislaciÃ³n con Ã­ndice
+  filtrable al vuelo, plazos y alertas (vigencia, calidad, revisiÃ³n).
+- **Informes**: periodo con comparaciÃ³n A/B y delta, matriz tema Ã— trimestre,
+  barras de proporciÃ³n y CSV de casos/informes/temas/alertas.
+- **RevisiÃ³n**: selecciÃ³n mÃºltiple, atajo N, carga por persona y auditorÃ­a
+  filtrable por acciÃ³n y persona.
+- **Ayuda**: `/ayuda`, `/novedades`, `/resumen` imprimible y `/eval` con coste
+  de IA en vivo, calidad del corpus y panel de sistema.
+- **ImpresiÃ³n**: cabeceras de tabla repetidas, sin partir filas ni listas y
+  secciones plegadas que en papel salen enteras.

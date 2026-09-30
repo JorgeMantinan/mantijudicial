@@ -56,7 +56,8 @@ export default async function AlertasPage() {
   return (
     <article className="print-sheet">
       <p className="small muted no-print">
-        <Link href="/">← Resumen</Link>
+        <Link href="/">← Resumen</Link> ·{" "}
+        <a href="/api/export/alertas">descargar CSV</a>
       </p>
       <PrintButton text="Imprimir el informe de alertas" />
 

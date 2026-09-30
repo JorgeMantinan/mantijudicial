@@ -22,7 +22,14 @@ function validar(value: string | undefined, fallback: string): string {
 export default async function InformesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ desde?: string; hasta?: string; desde2?: string; hasta2?: string }>;
+  searchParams: Promise<{
+    desde?: string;
+    hasta?: string;
+    desde2?: string;
+    hasta2?: string;
+    sort?: string;
+    dir?: string;
+  }>;
 }) {
   const actor = await requireActor();
   const orgId = await defaultOrgId();
@@ -62,6 +69,28 @@ export default async function InformesPage({
       b: informeB.porResultado[key] ?? 0,
     })),
   ];
+
+  const sort = ["fecha", "caso", "resultado"].includes(sp.sort ?? "")
+    ? (sp.sort as string)
+    : "fecha";
+  const dir = sp.dir === "desc" ? "desc" : "asc";
+  const casosOrdenados = [...informe.casos].sort((a, b) => {
+    let cmp = 0;
+    if (sort === "caso") cmp = a.id.localeCompare(b.id);
+    else if (sort === "resultado") cmp = a.outcome.localeCompare(b.outcome);
+    else cmp = a.fecha.localeCompare(b.fecha);
+    return dir === "asc" ? cmp : -cmp;
+  });
+  const conOrden = (campo: string): string => {
+    const params = new URLSearchParams();
+    params.set("desde", desde);
+    params.set("hasta", hasta);
+    params.set("desde2", desde2);
+    params.set("hasta2", hasta2);
+    params.set("sort", campo);
+    params.set("dir", dir === "asc" && sort === campo ? "desc" : "asc");
+    return `/informes?${params.toString()}`;
+  };
 
   return (
     <article className="print-sheet">
@@ -302,13 +331,19 @@ export default async function InformesPage({
           <table>
             <thead>
               <tr>
-                <th style={{ width: 100 }}>Fecha</th>
-                <th>Caso</th>
-                <th style={{ width: 150 }}>Resultado</th>
+                <th style={{ width: 100 }}>
+                  <Link href={conOrden("fecha")}>Fecha</Link>
+                </th>
+                <th>
+                  <Link href={conOrden("caso")}>Caso</Link>
+                </th>
+                <th style={{ width: 150 }}>
+                  <Link href={conOrden("resultado")}>Resultado</Link>
+                </th>
               </tr>
             </thead>
             <tbody>
-              {informe.casos.map((caso) => (
+              {casosOrdenados.map((caso) => (
                 <tr key={caso.id}>
                   <td className="mono small">{caso.fecha}</td>
                   <td className="small">

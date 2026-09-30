@@ -25,3 +25,4 @@ data/
 
 # Build de Next.js
 apps/web/.next/
+*.tsbuildinfo
