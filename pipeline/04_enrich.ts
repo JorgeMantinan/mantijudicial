@@ -223,7 +223,20 @@ async function enrichCase(
   try {
     judgmentText = await fs.readFile(judgmentPath, "utf8");
   } catch {
-    return { ok: false, tokens: null, cost: null, message: "sin extracted/judgment.txt" };
+    return {
+      ok: false,
+      tokens: null,
+      cost: null,
+      message: "sin extracted/judgment.txt (¿PDF escaneado? hace falta OCR)",
+    };
+  }
+  if (judgmentText.trim().length < 500) {
+    return {
+      ok: false,
+      tokens: null,
+      cost: null,
+      message: "texto demasiado corto (¿PDF escaneado? hace falta OCR)",
+    };
   }
 
   await moveLegacyStructured(path0);

@@ -102,6 +102,19 @@ async function main(): Promise<void> {
 
   await runStep("Higiene (genera metadata y manifiesto)", "01_hygiene.ts");
   await runStep("Extracción de texto", "02_extract.ts");
+
+  const quality = await fs
+    .readFile(path.join(CASES_DIR, caseId, "extracted", "quality.json"), "utf8")
+    .then((raw) => JSON.parse(raw) as { hasText?: boolean; reason?: string | null })
+    .catch(() => null);
+  if (quality && quality.hasText === false) {
+    const reason = quality.reason ?? "el PDF no contiene texto";
+    process.stdout.write(`\n[!] ${reason}\n`);
+    throw new Error(
+      `${caseId}: el PDF no se puede analizar todavía (${reason}). No se consume IA.`,
+    );
+  }
+
   await runStep("Metadata determinista", "03_metadata.ts");
   await patchMetadata(caseId, args.source);
 
