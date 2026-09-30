@@ -141,6 +141,11 @@ export default async function CasesPage({
               <td className="small">{label(SIDE, item.recurringSide)}</td>
               <td className="small">
                 {item.enriched ? <span className="badge ok">OK</span> : <span className="muted">—</span>}
+                {item.stale && (
+                  <span className="badge warn" title="El PDF es más nuevo que el análisis">
+                    reanalizar
+                  </span>
+                )}
               </td>
             </tr>
           ))}

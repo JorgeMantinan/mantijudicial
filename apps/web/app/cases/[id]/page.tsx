@@ -28,6 +28,7 @@ import {
 import { OutcomeBadge } from "@/lib/ui";
 import { ReviewForm } from "./review-form";
 import { NotesPanel } from "./notes-panel";
+import { ReanalyzeButton } from "./reanalyze-button";
 import { SharePanel, type ShareGrantView } from "./share-panel";
 
 export const dynamic = "force-dynamic";
@@ -164,10 +165,13 @@ export default async function CaseDetailPage({
         <span className="mono">{id}</span> · {label(BRANCH, detail.branch)} ·{" "}
         <OutcomeBadge outcome={detail.outcome} /> · recurrente: {label(SIDE, detail.recurringSide)} ·{" "}
         <span className="badge">
-          revisión: {label(REVIEW, reviewBlock.status ?? "UNREVIEWED")}
+          revisión: {label(REVIEW, detail.reviewStatus)}
           {reviewBlock.reviewed_by ? ` por ${reviewBlock.reviewed_by}` : ""}
         </span>
+        {detail.stale && <span className="badge warn">el PDF cambió desde el análisis</span>}
       </p>
+
+      <ReanalyzeButton caseId={id} stale={detail.stale} />
 
       <div className="section">
         <h2>Revisión humana</h2>

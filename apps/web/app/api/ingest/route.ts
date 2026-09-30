@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { canCreateCase } from "@pipeline/authorization";
-import { JobRegistry } from "@pipeline/jobs";
+import { jobs } from "@/lib/jobs";
 import { getActor } from "@/lib/auth";
 import { repoRoot } from "@/lib/dataset";
 
@@ -11,7 +11,6 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_BYTES = 25 * 1024 * 1024;
-const jobs = new JobRegistry();
 
 function runIngest(
   jobId: string,

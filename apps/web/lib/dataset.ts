@@ -42,6 +42,27 @@ export interface CaseListItem {
   recurringSide: string;
   enriched: boolean;
   reviewStatus: string;
+  /** El PDF es más nuevo que la última extracción: toca reanalizar. */
+  stale: boolean;
+}
+
+async function isStale(caseId: string, generatedAt: string | undefined): Promise<boolean> {
+  const dir = path.join(repoRoot(), "cases", caseId, "original");
+  try {
+    const names = await fs.readdir(dir);
+    if (names.length === 0) return false;
+    const stats = await Promise.all(
+      names.map((name) => fs.stat(path.join(dir, name)).catch(() => null)),
+    );
+    const newest = Math.max(0, ...stats.map((stat) => stat?.mtimeMs ?? 0));
+    if (newest === 0) return false;
+    if (!generatedAt) return true;
+    const analysed = Date.parse(generatedAt);
+    if (Number.isNaN(analysed)) return true;
+    return newest > analysed;
+  } catch {
+    return false;
+  }
 }
 
 export interface CaseDetail extends CaseListItem {
@@ -86,6 +107,8 @@ export async function listCases(filters: {
       outcome?: { cassation_outcome?: string; recurring_side?: string };
     }>(name, "outcome.json");
 
+    const generatedAt = (review as { extraction?: { generated_at?: string } } | null)?.extraction
+      ?.generated_at;
     const item: CaseListItem = {
       id: name,
       headline: summary?.summary?.headline ?? name,
@@ -96,6 +119,7 @@ export async function listCases(filters: {
       enriched: review?.extraction?.validation === "OK",
       reviewStatus:
         (review as { review?: { status?: string } } | null)?.review?.status ?? "UNREVIEWED",
+      stale: await isStale(name, generatedAt),
     };
     if (filters.branch && item.branch !== filters.branch) continue;
     if (filters.outcome && item.outcome !== filters.outcome) continue;
@@ -139,6 +163,10 @@ export async function getCase(caseId: string): Promise<CaseDetail | null> {
     recurringSide: (outcome?.outcome as { recurring_side?: string } | undefined)?.recurring_side ?? "UNKNOWN",
     enriched: (review?.extraction as { validation?: string } | undefined)?.validation === "OK",
     reviewStatus: (review?.review as { status?: string } | undefined)?.status ?? "UNREVIEWED",
+    stale: await isStale(
+      caseId,
+      (review?.extraction as { generated_at?: string } | undefined)?.generated_at,
+    ),
     summary: summary,
     parties: parties?.parties ?? [],
     claims: claims?.claims ?? [],
