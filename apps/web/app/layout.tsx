@@ -65,6 +65,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               "(function(){try{if(localStorage.getItem('mj-tema')==='light'){document.documentElement.setAttribute('data-theme','light');}}catch(e){}})();",
           }}
         />
+        <a href="#contenido" className="skip-link no-print">
+          Saltar al contenido
+        </a>
         <header className="top">
           <div className="wrap">
             <div className="brand">
@@ -119,7 +122,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             )}
           </div>
         </header>
-        <main className="wrap">{children}</main>
+        <main className="wrap" id="contenido">
+          {children}
+        </main>
         <Shortcuts />
         <footer>
           <div className="wrap">

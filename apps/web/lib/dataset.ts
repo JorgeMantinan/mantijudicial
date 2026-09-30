@@ -117,6 +117,7 @@ export async function setArchived(caseId: string, archived: boolean): Promise<vo
   const file = archivedFlagPath(caseId);
   if (archived) await fs.writeFile(file, `${new Date().toISOString()}\n`, "utf8");
   else await fs.rm(file, { force: true });
+  todosCache = null;
 }
 
 export async function listCases(filters: {
@@ -124,6 +125,25 @@ export async function listCases(filters: {
   outcome?: string;
   q?: string;
 } = {}): Promise<CaseListItem[]> {
+  const todos = await listarTodos();
+  return todos.filter((item) => {
+    if (filters.branch && item.branch !== filters.branch) return false;
+    if (filters.outcome && item.outcome !== filters.outcome) return false;
+    if (filters.q) {
+      const needle = filters.q.toLowerCase();
+      const haystack = `${item.id} ${item.headline} ${item.subtopic}`.toLowerCase();
+      if (!haystack.includes(needle)) return false;
+    }
+    return true;
+  });
+}
+
+let todosCache: { value: CaseListItem[]; at: number } | null = null;
+const TODOS_TTL_MS = 10_000;
+
+/** Lista completa con cache corta: evita releer ~320 ficheros en cada página. */
+async function listarTodos(): Promise<CaseListItem[]> {
+  if (todosCache && Date.now() - todosCache.at < TODOS_TTL_MS) return todosCache.value;
   const names = await caseNames();
   const items: CaseListItem[] = [];
   for (const name of names) {
@@ -138,7 +158,7 @@ export async function listCases(filters: {
 
     const generatedAt = (review as { extraction?: { generated_at?: string } } | null)?.extraction
       ?.generated_at;
-    const item: CaseListItem = {
+    items.push({
       id: name,
       headline: summary?.summary?.headline ?? name,
       subtopic: classification?.classification?.subtopic ?? "",
@@ -150,16 +170,9 @@ export async function listCases(filters: {
         (review as { review?: { status?: string } } | null)?.review?.status ?? "UNREVIEWED",
       stale: await isStale(name, generatedAt),
       archived: await isArchived(name),
-    };
-    if (filters.branch && item.branch !== filters.branch) continue;
-    if (filters.outcome && item.outcome !== filters.outcome) continue;
-    if (filters.q) {
-      const needle = filters.q.toLowerCase();
-      const haystack = `${item.id} ${item.headline} ${item.subtopic}`.toLowerCase();
-      if (!haystack.includes(needle)) continue;
-    }
-    items.push(item);
+    });
   }
+  todosCache = { value: items, at: Date.now() };
   return items;
 }
 

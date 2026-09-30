@@ -79,6 +79,20 @@ export default async function CasesPage({
   const csvQuery = new URLSearchParams(
     Object.entries(base).filter((entry): entry is [string, string] => Boolean(entry[1])),
   ).toString();
+  const sinFiltro = (clave: string): string => {
+    const params2 = new URLSearchParams();
+    for (const [k, v] of Object.entries(base)) if (v && k !== clave) params2.set(k, v);
+    const qs = params2.toString();
+    return `/cases${qs ? `?${qs}` : ""}`;
+  };
+  const chips = [
+    params.q ? { texto: `Texto: ${params.q}`, clave: "q" } : null,
+    params.branch ? { texto: `Rama: ${label(BRANCH, params.branch)}`, clave: "branch" } : null,
+    params.outcome
+      ? { texto: `Resultado: ${label(OUTCOME, params.outcome)}`, clave: "outcome" }
+      : null,
+    params.archivados === "1" ? { texto: "Incluye archivados", clave: "archivados" } : null,
+  ].filter((chip): chip is { texto: string; clave: string } => chip !== null);
 
   return (
     <>
@@ -132,6 +146,28 @@ export default async function CasesPage({
         </label>
         <button type="submit">Filtrar</button>
       </form>
+
+      {chips.length > 0 && (
+        <p className="small" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: -4 }}>
+          {chips.map((chip) => (
+            <span
+              key={chip.clave}
+              className="badge"
+              style={{ display: "inline-flex", gap: 6, alignItems: "center" }}
+            >
+              {chip.texto}
+              <a
+                href={sinFiltro(chip.clave)}
+                aria-label={`Quitar filtro: ${chip.texto}`}
+                title="Quitar este filtro"
+                style={{ color: "var(--muted)" }}
+              >
+                ✕
+              </a>
+            </span>
+          ))}
+        </p>
+      )}
 
       <table>
         <thead>
