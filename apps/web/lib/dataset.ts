@@ -560,6 +560,81 @@ export async function getVigenciaAlerts(): Promise<VigenciaAlert[]> {
   return value;
 }
 
+export interface TemaArgumento {
+  tipo: string;
+  aceptados: number;
+  rechazados: number;
+  parciales: number;
+  sinAnalizar: number;
+  total: number;
+}
+
+export interface TemaLey {
+  norma: string;
+  boe_id: string | null;
+  veces: number;
+}
+
+export interface TemaFicha {
+  tema: EvolucionTema;
+  argumentos: TemaArgumento[];
+  leyes: TemaLey[];
+}
+
+/** Ficha de un tema: cronología + argumentos usados + leyes citadas. */
+export async function getTema(topic: string): Promise<TemaFicha | null> {
+  const temas = await getEvolucion();
+  const tema = temas.find((item) => item.topic === topic);
+  if (!tema) return null;
+
+  const argsMap = new Map<string, TemaArgumento>();
+  const leyesMap = new Map<string, TemaLey>();
+
+  for (const entry of tema.entries) {
+    const [args, lawRefs] = await Promise.all([
+      section<{
+        arguments?: Array<{ type?: string; outcome?: string }>;
+      }>(entry.caseId, "arguments.json"),
+      section<{
+        refs?: Array<{ status?: string; boe_id?: string | null; norma?: string }>;
+      }>(entry.caseId, "law_refs.json"),
+    ]);
+
+    for (const argument of args?.arguments ?? []) {
+      const tipo = (argument.type ?? "UNKNOWN").toUpperCase();
+      const row =
+        argsMap.get(tipo) ??
+        ({ tipo, aceptados: 0, rechazados: 0, parciales: 0, sinAnalizar: 0, total: 0 } satisfies TemaArgumento);
+      row.total += 1;
+      const outcome = (argument.outcome ?? "").toUpperCase();
+      if (["ACCEPTED", "ACEPTADO", "ACEPTADA", "ESTIMADO", "ESTIMADA"].includes(outcome)) {
+        row.aceptados += 1;
+      } else if (["REJECTED", "RECHAZADO", "RECHAZADA", "DESESTIMADO", "DESESTIMADA"].includes(outcome)) {
+        row.rechazados += 1;
+      } else if (["PARTIALLY_ACCEPTED", "PARCIAL", "PARCIALMENTE"].includes(outcome)) {
+        row.parciales += 1;
+      } else {
+        row.sinAnalizar += 1;
+      }
+      argsMap.set(tipo, row);
+    }
+
+    for (const ref of lawRefs?.refs ?? []) {
+      if (ref.status !== "VERIFIED") continue;
+      const key = `${ref.norma ?? "?"}|${ref.boe_id ?? ""}`;
+      const row = leyesMap.get(key) ?? { norma: ref.norma ?? "?", boe_id: ref.boe_id ?? null, veces: 0 };
+      row.veces += 1;
+      leyesMap.set(key, row);
+    }
+  }
+
+  const argumentos = [...argsMap.values()].sort(
+    (a, b) => b.aceptados + b.rechazados - (a.aceptados + a.rechazados),
+  );
+  const leyes = [...leyesMap.values()].sort((a, b) => b.veces - a.veces);
+  return { tema, argumentos, leyes };
+}
+
 export interface SentenciaEnCorpus {
   raw: string;
   roj: string;

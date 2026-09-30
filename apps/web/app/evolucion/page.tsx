@@ -76,6 +76,11 @@ export default async function EvolucionPage({
                       .join(" · ")}
                   </span>
                 </h2>
+                <p className="small">
+                  <Link href={`/temas/${encodeURIComponent(activo.topic)}`}>
+                    Ficha completa del tema (argumentos y leyes) →
+                  </Link>
+                </p>
                 <table>
                   <thead>
                     <tr>

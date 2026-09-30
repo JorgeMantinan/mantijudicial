@@ -107,7 +107,7 @@ export default async function PatternsPage() {
               {contradictorio.map((item) => (
                 <tr key={item.topic}>
                   <td>
-                    <Link href={`/evolucion?tema=${encodeURIComponent(item.topic)}`}>
+                    <Link href={`/temas/${encodeURIComponent(item.topic)}`}>
                       {item.topic}
                     </Link>
                   </td>

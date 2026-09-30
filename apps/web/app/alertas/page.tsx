@@ -105,7 +105,7 @@ export default async function AlertasPage() {
               {contradictorio.map((tema) => (
                 <tr key={tema.topic}>
                   <td>
-                    <Link href={`/evolucion?tema=${encodeURIComponent(tema.topic)}`}>{tema.topic}</Link>
+                    <Link href={`/temas/${encodeURIComponent(tema.topic)}`}>{tema.topic}</Link>
                   </td>
                   <td>
                     <span className="badge ok">{tema.estimados}</span>
