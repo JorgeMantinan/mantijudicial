@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { REVIEW, label } from "@/lib/labels";
 
 interface CurrentReview {
@@ -13,9 +13,11 @@ interface CurrentReview {
 export function ReviewForm({
   caseId,
   current,
+  nextId,
 }: {
   caseId: string;
   current: CurrentReview;
+  nextId?: string | null;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -24,6 +26,21 @@ export function ReviewForm({
   const [notes, setNotes] = useState(current.notes ?? "");
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (!nextId) return;
+    function onKey(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      if (tag === "input" || tag === "textarea" || tag === "select" || target?.isContentEditable) return;
+      if (event.key.toLowerCase() === "n" && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        event.preventDefault();
+        router.push(`/cases/${nextId}`);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [nextId, router]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -79,8 +96,18 @@ export function ReviewForm({
       <button type="submit" disabled={isPending} style={{ marginTop: 20 }}>
         {isPending ? "Guardando…" : "Guardar revisión"}
       </button>
+      {saved && nextId && (
+        <button type="button" style={{ marginTop: 20 }} onClick={() => router.push(`/cases/${nextId}`)}>
+          Guardado ✓ · Siguiente pendiente (N) →
+        </button>
+      )}
       {error && <p className="small" style={{ color: "var(--red)" }}>{error}</p>}
-      {saved && <p className="small" style={{ color: "var(--green)" }}>Guardado</p>}
+      {saved && !nextId && <p className="small" style={{ color: "var(--green)" }}>Guardado</p>}
+      {!saved && nextId && (
+        <p className="small muted" style={{ marginTop: 24 }}>
+          Atajo: pulsa <strong>N</strong> para abrir el siguiente pendiente.
+        </p>
+      )}
     </form>
   );
 }

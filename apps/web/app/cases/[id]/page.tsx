@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { canShareResource } from "@pipeline/authorization";
 import { canViewCase, caseResource, defaultOrgId, loadIdentity, requireActor } from "@/lib/auth";
-import { getCase, getComparisons, getEscrito, getGoldenInfo, getSentenciasCitadas, getSimilarCases, getVigenciaChecks, getVias, listLaws } from "@/lib/dataset";
+import { getCase, getComparisons, getEscrito, getGoldenInfo, getReviewStats, getSentenciasCitadas, getSimilarCases, getVigenciaChecks, getVias, listLaws } from "@/lib/dataset";
 import { authorizationGrants, loadGrantStore } from "@/lib/grants";
 import {
   ARG_OUTCOME,
@@ -128,7 +128,7 @@ export default async function CaseDetailPage({
   const detail = await getCase(id);
   if (!detail) notFound();
 
-  const [laws, similar, vias, comparisons, identity, grantStore, golden, sentencias, vigencias, escrito] =
+  const [laws, similar, vias, comparisons, identity, grantStore, golden, sentencias, vigencias, escrito, reviewStats] =
     await Promise.all([
       listLaws(),
       getSimilarCases(id, 5),
@@ -140,7 +140,10 @@ export default async function CaseDetailPage({
       getSentenciasCitadas(id),
       getVigenciaChecks(id),
       getEscrito(id),
+      getReviewStats(),
     ]);
+
+  const nextPendiente = reviewStats.pending.find((item) => item.id !== id)?.id ?? null;
 
   const users = identity.listUsers().map((user) => ({
     id: user.id,
@@ -227,7 +230,7 @@ export default async function CaseDetailPage({
             Última revisión: {reviewBlock.reviewed_at} · {reviewBlock.notes}
           </p>
         )}
-        <ReviewForm caseId={id} current={reviewBlock} />
+        <ReviewForm caseId={id} current={reviewBlock} nextId={nextPendiente} />
       </div>
 
       <div className="section">

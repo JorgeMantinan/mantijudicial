@@ -92,6 +92,10 @@ carlos está en **Despacho_B**, sirve para probar el aislamiento).
   por escaping).
 - `Set-Content -Encoding UTF8` en PS 5.1 añade **BOM**: eliminarlo después
   ([System.Text.UTF8Encoding]$false).
+- **Nunca `Add-Content`/`Set-Content` sin codificación** en `.ts`/`.tsx`: escribe
+  en ANSI y rompe el fichero UTF-8 (el build falla con "invalid utf-8" aunque
+  `tsc` pase). Para escribir: herramienta Edit, o
+  `[System.IO.File]::WriteAllText($ruta, $texto, [System.Text.UTF8Encoding]$false)`.
 - Los avisos `LF will be replaced by CRLF` de git son normales (autocrlf).
 - `rg` (ripgrep) **no está instalado**: usar la herramienta Grep.
 - `bash` no está en PATH: `C:\Program Files\Git\bin\bash.exe`.

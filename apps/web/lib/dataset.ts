@@ -1165,3 +1165,102 @@ async function loadArticleDocs(): Promise<SearchDoc[]> {
   return docs;
 }
 
+
+
+export interface InformeCaso {
+  id: string;
+  headline: string;
+  branch: string;
+  outcome: string;
+  fecha: string;
+  reviewStatus: string;
+}
+
+export interface InformeTema {
+  topic: string;
+  casos: number;
+  distribution: Record<string, number>;
+}
+
+export interface Informe {
+  desde: string;
+  hasta: string;
+  casos: InformeCaso[];
+  porResultado: Record<string, number>;
+  porRama: Record<string, number>;
+  pendientes: number;
+  temas: InformeTema[];
+  leyes: Array<{ norma: string; boe_id: string | null; veces: number }>;
+}
+
+/** Informe de un periodo (por fecha de resolucion) para imprimir o mandar. */
+export async function getInforme(desde: string, hasta: string): Promise<Informe> {
+  const enRango = (fecha: string): boolean => fecha >= desde && fecha <= hasta;
+
+  const [items, temas] = await Promise.all([listCases(), getEvolucion()]);
+  const casos: InformeCaso[] = [];
+  for (const item of items) {
+    const meta = await readFirstJson<{ resolution_date?: string }>(
+      path.join(repoRoot(), "cases", item.id, "metadata"),
+    );
+    const fecha = (meta?.resolution_date ?? "").slice(0, 10);
+    if (fecha.length !== 10 || !enRango(fecha)) continue;
+    casos.push({
+      id: item.id,
+      headline: item.headline,
+      branch: item.branch,
+      outcome: item.outcome,
+      fecha,
+      reviewStatus: item.reviewStatus,
+    });
+  }
+  casos.sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+  const porResultado: Record<string, number> = {};
+  const porRama: Record<string, number> = {};
+  for (const caso of casos) {
+    porResultado[caso.outcome] = (porResultado[caso.outcome] ?? 0) + 1;
+    porRama[caso.branch] = (porRama[caso.branch] ?? 0) + 1;
+  }
+
+  const leyesMap = new Map<string, { norma: string; boe_id: string | null; veces: number }>();
+  for (const caso of casos) {
+    const refs = await section<{
+      refs?: Array<{ status?: string; boe_id?: string | null; norma?: string }>;
+    }>(caso.id, "law_refs.json");
+    for (const ref of refs?.refs ?? []) {
+      if (ref.status !== "VERIFIED") continue;
+      const key = `${ref.norma ?? "?"}|${ref.boe_id ?? ""}`;
+      const row =
+        leyesMap.get(key) ?? { norma: ref.norma ?? "?", boe_id: ref.boe_id ?? null, veces: 0 };
+      row.veces += 1;
+      leyesMap.set(key, row);
+    }
+  }
+
+  const periodTemas: InformeTema[] = temas
+    .map((tema) => {
+      const entries = tema.entries.filter(
+        (entry) => entry.fecha.slice(0, 10) >= desde && entry.fecha.slice(0, 10) <= hasta,
+      );
+      const distribution: Record<string, number> = {};
+      for (const entry of entries) {
+        distribution[entry.outcome] = (distribution[entry.outcome] ?? 0) + 1;
+      }
+      return { topic: tema.topic, casos: entries.length, distribution };
+    })
+    .filter((tema) => tema.casos >= 2)
+    .sort((a, b) => b.casos - a.casos)
+    .slice(0, 10);
+
+  return {
+    desde,
+    hasta,
+    casos,
+    porResultado,
+    porRama,
+    pendientes: casos.filter((caso) => caso.reviewStatus === "UNREVIEWED").length,
+    temas: periodTemas,
+    leyes: [...leyesMap.values()].sort((a, b) => b.veces - a.veces).slice(0, 12),
+  };
+}
