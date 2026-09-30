@@ -106,6 +106,12 @@ async function showCase(
   const fallo = text ? falloSection(text).replace(/\s+/g, " ").slice(0, 400) : "(sin texto)";
   const existing = golden?.entries.find((entry) => entry.caseId === caseId) ?? null;
 
+  const pdfDir = path.join(CASES_DIR, caseId, "original");
+  const pdfName = (await fs.readdir(pdfDir).catch(() => [])).find((name) =>
+    name.toLowerCase().endsWith(".pdf"),
+  );
+  const pdfPath = pdfName ? path.join(pdfDir, pdfName) : "(sin PDF)";
+
   const expect: GoldenEntry["expect"] = { ...(existing?.expect ?? {}) };
   if (!expect.cassation_outcome && detected !== "UNKNOWN") expect.cassation_outcome = detected;
   if (!expect.must_cite_boe_ids && cites.length > 0) expect.must_cite_boe_ids = cites;
@@ -122,11 +128,14 @@ async function showCase(
   process.stdout.write(`  siglas detectadas → ${siglas.join(", ") || "(ninguna)"}\n`);
   process.stdout.write(`  normas que exige    → ${cites.join(", ") || "(ninguna)"}\n`);
   process.stdout.write(`  parte dispositiva: «…${fallo}…»\n`);
-  process.stdout.write("\nCOMPRUEBA EN EL PDF Y COMPLETA LO QUE FALTE\n");
+  process.stdout.write(`\n1) Abre el PDF (últimas páginas = fallo):\n   ${pdfPath}\n`);
+  process.stdout.write("2) Comprueba: ¿qué decide el tribunal? ¿qué leyes cita?\n");
   process.stdout.write(
-    "  Añade a \"expect\" los campos que verifiques a mano: civil_branch,\n" +
-      "  headline_contains, min_holdings, min_facts, must_cite_boe_ids.\n",
+    "3) Añade a \"expect\" lo que verifiques: civil_branch, headline_contains,\n" +
+      "   min_holdings, min_facts, must_cite_boe_ids.\n",
   );
+  process.stdout.write(`4) Valida: pnpm run eval -- --confirm=${caseId}\n`);
+  process.stdout.write("5) Mira el resultado: pnpm run eval\n");
   if (existing) {
     process.stdout.write(`\nENTRADA ACTUAL (confirmed=${existing.confirmed}, source=${existing.source})\n`);
     process.stdout.write(`${JSON.stringify(existing, null, 2)}\n`);
