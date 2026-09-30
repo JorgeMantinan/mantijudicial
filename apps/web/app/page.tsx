@@ -109,6 +109,9 @@ export default async function Home() {
             <Link href="/plazos">Plazos procesales</Link> — cómputo con la LEC verificada contra el
             BOE
           </li>
+          <li>
+            <Link href="/novedades">Novedades</Link> — qué se ha ido añadiendo a la plataforma
+          </li>
         </ul>
       </div>
 

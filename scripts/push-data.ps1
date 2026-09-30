@@ -26,6 +26,10 @@ try {
 
   git add -f cases laws data/grants.json
   if ($LASTEXITCODE -ne 0) { throw "git add falló" }
+  if (Test-Path (Join-Path $repo "data\busquedas.json")) {
+    git add -f data/busquedas.json
+    if ($LASTEXITCODE -ne 0) { throw "git add (busquedas) falló" }
+  }
 
   $sha = (git hash-object -w $identityTmp).Trim()
   git update-index --add --cacheinfo "100644,$sha,data/identity.json"

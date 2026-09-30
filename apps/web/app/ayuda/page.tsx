@@ -13,7 +13,8 @@ export default async function AyudaPage() {
       <p className="lead">
         Cómo funciona la plataforma, qué significan los estados y qué puedes exportar. Todo lo que
         ves aquí sale de tu corpus: <span className="mono">cases/</span> (sentencias) y{" "}
-        <span className="mono">laws/</span> (texto consolidado del BOE).
+        <span className="mono">laws/</span> (texto consolidado del BOE). El listado de lo nuevo
+        está en <Link href="/novedades">/novedades</Link>.
       </p>
 
       <div className="section">

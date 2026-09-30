@@ -1554,3 +1554,37 @@ export async function getCalidadCorpus(): Promise<CalidadCorpus> {
   calidadCache = { value, at: Date.now() };
   return value;
 }
+
+export interface BusquedaGuardada {
+  nombre: string;
+  q: string;
+  kind?: string;
+  branch?: string;
+  outcome?: string;
+  at: string;
+}
+
+function busquedasPath(): string {
+  return path.join(repoRoot(), "data", "busquedas.json");
+}
+
+export async function getBusquedas(): Promise<BusquedaGuardada[]> {
+  const list = await readJson<BusquedaGuardada[]>(busquedasPath());
+  return Array.isArray(list) ? list : [];
+}
+
+export async function saveBusqueda(item: BusquedaGuardada): Promise<BusquedaGuardada[]> {
+  const actuales = await getBusquedas();
+  const sinRepetir = actuales.filter((busqueda) => busqueda.nombre !== item.nombre);
+  const siguiente = [item, ...sinRepetir].slice(0, 20);
+  await fs.mkdir(path.dirname(busquedasPath()), { recursive: true });
+  await fs.writeFile(busquedasPath(), `${JSON.stringify(siguiente, null, 2)}\n`, "utf8");
+  return siguiente;
+}
+
+export async function deleteBusqueda(nombre: string): Promise<BusquedaGuardada[]> {
+  const actuales = await getBusquedas();
+  const siguiente = actuales.filter((busqueda) => busqueda.nombre !== nombre);
+  await fs.writeFile(busquedasPath(), `${JSON.stringify(siguiente, null, 2)}\n`, "utf8");
+  return siguiente;
+}

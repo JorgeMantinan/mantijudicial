@@ -1,11 +1,32 @@
 import Link from "next/link";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
-import { runSearch } from "@/lib/dataset";
+import { getBusquedas, runSearch } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { findByIdentifier } from "@/lib/identifier";
 import { BRANCH, OUTCOME, SEARCH_KIND, label } from "@/lib/labels";
+import { BusquedasGuardadas } from "./busquedas-guardadas";
 
 export const dynamic = "force-dynamic";
+
+function escapeRegExp(texto: string): string {
+  return texto.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Resalta los términos buscados dentro del fragmento de resultado. */
+function resaltar(texto: string, terminos: string[]): React.ReactNode {
+  const utiles = terminos.filter((termino) => termino.length >= 3);
+  if (utiles.length === 0) return texto;
+  const patron = new RegExp(`(${utiles.map(escapeRegExp).join("|")})`, "gi");
+  return texto
+    .split(patron)
+    .map((pedazo, index) =>
+      utiles.some((termino) => termino.toLowerCase() === pedazo.toLowerCase()) ? (
+        <mark key={index}>{pedazo}</mark>
+      ) : (
+        pedazo
+      ),
+    );
+}
 
 const KINDS = [
   { value: "", label: "Todo" },
@@ -30,6 +51,7 @@ export default async function SearchPage({
   let hits: Awaited<ReturnType<typeof runSearch>>["hits"] = [];
   let docs = 0;
   const exactos = query.length >= 4 ? await findByIdentifier(query) : [];
+  const busquedas = await getBusquedas();
   if (query.length > 0) {
     const filters: Record<string, string> = {};
     if (params.branch) filters.branch = params.branch;
@@ -79,6 +101,14 @@ export default async function SearchPage({
         </select>
         <button type="submit">Buscar</button>
       </form>
+
+      <BusquedasGuardadas
+        items={busquedas}
+        q={query}
+        kind={params.kind ?? ""}
+        branch={params.branch ?? ""}
+        outcome={params.outcome ?? ""}
+      />
 
       {query.length === 0 && <p className="muted">Escribe una consulta para buscar.</p>}
 
@@ -137,7 +167,7 @@ export default async function SearchPage({
               {hit.meta.branch ? ` · ${label(BRANCH, hit.meta.branch)}` : ""}
               {hit.meta.outcome ? ` · ${label(OUTCOME, hit.meta.outcome)}` : ""}
             </div>
-            <div className="small">«{hit.snippet}»</div>
+            <div className="small">«{resaltar(hit.snippet, hit.matchedTerms)}»</div>
             <div className="small muted">términos: {hit.matchedTerms.join(", ")}</div>
           </li>
         ))}
