@@ -582,10 +582,28 @@ export interface TemaFicha {
 }
 
 /** Ficha de un tema: cronología + argumentos usados + leyes citadas. */
-export async function getTema(topic: string): Promise<TemaFicha | null> {
+export async function getTema(
+  topic: string,
+  permitido: (caseId: string) => boolean = () => true,
+): Promise<TemaFicha | null> {
   const temas = await getEvolucion();
-  const tema = temas.find((item) => item.topic === topic);
-  if (!tema) return null;
+  const base = temas.find((item) => item.topic === topic);
+  if (!base) return null;
+  const entries = base.entries.filter((entry) => permitido(entry.caseId));
+  if (entries.length === 0) return null;
+  const distribution: Record<string, number> = {};
+  for (const entry of entries) {
+    distribution[entry.outcome] = (distribution[entry.outcome] ?? 0) + 1;
+  }
+  const fechas = entries.map((entry) => entry.fecha).sort();
+  const tema: EvolucionTema = {
+    ...base,
+    entries,
+    cases: entries.length,
+    distribution,
+    first: fechas[0] ?? base.first,
+    last: fechas[fechas.length - 1] ?? base.last,
+  };
 
   const argsMap = new Map<string, TemaArgumento>();
   const leyesMap = new Map<string, TemaLey>();
@@ -1190,16 +1208,23 @@ export interface Informe {
   porRama: Record<string, number>;
   pendientes: number;
   temas: InformeTema[];
+  periodos: string[];
+  matriz: Array<{ topic: string; total: number; celdas: Record<string, number> }>;
   leyes: Array<{ norma: string; boe_id: string | null; veces: number }>;
 }
 
 /** Informe de un periodo (por fecha de resolucion) para imprimir o mandar. */
-export async function getInforme(desde: string, hasta: string): Promise<Informe> {
+export async function getInforme(
+  desde: string,
+  hasta: string,
+  permitido: (caseId: string) => boolean = () => true,
+): Promise<Informe> {
   const enRango = (fecha: string): boolean => fecha >= desde && fecha <= hasta;
 
   const [items, temas] = await Promise.all([listCases(), getEvolucion()]);
   const casos: InformeCaso[] = [];
   for (const item of items) {
+    if (!permitido(item.id)) continue;
     const meta = await readFirstJson<{ resolution_date?: string }>(
       path.join(repoRoot(), "cases", item.id, "metadata"),
     );
@@ -1241,7 +1266,10 @@ export async function getInforme(desde: string, hasta: string): Promise<Informe>
   const periodTemas: InformeTema[] = temas
     .map((tema) => {
       const entries = tema.entries.filter(
-        (entry) => entry.fecha.slice(0, 10) >= desde && entry.fecha.slice(0, 10) <= hasta,
+        (entry) =>
+          entry.fecha.slice(0, 10) >= desde &&
+          entry.fecha.slice(0, 10) <= hasta &&
+          permitido(entry.caseId),
       );
       const distribution: Record<string, number> = {};
       for (const entry of entries) {
@@ -1253,6 +1281,61 @@ export async function getInforme(desde: string, hasta: string): Promise<Informe>
     .sort((a, b) => b.casos - a.casos)
     .slice(0, 10);
 
+  // Matriz tema × periodo (meses si el rango es corto, trimestres si es largo)
+  const dias = Math.max(1, (Date.parse(hasta) - Date.parse(desde)) / 86_400_000 || 90);
+  const porMes = dias <= 200;
+  const etiqueta = (fecha: string): string => {
+    const anio = fecha.slice(0, 4);
+    const mes = Number(fecha.slice(5, 7));
+    return porMes ? `${anio}-${String(mes).padStart(2, "0")}` : `${anio}-T${Math.ceil(mes / 3)}`;
+  };
+  const periodos: string[] = [];
+  {
+    let anio = Number(desde.slice(0, 4));
+    let paso = Number(desde.slice(5, 7));
+    const fin = etiqueta(hasta);
+    for (let guard = 0; guard < 60; guard += 1) {
+      const etiquetaActual = porMes
+        ? `${anio}-${String(paso).padStart(2, "0")}`
+        : `${anio}-T${Math.ceil(paso / 3)}`;
+      if (etiquetaActual > fin) break;
+      if (etiquetaActual >= etiqueta(desde) && !periodos.includes(etiquetaActual)) {
+        periodos.push(etiquetaActual);
+      }
+      if (porMes) {
+        paso += 1;
+        if (paso > 12) {
+          paso = 1;
+          anio += 1;
+        }
+      } else {
+        paso += 3;
+        if (paso > 12) {
+          paso -= 12;
+          anio += 1;
+        }
+      }
+    }
+  }
+  const matriz: Array<{ topic: string; total: number; celdas: Record<string, number> }> = [];
+  for (const tema of temas) {
+    const entries = tema.entries.filter(
+      (entry) =>
+        entry.fecha.slice(0, 10) >= desde &&
+        entry.fecha.slice(0, 10) <= hasta &&
+        permitido(entry.caseId),
+    );
+    if (entries.length === 0) continue;
+    const celdas: Record<string, number> = {};
+    for (const entry of entries) {
+      const clave = etiqueta(entry.fecha.slice(0, 10));
+      celdas[clave] = (celdas[clave] ?? 0) + 1;
+    }
+    matriz.push({ topic: tema.topic, total: entries.length, celdas });
+  }
+  matriz.sort((a, b) => b.total - a.total);
+  matriz.splice(15);
+
   return {
     desde,
     hasta,
@@ -1261,6 +1344,51 @@ export async function getInforme(desde: string, hasta: string): Promise<Informe>
     porRama,
     pendientes: casos.filter((caso) => caso.reviewStatus === "UNREVIEWED").length,
     temas: periodTemas,
+    periodos,
+    matriz,
     leyes: [...leyesMap.values()].sort((a, b) => b.veces - a.veces).slice(0, 12),
+  };
+}
+
+export interface RevisionPersona {
+  persona: string;
+  casos: number;
+  estados: Record<string, number>;
+  ultimo: string;
+}
+
+/**
+ * Carga de revisión por persona: quién ha revisado qué y cuánto lleva.
+ */
+export async function getRevisionPorPersona(): Promise<{
+  personas: RevisionPersona[];
+  sinRevisador: number;
+}> {
+  const personas = new Map<string, RevisionPersona>();
+  let sinRevisador = 0;
+
+  for (const item of await listCases()) {
+    const review = await section<{
+      review?: { status?: string; reviewed_by?: string | null; reviewed_at?: string };
+    }>(item.id, "review.json");
+    const block = review?.review ?? {};
+    const status = block.status ?? "UNREVIEWED";
+    const persona = (block.reviewed_by ?? "").trim();
+    if (!persona) {
+      if (status !== "UNREVIEWED") sinRevisador += 1;
+      continue;
+    }
+    const row =
+      personas.get(persona) ?? { persona, casos: 0, estados: {}, ultimo: "" };
+    row.casos += 1;
+    row.estados[status] = (row.estados[status] ?? 0) + 1;
+    const cuando = block.reviewed_at ?? "";
+    if (cuando > row.ultimo) row.ultimo = cuando;
+    personas.set(persona, row);
+  }
+
+  return {
+    personas: [...personas.values()].sort((a, b) => b.casos - a.casos),
+    sinRevisador,
   };
 }

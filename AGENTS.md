@@ -53,7 +53,10 @@ Casos concretos: `pnpm eval -- --show`, `pnpm compare -- --a=case_000034`,
   `label(MAP, valor)` (fallback: valor en mayúsculas). Añade la clave nueva ahí.
 - **Auth**: toda página/ruta empieza con `requireActor()` (+ `defaultOrgId()`,
   `authorizationGrants()`, `canViewCase(...)`) o `getActor()` en APIs. Permiso
-  **deny-by-default** en `pipeline/lib/authorization.ts`.
+  **deny-by-default** en `pipeline/lib/authorization.ts`. Los agregados que
+  muestran casos (`/informes`, `/alertas`, `/temas`, portada) deben filtrar con
+  `canViewCase`: en dataset hay funciones que aceptan un predicado
+  `permitido(caseId)` (`getInforme`, `getTema`).
 - **Tablas ordenables**: `apps/web/lib/sort-th.tsx`.
 - **Trabajos largos**: `JobRegistry` (`pipeline/lib/jobs.ts`, singleton en
   `apps/web/lib/jobs.ts`), serializados con `runExclusive`; las APIs

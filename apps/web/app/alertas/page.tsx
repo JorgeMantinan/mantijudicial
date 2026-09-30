@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { PrintButton } from "@/components/print-button";
-import { requireActor } from "@/lib/auth";
+import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import { getContradicciones, getReviewStats, getVigenciaAlerts } from "@/lib/dataset";
+import { authorizationGrants } from "@/lib/grants";
 import { jobs } from "@/lib/jobs";
 
 export const dynamic = "force-dynamic";
@@ -12,12 +13,29 @@ function fecha(iso: string): string {
 }
 
 export default async function AlertasPage() {
-  await requireActor();
-  const [contradictorio, vigencia, review] = await Promise.all([
-    getContradicciones(),
+  const actor = await requireActor();
+  const orgId = await defaultOrgId();
+  const grants = await authorizationGrants();
+  const puedeVer = (caseId: string) => canViewCase(actor, caseId, orgId, grants);
+
+  const [vigenciaBruta, contradictorioBruto, reviewBruto] = await Promise.all([
     getVigenciaAlerts(),
+    getContradicciones(),
     getReviewStats(),
   ]);
+  const vigencia = vigenciaBruta
+    .map((alerta) => ({ ...alerta, casos: alerta.casos.filter((caso) => puedeVer(caso.caseId)) }))
+    .filter((alerta) => alerta.casos.length > 0);
+  const contradictorio = contradictorioBruto
+    .map((tema) => ({
+      ...tema,
+      ejemplos: tema.ejemplos.filter((ejemplo) => puedeVer(ejemplo.caseId)),
+    }))
+    .filter((tema) => tema.ejemplos.length > 0);
+  const review = {
+    ...reviewBruto,
+    pending: reviewBruto.pending.filter((item) => puedeVer(item.id)),
+  };
   const fallos = jobs
     .list()
     .filter((job) => job.status === "error")

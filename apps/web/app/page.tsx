@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireActor, canViewCase, defaultOrgId } from "@/lib/auth";
-import { computePatterns, getEvalReport, getLawUsage, listCases, listLaws } from "@/lib/dataset";
+import { computePatterns, getEvalReport, getLawUsage, getReviewStats, getVigenciaAlerts, listCases, listLaws } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { BRANCH, OUTCOME, label } from "@/lib/labels";
 
@@ -22,12 +22,19 @@ export default async function Home() {
   const cases = all.filter((item) => canViewCase(actor, item.id, orgId, grants));
   const caseIds = cases.map((item) => item.id);
 
-  const [usage, patterns, laws, evalReport] = await Promise.all([
+  const [usage, patterns, laws, evalReport, reviewStats, vigencia] = await Promise.all([
     getLawUsage(caseIds),
     computePatterns(caseIds),
     listLaws(),
     getEvalReport(),
+    getReviewStats(),
+    getVigenciaAlerts(),
   ]);
+
+  const pendientes = reviewStats.pending.filter((item) => canViewCase(actor, item.id, orgId, grants));
+  const leyesCambiadas = vigencia.filter((alerta) =>
+    alerta.casos.some((caso) => canViewCase(actor, caso.caseId, orgId, grants)),
+  ).length;
 
   const cross = evalReport?.cross_check_outcome as
     | { agreement?: number; total?: number; agreement_rate?: number }
@@ -68,6 +75,40 @@ export default async function Home() {
           <div className="value">{analyzed}</div>
           <div className="label">casos con patrones</div>
         </div>
+      </div>
+
+      <div className="section">
+        <h2>Accesos directos</h2>
+        <ul className="small">
+          <li>
+            <Link href="/alertas">Alertas</Link> — {leyesCambiadas} leyes cambiadas tras tus
+            sentencias y {pendientes.length} casos sin revisar
+          </li>
+          <li>
+            <Link href="/review">Revisión humana</Link>
+            {reviewStats.next ? (
+              <>
+                {" "}
+                — siguiente pendiente:{" "}
+                <Link href={`/cases/${reviewStats.next.id}`}>{reviewStats.next.id}</Link>
+              </>
+            ) : (
+              " — todo revisado"
+            )}
+          </li>
+          <li>
+            <Link href="/informes">Informe del periodo</Link> — sentencias, temas y normas del mes,
+            listo para imprimir
+          </li>
+          <li>
+            <Link href="/search">Búsqueda</Link> — texto libre o identificador exacto (ECLI, ROJ, nº
+            de recurso)
+          </li>
+          <li>
+            <Link href="/plazos">Plazos procesales</Link> — cómputo con la LEC verificada contra el
+            BOE
+          </li>
+        </ul>
       </div>
 
       <h2>Resultados (casación)</h2>

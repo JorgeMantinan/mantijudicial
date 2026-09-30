@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PrintButton } from "@/components/print-button";
-import { requireActor } from "@/lib/auth";
+import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import { getTema } from "@/lib/dataset";
+import { authorizationGrants } from "@/lib/grants";
 import { ARG_OUTCOME, ARG_TYPE, BRANCH, OUTCOME, label } from "@/lib/labels";
 import { OutcomeBadge } from "@/lib/ui";
 
@@ -10,8 +11,10 @@ export const dynamic = "force-dynamic";
 
 export default async function TemaPage({ params }: { params: Promise<{ topic: string }> }) {
   const { topic } = await params;
-  await requireActor();
-  const ficha = await getTema(topic);
+  const actor = await requireActor();
+  const orgId = await defaultOrgId();
+  const grants = await authorizationGrants();
+  const ficha = await getTema(topic, (caseId) => canViewCase(actor, caseId, orgId, grants));
   if (!ficha) redirect("/evolucion");
   const { tema, argumentos, leyes } = ficha;
 

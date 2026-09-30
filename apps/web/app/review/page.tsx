@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireActor } from "@/lib/auth";
-import { getReviewStats, listCases } from "@/lib/dataset";
+import { getRevisionPorPersona, getReviewStats, listCases } from "@/lib/dataset";
 import { BRANCH, OUTCOME, REVIEW, label } from "@/lib/labels";
 import { OutcomeBadge } from "@/lib/ui";
 
@@ -15,6 +15,7 @@ export default async function ReviewPage({
   const params = await searchParams;
   const status = params.status ?? "UNREVIEWED";
   const stats = await getReviewStats(true);
+  const carga = await getRevisionPorPersona();
   const all = await listCases();
   const filtered = all.filter((item) => (status === "TODOS" ? true : item.reviewStatus === status));
 
@@ -50,8 +51,51 @@ export default async function ReviewPage({
           <Link href={`/cases/${stats.next.id}`}>
             <button type="button">Siguiente a revisar: {stats.next.id} →</button>
           </Link>
+          <span className="small muted" style={{ marginLeft: 10 }}>
+            en la ficha puedes guardar y pulsar <strong>N</strong> para pasar al siguiente
+          </span>
         </p>
       )}
+
+      <div className="section">
+        <h2>Carga de revisión por persona</h2>
+        {carga.personas.length === 0 ? (
+          <p className="small muted">Todavía no consta quién ha revisado nada.</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Persona</th>
+                <th>Casos revisados</th>
+                <th>Estados</th>
+                <th>Última revisión</th>
+              </tr>
+            </thead>
+            <tbody>
+              {carga.personas.map((persona) => (
+                <tr key={persona.persona}>
+                  <td className="small">{persona.persona}</td>
+                  <td>
+                    <span className="badge ok">{persona.casos}</span>
+                  </td>
+                  <td className="small">
+                    {Object.entries(persona.estados)
+                      .map(([estado, count]) => `${label(REVIEW, estado)} ${count}`)
+                      .join(" · ")}
+                  </td>
+                  <td className="small">{persona.ultimo ? new Date(persona.ultimo).toLocaleDateString("es-ES") : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        {carga.sinRevisador > 0 && (
+          <p className="small muted">
+            {carga.sinRevisador} casos con estado revisado pero sin indicar quién: rellena el campo
+            «Revisado por».
+          </p>
+        )}
+      </div>
 
       <form className="filters" action="/review" method="get">
         <select name="status" defaultValue={status}>

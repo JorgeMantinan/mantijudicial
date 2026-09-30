@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { PrintButton } from "@/components/print-button";
-import { requireActor } from "@/lib/auth";
+import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import { getInforme } from "@/lib/dataset";
+import { authorizationGrants } from "@/lib/grants";
 import { BRANCH, OUTCOME, label } from "@/lib/labels";
 import { OutcomeBadge } from "@/lib/ui";
 
@@ -22,14 +23,18 @@ export default async function InformesPage({
 }: {
   searchParams: Promise<{ desde?: string; hasta?: string }>;
 }) {
-  await requireActor();
+  const actor = await requireActor();
+  const orgId = await defaultOrgId();
+  const grants = await authorizationGrants();
   const sp = await searchParams;
   const hoy = fechaLocal(new Date());
   const mesInicio = fechaLocal(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const desde = validar(sp.desde, mesInicio);
   const hasta = validar(sp.hasta, hoy);
 
-  const informe = await getInforme(desde, hasta);
+  const informe = await getInforme(desde, hasta, (caseId) =>
+    canViewCase(actor, caseId, orgId, grants),
+  );
 
   return (
     <article className="print-sheet">
@@ -118,6 +123,48 @@ export default async function InformesPage({
                     {Object.entries(tema.distribution)
                       .map(([key, value]) => `${label(OUTCOME, key)} ${value}`)
                       .join(" · ")}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className="section">
+        <h2>Temas por {informe.periodos[0]?.includes("-T") ? "trimestre" : "mes"}</h2>
+        <p className="small muted">
+          Cuántos casos de cada tema caen en cada periodo. Ayuda a ver la tendencia; es una
+          asociación observada, no una predicción.
+        </p>
+        {informe.matriz.length === 0 ? (
+          <p className="small muted">Sin temas en el periodo.</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Tema</th>
+                {informe.periodos.map((periodo) => (
+                  <th key={periodo} style={{ textAlign: "right" }}>
+                    {periodo}
+                  </th>
+                ))}
+                <th style={{ textAlign: "right" }}>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {informe.matriz.map((fila) => (
+                <tr key={fila.topic}>
+                  <td className="small">
+                    <Link href={`/temas/${encodeURIComponent(fila.topic)}`}>{fila.topic}</Link>
+                  </td>
+                  {informe.periodos.map((periodo) => (
+                    <td key={periodo} className="small" style={{ textAlign: "right" }}>
+                      {fila.celdas[periodo] ?? <span className="muted">·</span>}
+                    </td>
+                  ))}
+                  <td style={{ textAlign: "right" }}>
+                    <strong>{fila.total}</strong>
                   </td>
                 </tr>
               ))}
