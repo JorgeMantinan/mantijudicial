@@ -1,0 +1,27 @@
+# Blueprint de Render para MantiJudicial (https://render.com/blueprints)
+#
+# Importante: el corpus (cases/) y la legislación (laws/) NO viajan por git.
+# Subelos al disco persistente del servicio antes de arrancar, o genera los
+# archivos en el servidor (ver docs/12_DESPLIEGUE.md).
+services:
+  - type: web
+    name: mantijudicial
+    runtime: node
+    plan: starter
+    buildCommand: pnpm install && pnpm --dir apps/web build
+    startCommand: pnpm --dir apps/web start
+    disk:
+      name: mantijudicial-data
+      mountPath: /var/data/mantijudicial
+      sizeGB: 5
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MANTIJUDICIAL_ROOT
+        value: /var/data/mantijudicial/repo
+      # Identidad (Supabase): pendiente de configurar
+      # - key: DATABASE_URL
+      #   sync: false
+      # Modelo de IA: hoy se usa el binario local de opencode; en servidor
+      # hay que instalarlo y autenticarlo o cambiar de proveedor.
+    healthCheckPath: /login
