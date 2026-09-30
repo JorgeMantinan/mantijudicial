@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Bar } from "@/components/bar";
 import { requireActor, canViewCase, defaultOrgId } from "@/lib/auth";
 import { computePatterns, getEvalReport, getLawUsage, getReviewStats, getVigenciaAlerts, listCases, listLaws } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
@@ -117,6 +118,7 @@ export default async function Home() {
           <tr>
             <th>Resultado</th>
             <th>Casos</th>
+            <th style={{ width: 180 }}>Proporción</th>
           </tr>
         </thead>
         <tbody>
@@ -124,6 +126,19 @@ export default async function Home() {
             <tr key={row.name}>
               <td title={row.name}>{label(OUTCOME, row.name)}</td>
               <td>{row.count}</td>
+              <td>
+                <Bar
+                  value={row.count}
+                  max={outcomes[0]?.count ?? 1}
+                  tone={
+                    row.name === "ESTIMED"
+                      ? "ok"
+                      : row.name === "DISMISSED"
+                        ? "ko"
+                        : "accent"
+                  }
+                />
+              </td>
             </tr>
           ))}
         </tbody>
@@ -135,6 +150,7 @@ export default async function Home() {
           <tr>
             <th>Rama</th>
             <th>Casos</th>
+            <th style={{ width: 180 }}>Proporción</th>
           </tr>
         </thead>
         <tbody>
@@ -146,6 +162,9 @@ export default async function Home() {
                 </Link>
               </td>
               <td>{row.count}</td>
+              <td>
+                <Bar value={row.count} max={branches[0]?.count ?? 1} tone="accent" />
+              </td>
             </tr>
           ))}
         </tbody>

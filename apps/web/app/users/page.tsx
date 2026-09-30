@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { loadIdentity, requireActor } from "@/lib/auth";
-import { ROLE, label } from "@/lib/labels";
+import { getAuditoria } from "@/lib/dataset";
+import { AUDIT, ROLE, label } from "@/lib/labels";
 import { SortTh } from "@/lib/sort-th";
 import { UserForm } from "./user-form";
 import { MfaPanel } from "./mfa-panel";
@@ -34,6 +35,9 @@ export default async function UsersPage({
       self: user.id === actor.userId,
     };
   });
+
+  const auditoria = await getAuditoria(40);
+  const nombres = new Map(users.map((user) => [user.id, user.name]));
 
   const sort = (SORTS as readonly string[]).includes(params.sort ?? "")
     ? (params.sort as SortKey)
@@ -89,6 +93,39 @@ export default async function UsersPage({
           ))}
         </tbody>
       </table>
+
+      <div className="section">
+        <h2>Actividad reciente</h2>
+        <p className="small muted">
+          Últimas entradas de <span className="mono">data/audit.log</span> (sin notas privadas).
+        </p>
+        {auditoria.length === 0 ? (
+          <p className="small">Sin actividad registrada.</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th style={{ width: 160 }}>Cuándo</th>
+                <th>Quién</th>
+                <th>Qué</th>
+                <th>Recurso</th>
+              </tr>
+            </thead>
+            <tbody>
+              {auditoria.map((entrada, index) => (
+                <tr key={`${entrada.at}-${index}`}>
+                  <td className="small mono">
+                    {entrada.at ? new Date(entrada.at).toLocaleString("es-ES") : "—"}
+                  </td>
+                  <td className="small">{nombres.get(entrada.actor) ?? entrada.actor}</td>
+                  <td className="small">{label(AUDIT, entrada.action)}</td>
+                  <td className="small mono">{entrada.resource ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
 
       <p className="small muted">
         Roles: <strong>Administración</strong> (gestiona casos, usuarios y permisos) ·{" "}

@@ -1392,3 +1392,28 @@ export async function getRevisionPorPersona(): Promise<{
     sinRevisador,
   };
 }
+
+export interface AuditoriaEntrada {
+  at: string;
+  actor: string;
+  action: string;
+  resource?: string;
+  details?: Record<string, unknown>;
+}
+
+/** Últimas entradas de data/audit.log (la más reciente primero). */
+export async function getAuditoria(limit = 50): Promise<AuditoriaEntrada[]> {
+  const text = await fs
+    .readFile(path.join(repoRoot(), "data", "audit.log"), "utf8")
+    .catch(() => "");
+  const rows: AuditoriaEntrada[] = [];
+  for (const line of text.split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    try {
+      rows.push(JSON.parse(line) as AuditoriaEntrada);
+    } catch {
+      // línea corrupta: se ignora
+    }
+  }
+  return rows.slice(-limit).reverse();
+}

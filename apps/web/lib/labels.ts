@@ -141,6 +141,18 @@ export const QUOTE: Record<string, string> = {
   NOT_CHECKED: "Sin comprobar",
 };
 
+export const AUDIT: Record<string, string> = {
+  "auth.login": "Inicio de sesión",
+  "auth.login_failed": "Inicio de sesión fallido",
+  "share.grant": "Permiso concedido",
+  "share.revoke": "Permiso revocado",
+  "user.create": "Usuario creado",
+  "user.mfa_enabled": "Doble factor activado",
+  "note.create": "Nota creada",
+  "note.delete": "Nota eliminada",
+  "golden.confirm": "Golden confirmado",
+};
+
 export const REVIEW: Record<string, string> = {
   UNREVIEWED: "Sin revisar",
   REVIEWED: "Revisado",

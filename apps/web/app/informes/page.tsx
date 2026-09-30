@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Bar } from "@/components/bar";
 import { PrintButton } from "@/components/print-button";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import { getInforme } from "@/lib/dataset";
@@ -39,8 +40,8 @@ export default async function InformesPage({
   return (
     <article className="print-sheet">
       <p className="small muted no-print">
-        <Link href="/alertas">← Alertas</Link> ·{" "}
-        <Link href="/evolucion">Evolución</Link>
+        <Link href="/alertas">← Alertas</Link> · <Link href="/evolucion">Evolución</Link> ·{" "}
+        <a href={`/api/export/informe?desde=${desde}&hasta=${hasta}`}>descargar CSV</a>
       </p>
       <PrintButton text="Imprimir el informe" />
 
@@ -85,18 +86,41 @@ export default async function InformesPage({
 
       <div className="section">
         <h2>Resultado y rama</h2>
-        <p className="small">
-          {Object.entries(informe.porResultado)
-            .sort((a, b) => b[1] - a[1])
-            .map(([key, value]) => `${label(OUTCOME, key)}: ${value}`)
-            .join(" · ")}
-        </p>
-        <p className="small muted">
-          {Object.entries(informe.porRama)
-            .sort((a, b) => b[1] - a[1])
-            .map(([key, value]) => `${label(BRANCH, key)}: ${value}`)
-            .join(" · ")}
-        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Resultado</th>
+              <th>Casos</th>
+              <th style={{ width: 160 }}>Proporción</th>
+              <th>Rama</th>
+              <th>Casos</th>
+              <th style={{ width: 160 }}>Proporción</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(() => {
+              const res = Object.entries(informe.porResultado).sort((a, b) => b[1] - a[1]);
+              const ram = Object.entries(informe.porRama).sort((a, b) => b[1] - a[1]);
+              const filas = Math.max(res.length, ram.length);
+              const maxRes = res[0]?.[1] ?? 1;
+              const maxRam = ram[0]?.[1] ?? 1;
+              return Array.from({ length: filas }, (_, index) => {
+                const r = res[index];
+                const m = ram[index];
+                return (
+                  <tr key={index}>
+                    <td className="small">{r ? label(OUTCOME, r[0]) : ""}</td>
+                    <td>{r ? r[1] : ""}</td>
+                    <td>{r ? <Bar value={r[1]} max={maxRes} tone={r[0] === "ESTIMED" ? "ok" : r[0] === "DISMISSED" ? "ko" : "accent"} /> : ""}</td>
+                    <td className="small">{m ? label(BRANCH, m[0]) : ""}</td>
+                    <td>{m ? m[1] : ""}</td>
+                    <td>{m ? <Bar value={m[1]} max={maxRam} tone="accent" /> : ""}</td>
+                  </tr>
+                );
+              });
+            })()}
+          </tbody>
+        </table>
       </div>
 
       <div className="section">
