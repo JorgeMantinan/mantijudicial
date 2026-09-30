@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PrintButton } from "@/components/print-button";
 import { requireActor } from "@/lib/auth";
 import { getContradicciones, getReviewStats, getVigenciaAlerts } from "@/lib/dataset";
 import { jobs } from "@/lib/jobs";
@@ -26,7 +27,12 @@ export default async function AlertasPage() {
   const total = contradictorio.length + vigencia.length + review.pending.length + fallos.length;
 
   return (
-    <>
+    <article className="print-sheet">
+      <p className="small muted no-print">
+        <Link href="/">← Resumen</Link>
+      </p>
+      <PrintButton text="Imprimir el informe de alertas" />
+
       <h1>Alertas</h1>
       <p className="lead">
         Señales que piden atención de un letrado: leyes que cambiaron después de tus sentencias,
@@ -183,6 +189,6 @@ export default async function AlertasPage() {
           </table>
         )}
       </div>
-    </>
+    </article>
   );
 }

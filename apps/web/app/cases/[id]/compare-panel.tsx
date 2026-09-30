@@ -25,9 +25,14 @@ export function ComparePanel({
   const [other, setOther] = useState(
     options.find((item) => !existing.includes(item.id))?.id ?? options[0]?.id ?? "",
   );
+  const [manual, setManual] = useState("");
   const [job, setJob] = useState<Job | null>(null);
   const [error, setError] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const manualValid = /^case_\d{6}$/.test(manual) && manual !== caseId;
+  const manualInvalid = manual.trim().length > 0 && !manualValid;
+  const target = manual.trim().length > 0 ? (manualValid ? manual.trim() : "") : other;
 
   useEffect(() => () => {
     if (timer.current) clearInterval(timer.current);
@@ -49,13 +54,13 @@ export function ComparePanel({
   }
 
   async function start() {
-    if (!other) return;
+    if (!target) return;
     setError(null);
     setJob(null);
     const response = await fetch("/api/compare", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ caseId, otherId: other }),
+      body: JSON.stringify({ caseId, otherId: target }),
     }).catch(() => null);
     if (!response) {
       setError("No se pudo contactar con el servidor");
@@ -74,15 +79,6 @@ export function ComparePanel({
 
   const running = job !== null && job.status !== "done" && job.status !== "error";
 
-  if (options.length === 0) {
-    return (
-      <p className="small muted">
-        No hay otros casos comparables todavía. Por CLI:{" "}
-        <span className="mono">pnpm compare -- --a={caseId}</span>
-      </p>
-    );
-  }
-
   return (
     <div>
       <form
@@ -92,18 +88,35 @@ export function ComparePanel({
           void start();
         }}
       >
+        {options.length > 0 && (
+          <label className="small muted" style={{ display: "grid", gap: 4 }}>
+            Comparar con
+            <select
+              value={other}
+              onChange={(event) => {
+                setOther(event.target.value);
+                setManual("");
+              }}
+            >
+              {options.map((item) => (
+                <option key={item.id} value={item.id} disabled={existing.includes(item.id)}>
+                  {existing.includes(item.id) ? "✓ " : ""}
+                  {item.title}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="small muted" style={{ display: "grid", gap: 4 }}>
-          Comparar con
-          <select value={other} onChange={(event) => setOther(event.target.value)}>
-            {options.map((item) => (
-              <option key={item.id} value={item.id} disabled={existing.includes(item.id)}>
-                {existing.includes(item.id) ? "✓ " : ""}
-                {item.title}
-              </option>
-            ))}
-          </select>
+          …o escribe cualquier caso
+          <input
+            value={manual}
+            onChange={(event) => setManual(event.target.value)}
+            placeholder="case_000045"
+            style={{ width: 150 }}
+          />
         </label>
-        <button type="submit" disabled={isPending || running || !other}>
+        <button type="submit" disabled={isPending || running || !target}>
           {running ? "Comparando…" : "Generar comparación"}
         </button>
         {job && (
@@ -114,6 +127,11 @@ export function ComparePanel({
           </span>
         )}
       </form>
+      {manualInvalid && (
+        <p className="small" style={{ color: "var(--red)" }}>
+          Escribe un identificador válido (p. ej. case_000045) distinto del caso actual.
+        </p>
+      )}
       {error && (
         <p className="small" style={{ color: "var(--red)" }}>
           {error}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PrintButton } from "@/components/print-button";
 import { requireActor } from "@/lib/auth";
 import { getTema } from "@/lib/dataset";
 import { ARG_OUTCOME, ARG_TYPE, BRANCH, OUTCOME, label } from "@/lib/labels";
@@ -15,7 +16,13 @@ export default async function TemaPage({ params }: { params: Promise<{ topic: st
   const { tema, argumentos, leyes } = ficha;
 
   return (
-    <>
+    <article className="print-sheet">
+      <p className="small muted no-print">
+        <Link href="/evolucion">← Evolución</Link> · <Link href="/patterns">Patrones</Link> ·{" "}
+        <Link href="/alertas">Alertas</Link>
+      </p>
+      <PrintButton text="Imprimir la ficha del tema" />
+
       <h1>Tema: {tema.topic}</h1>
       <p className="lead">
         {tema.cases} casos entre {tema.first.slice(0, 10)} y {tema.last.slice(0, 10)} ·{" "}
@@ -143,6 +150,6 @@ export default async function TemaPage({ params }: { params: Promise<{ topic: st
         Ficha generada automáticamente a partir de tu corpus. Los análisis de IA asociados están
         pendientes de validación profesional.
       </p>
-    </>
+    </article>
   );
 }
