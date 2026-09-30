@@ -40,6 +40,7 @@ export default async function TemaPage({
       <p className="small muted no-print">
         <Link href="/evolucion">← Evolución</Link> · <Link href="/patterns">Patrones</Link> ·{" "}
         <Link href="/alertas">Alertas</Link> ·{" "}
+        <Link href={`/temas/comparar?a=${encodeURIComponent(tema.topic)}`}>comparar con otro tema</Link> ·{" "}
         <a href={`/api/export/tema?tema=${encodeURIComponent(tema.topic)}`}>descargar CSV</a>
       </p>
       <PrintButton text="Imprimir la ficha del tema" />

@@ -112,6 +112,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 </span>
               ))}
             </nav>
+            <form
+              action="/search"
+              method="get"
+              style={{ display: "flex", gap: 6, alignItems: "center" }}
+              role="search"
+            >
+              <input
+                name="q"
+                placeholder="Buscar…"
+                aria-label="Buscar en casos, frases y artículos"
+                style={{ width: 150, fontSize: 13, padding: "5px 8px" }}
+              />
+            </form>
             <ThemeToggle />
             {authenticated ? (
               <LogoutButton />

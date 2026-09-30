@@ -25,6 +25,9 @@ export default async function EvalPage() {
     return (
       <>
         <h1>Evaluación</h1>
+        <p className="small no-print">
+          <a href="/api/export/eval">descargar CSV con todas las métricas</a>
+        </p>
         <p className="muted">
           Todavía no hay informe. Ejecuta <span className="mono">pnpm run eval</span>.
         </p>

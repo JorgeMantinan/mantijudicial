@@ -50,6 +50,7 @@ try {
     "/ayuda"                                        = "Atajos de teclado"
     "/users"                                        = "Actividad reciente"
     "/temas/costas"                                 = "argumentos"
+    "/temas/comparar?a=costas&b=congruencia"        = "Comparar dos temas"
     "/cases/case_000034"                            = "falta por concretar"
     "/cases/case_000034/print"                      = "Resumen"
     "/cases/case_000034/dossier"                    = "Dossier del asunto"
