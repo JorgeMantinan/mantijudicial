@@ -1,0 +1,20 @@
+node_modules/
+dist/
+.turbo/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+
+# Identidad, concesiones y auditoría (nunca se sube)
+data/
+
+# Corpus de sentencias y legislación descargada:
+# son datos, no código, y se regeneran con el pipeline
+# (pnpm laws / pnpm hygiene). Sube con `git add -f` si los quieres versionar.
+cases/
+laws/
+
+# Build de Next.js
+apps/web/.next/

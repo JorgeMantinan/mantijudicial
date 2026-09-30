@@ -1,0 +1,571 @@
+import { existsSync } from "node:fs";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { aggregate, type CaseSignals } from "@pipeline/patterns";
+import { buildIndex, search, type SearchDoc, type SearchHit } from "@pipeline/search";
+
+const INDEX_TTL_MS = 30_000;
+
+let cachedRoot: string | null = null;
+
+export function repoRoot(): string {
+  if (cachedRoot) return cachedRoot;
+  const candidates = [
+    process.env.MANTIJUDICIAL_ROOT,
+    path.resolve(process.cwd(), "..", ".."),
+    process.cwd(),
+    path.resolve(/* turbopackIgnore: true */ process.cwd(), ".."),
+  ].filter((value): value is string => Boolean(value));
+  for (const candidate of candidates) {
+    if (existsSync(path.join(candidate, "cases"))) {
+      cachedRoot = candidate;
+      return candidate;
+    }
+  }
+  throw new Error("No se encuentra el corpus (carpeta cases/). Define MANTIJUDICIAL_ROOT.");
+}
+
+async function readJson<T>(filePath: string): Promise<T | null> {
+  try {
+    return JSON.parse(await fs.readFile(filePath, "utf8")) as T;
+  } catch {
+    return null;
+  }
+}
+
+export interface CaseListItem {
+  id: string;
+  headline: string;
+  subtopic: string;
+  branch: string;
+  outcome: string;
+  recurringSide: string;
+  enriched: boolean;
+}
+
+export interface CaseDetail extends CaseListItem {
+  summary: Record<string, unknown> | null;
+  parties: unknown[];
+  claims: unknown[];
+  facts: unknown[];
+  timeline: unknown[];
+  arguments: unknown[];
+  reasoning: unknown[];
+  issues: unknown[];
+  citedLaws: unknown[];
+  outcomeDetail: Record<string, unknown> | null;
+  lawRefs: unknown[];
+  review: Record<string, unknown> | null;
+}
+
+async function caseNames(): Promise<string[]> {
+  const dir = path.join(repoRoot(), "cases");
+  const entries = await fs.readdir(dir);
+  return entries.filter((name) => name.startsWith("case_")).sort();
+}
+
+async function section<T>(caseId: string, file: string): Promise<T | null> {
+  return readJson<T>(path.join(repoRoot(), "cases", caseId, "structured", file));
+}
+
+export async function listCases(filters: {
+  branch?: string;
+  outcome?: string;
+  q?: string;
+} = {}): Promise<CaseListItem[]> {
+  const names = await caseNames();
+  const items: CaseListItem[] = [];
+  for (const name of names) {
+    const review = await section<{ extraction?: { validation?: string } }>(name, "review.json");
+    const classification = await section<{
+      classification?: { civil_branch?: string; subtopic?: string };
+    }>(name, "classification.json");
+    const summary = await section<{ summary?: { headline?: string } }>(name, "summary.json");
+    const outcome = await section<{
+      outcome?: { cassation_outcome?: string; recurring_side?: string };
+    }>(name, "outcome.json");
+
+    const item: CaseListItem = {
+      id: name,
+      headline: summary?.summary?.headline ?? name,
+      subtopic: classification?.classification?.subtopic ?? "",
+      branch: classification?.classification?.civil_branch ?? "UNKNOWN",
+      outcome: outcome?.outcome?.cassation_outcome ?? "UNKNOWN",
+      recurringSide: outcome?.outcome?.recurring_side ?? "UNKNOWN",
+    enriched: (review?.extraction as { validation?: string } | undefined)?.validation === "OK",
+    };
+    if (filters.branch && item.branch !== filters.branch) continue;
+    if (filters.outcome && item.outcome !== filters.outcome) continue;
+    if (filters.q) {
+      const needle = filters.q.toLowerCase();
+      const haystack = `${item.id} ${item.headline} ${item.subtopic}`.toLowerCase();
+      if (!haystack.includes(needle)) continue;
+    }
+    items.push(item);
+  }
+  return items;
+}
+
+export async function getCase(caseId: string): Promise<CaseDetail | null> {
+  const [summary, classification, outcome, parties, claims, facts, timeline, args, reasoning, issues, citedLaws, lawRefs, review] =
+    await Promise.all([
+      section<Record<string, unknown>>(caseId, "summary.json"),
+      section<{ classification?: Record<string, unknown> }>(caseId, "classification.json"),
+      section<Record<string, unknown>>(caseId, "outcome.json"),
+      section<{ parties?: unknown[] }>(caseId, "parties.json"),
+      section<{ claims?: unknown[] }>(caseId, "claims.json"),
+      section<{ facts?: unknown[] }>(caseId, "facts.json"),
+      section<{ events?: unknown[] }>(caseId, "timeline.json"),
+      section<{ arguments?: unknown[] }>(caseId, "arguments.json"),
+      section<{ holdings?: unknown[] }>(caseId, "reasoning.json"),
+      section<{ issues?: unknown[] }>(caseId, "issues.json"),
+      section<{ citations?: unknown[] }>(caseId, "cited_laws.json"),
+      section<{ refs?: unknown[] }>(caseId, "law_refs.json"),
+      section<Record<string, unknown>>(caseId, "review.json"),
+    ]);
+
+  if (!outcome && !summary) return null;
+
+  return {
+    id: caseId,
+    headline:
+      (summary?.summary as { headline?: string } | undefined)?.headline ?? caseId,
+    subtopic: (classification?.classification as { subtopic?: string } | undefined)?.subtopic ?? "",
+    branch: (classification?.classification as { civil_branch?: string } | undefined)?.civil_branch ?? "UNKNOWN",
+    outcome: (outcome?.outcome as { cassation_outcome?: string } | undefined)?.cassation_outcome ?? "UNKNOWN",
+    recurringSide: (outcome?.outcome as { recurring_side?: string } | undefined)?.recurring_side ?? "UNKNOWN",
+    enriched: (review?.extraction as { validation?: string } | undefined)?.validation === "OK",
+    summary: summary,
+    parties: parties?.parties ?? [],
+    claims: claims?.claims ?? [],
+    facts: facts?.facts ?? [],
+    timeline: timeline?.events ?? [],
+    arguments: args?.arguments ?? [],
+    reasoning: reasoning?.holdings ?? [],
+    issues: issues?.issues ?? [],
+    citedLaws: citedLaws?.citations ?? [],
+    outcomeDetail: outcome,
+    lawRefs: lawRefs?.refs ?? [],
+    review: review,
+  };
+}
+
+export interface LawIndexEntry {
+  boe_id: string;
+  titulo: string;
+  blocks: number;
+  chars: number;
+  retrieved_at: string;
+}
+
+export async function listLaws(): Promise<LawIndexEntry[]> {
+  const index = await readJson<{ norms?: LawIndexEntry[] }>(path.join(repoRoot(), "laws", "index.json"));
+  return index?.norms ?? [];
+}
+
+export interface LawBlock {
+  id: string;
+  tipo: string;
+  titulo: string;
+  fecha_vigencia: string;
+  texto: string;
+}
+
+export interface LawNorm {
+  boe_id: string;
+  titulo: string;
+  rango: string;
+  ambito: string;
+  url_html: string;
+  retrieved_at: string;
+  notice: string;
+  blocks: LawBlock[];
+}
+
+export async function getLaw(boeId: string): Promise<LawNorm | null> {
+  if (!/^BOE-A-[\w-]+$/.test(boeId)) return null;
+  return readJson<LawNorm>(path.join(repoRoot(), "laws", "norms", `${boeId}.json`));
+}
+
+export async function getPatterns(): Promise<Record<string, unknown> | null> {
+  return readJson<Record<string, unknown>>(path.join(repoRoot(), "cases", "patterns.json"));
+}
+
+export async function getEvalReport(): Promise<Record<string, unknown> | null> {
+  return readJson<Record<string, unknown>>(path.join(repoRoot(), "cases", "eval_report.json"));
+}
+
+export interface ViasArgument {
+  argumento: string;
+  apoyo_case_id: string;
+  apoyo_frase: string;
+  ley: string;
+}
+
+export interface Vias {
+  id: string;
+  titulo: string;
+  estrategia: string;
+  fuerza: "ALTA" | "MEDIA" | "BAJA";
+  argumentos: ViasArgument[];
+  evidencia_a_solicitar: string[];
+  riesgos: string[];
+}
+
+export interface ViasOutput {
+  case_id: string;
+  analysis: {
+    model?: string;
+    prompt_version?: string;
+    generated_at?: string;
+    similar_case_ids?: string[];
+    law_ids?: string[];
+    cost?: number;
+    validation?: string;
+  };
+  report: {
+    vias: Vias[];
+    huecos: Array<{ descripcion: string; como_cubrirlo: string }>;
+    consultas_al_cliente: string[];
+    leyes_relevantes: Array<{ boe_id: string; article: string; por_que: string }>;
+    avisos: string[];
+  };
+}
+
+export async function getVias(caseId: string): Promise<ViasOutput | null> {
+  if (!/^case_\d{6}$/.test(caseId)) return null;
+  return readJson<ViasOutput>(path.join(repoRoot(), "cases", caseId, "structured", "vias.json"));
+}
+
+export async function getCaseCitations(): Promise<Record<string, unknown> | null> {
+  return readJson<Record<string, unknown>>(path.join(repoRoot(), "laws", "case_citations.json"));
+}
+
+export interface LawUsage {
+  byNorm: Array<{ boe_id: string; titulo: string; citations: number; cases: string[] }>;
+  byArticle: Array<{ boe_id: string; article: number; titulo: string; citations: number; cases: string[] }>;
+}
+
+interface RefLite {
+  boe_id?: string | null;
+  status?: string;
+  norma?: string;
+  articles?: Array<{ number?: number; titulo?: string | null }>;
+}
+
+export async function getLawUsage(caseIds: string[]): Promise<LawUsage> {
+  const norms = new Map<string, { titulo: string; citations: number; cases: Set<string> }>();
+  const articles = new Map<
+    string,
+    { boe_id: string; article: number; titulo: string; citations: number; cases: Set<string> }
+  >();
+  const titles = new Map((await listLaws()).map((law) => [law.boe_id, law.titulo]));
+
+  for (const caseId of caseIds) {
+    const refs = await section<{ refs?: RefLite[] }>(caseId, "law_refs.json");
+    for (const ref of refs?.refs ?? []) {
+      if (ref.status !== "VERIFIED" || !ref.boe_id) continue;
+      const entry =
+        norms.get(ref.boe_id) ??
+        { titulo: titles.get(ref.boe_id) ?? ref.boe_id, citations: 0, cases: new Set<string>() };
+      entry.citations += 1;
+      entry.cases.add(caseId);
+      norms.set(ref.boe_id, entry);
+
+      for (const article of ref.articles ?? []) {
+        if (typeof article.number !== "number") continue;
+        if (article.titulo === null || article.titulo === undefined) continue;
+        const key = `${ref.boe_id}#${article.number}`;
+        const item =
+          articles.get(key) ??
+          {
+            boe_id: ref.boe_id,
+            article: article.number,
+            titulo: article.titulo ?? "",
+            citations: 0,
+            cases: new Set<string>(),
+          };
+        item.citations += 1;
+        item.cases.add(caseId);
+        articles.set(key, item);
+      }
+    }
+  }
+
+  return {
+    byNorm: [...norms.entries()]
+      .map(([boe_id, entry]) => ({
+        boe_id,
+        titulo: entry.titulo,
+        citations: entry.citations,
+        cases: [...entry.cases].sort(),
+      }))
+      .sort((a, b) => b.citations - a.citations),
+    byArticle: [...articles.values()]
+      .map((item) => ({ ...item, cases: [...item.cases].sort() }))
+      .sort((a, b) => b.citations - a.citations),
+  };
+}
+
+async function loadSignals(caseId: string): Promise<CaseSignals | null> {
+  const review = await section<{ extraction?: { validation?: string } }>(caseId, "review.json");
+  if (review?.extraction?.validation !== "OK") return null;
+  const [classification, outcome, claims, args, reasoning, issues, lawRefs] = await Promise.all([
+    section<{ classification?: { civil_branch?: string; subtopic?: string } }>(caseId, "classification.json"),
+    section<{ outcome?: { cassation_outcome?: string; recurring_side?: string } }>(caseId, "outcome.json"),
+    section<{ claims?: Array<{ outcome?: string; outcome_scope?: string }> }>(caseId, "claims.json"),
+    section<{ arguments?: Array<{ type?: string; side?: string; outcome?: string }> }>(caseId, "arguments.json"),
+    section<{ holdings?: Array<{ topic?: string; doctrine?: string }> }>(caseId, "reasoning.json"),
+    section<{ issues?: Array<{ topic?: string }> }>(caseId, "issues.json"),
+    section<{ refs?: RefLite[] }>(caseId, "law_refs.json"),
+  ]);
+  if (!outcome?.outcome?.cassation_outcome) return null;
+
+  return {
+    caseId,
+    branch: classification?.classification?.civil_branch ?? "UNKNOWN",
+    subtopic: classification?.classification?.subtopic ?? "",
+    cassation: outcome.outcome.cassation_outcome,
+    recurringSide: outcome.outcome.recurring_side ?? "UNKNOWN",
+    claims: (claims?.claims ?? []).map((claim) => ({
+      outcome: claim.outcome ?? "UNKNOWN",
+      scope: claim.outcome_scope ?? "NONE",
+    })),
+    args: (args?.arguments ?? []).map((argument) => ({
+      type: argument.type ?? "UNKNOWN",
+      side: argument.side ?? "UNKNOWN",
+      outcome: argument.outcome ?? "UNKNOWN",
+    })),
+    holdings: (reasoning?.holdings ?? []).map((holding) => ({
+      topic: holding.topic ?? "",
+      doctrine: holding.doctrine ?? "UNKNOWN",
+    })),
+    issues: (issues?.issues ?? []).map((issue) => ({ topic: issue.topic ?? "" })),
+    laws: (lawRefs?.refs ?? []).map((ref) => ({
+      boe_id: ref.boe_id ?? null,
+      sigla: ref.norma ?? "",
+      status: ref.status ?? "UNKNOWN",
+    })),
+  };
+}
+
+export async function computePatterns(
+  caseIds: string[],
+  minSupport = 5,
+): Promise<ReturnType<typeof aggregate> | null> {
+  const signals = await Promise.all(caseIds.map((caseId) => loadSignals(caseId)));
+  const valid = signals.filter((item): item is CaseSignals => item !== null);
+  if (valid.length === 0) return null;
+  return aggregate(valid, minSupport);
+}
+
+export interface OutcomeTotals {  total: number;
+  enriched: number;
+  byBranch: Array<{ branch: string; count: number }>;
+  byOutcome: Array<{ outcome: string; count: number }>;
+}
+
+export async function getDashboard(): Promise<OutcomeTotals> {
+  const cases = await listCases();
+  const branches = new Map<string, number>();
+  const outcomes = new Map<string, number>();
+  for (const item of cases) {
+    branches.set(item.branch, (branches.get(item.branch) ?? 0) + 1);
+    outcomes.set(item.outcome, (outcomes.get(item.outcome) ?? 0) + 1);
+  }
+  return {
+    total: cases.length,
+    enriched: cases.filter((item) => item.enriched).length,
+    byBranch: [...branches.entries()]
+      .map(([branch, count]) => ({ branch, count }))
+      .sort((a, b) => b.count - a.count),
+    byOutcome: [...outcomes.entries()]
+      .map(([outcome, count]) => ({ outcome, count }))
+      .sort((a, b) => b.count - a.count),
+  };
+}
+
+let searchDocs: { docs: SearchDoc[]; index: ReturnType<typeof buildIndex>; at: number } | null = null;
+async function getIndex(): Promise<{ docs: SearchDoc[]; index: ReturnType<typeof buildIndex> }> {
+  if (searchDocs && Date.now() - searchDocs.at < INDEX_TTL_MS) {
+    return { docs: searchDocs.docs, index: searchDocs.index };
+  }
+  const [caseDocs, articleDocs] = await Promise.all([loadCaseDocs(), loadArticleDocs()]);
+  const docs = [...caseDocs, ...articleDocs];
+  searchDocs = { docs, index: buildIndex(docs), at: Date.now() };
+  return { docs, index: searchDocs.index };
+}
+
+export async function runSearch(
+  query: string,
+  options: {
+    kinds?: string[];
+    limit?: number;
+    filters?: Record<string, string>;
+    allow?: (doc: SearchDoc) => boolean;
+  } = {},
+): Promise<{ hits: SearchHit[]; docs: number }> {
+  const { docs, index } = await getIndex();
+  const hits = search(index, query, {
+    kinds: options.kinds,
+    limit: options.limit ?? 15,
+    filters: options.filters,
+    allow: options.allow,
+  });
+  return { hits, docs: docs.length };
+}
+
+export interface SimilarCase {
+  id: string;
+  title: string;
+  score: number;
+  branch: string;
+  outcome: string;
+  why: string[];
+}
+
+export async function getSimilarCases(caseId: string, limit = 5): Promise<SimilarCase[]> {
+  const detail = await getCase(caseId);
+  if (!detail) return [];
+
+  const topics = (detail.reasoning as Array<{ topic?: string; doctrine?: string }>)
+    .flatMap((holding) => [holding.topic, holding.doctrine])
+    .filter((value): value is string => Boolean(value && value !== "UNKNOWN"));
+  const query = [detail.headline, detail.subtopic, ...topics].join(" ");
+
+  const { index } = await getIndex();
+  const hits = search(index, query, { kinds: ["case"], limit: limit + 6 });
+  const ownLaws = new Set(
+    (detail.lawRefs as Array<{ boe_id?: string | null; norma?: string }>)
+      .map((ref) => ref.boe_id)
+      .filter((value): value is string => Boolean(value)),
+  );
+  const ownTerms = new Set(
+    topics.map((value) => value.toLowerCase()).concat(detail.branch.toLowerCase()),
+  );
+
+  const results: SimilarCase[] = [];
+  for (const hit of hits) {
+    if (hit.id === caseId) continue;
+    const sharedTerms = hit.matchedTerms.filter((term) => ownTerms.has(term));
+    const sharedLaws = ((hit.meta as { laws?: string }).laws ?? "")
+      .split(",")
+      .filter((value) => value && ownLaws.has(value));
+    const why: string[] = [];
+    if (sharedTerms.length > 0) why.push(`temas compartidos: ${sharedTerms.join(", ")}`);
+    if (hit.phraseMatch) why.push("coincidencia de frase literal");
+    if (sharedLaws.length > 0) why.push(`mismas normas: ${sharedLaws.join(", ")}`);
+    if (sharedTerms.length === 0 && !hit.phraseMatch && sharedLaws.length === 0) {
+      why.push(`términos coincidentes: ${hit.matchedTerms.slice(0, 6).join(", ")}`);
+    }
+    results.push({
+      id: hit.id,
+      title: hit.title,
+      score: hit.score,
+      branch: String(hit.meta.branch ?? ""),
+      outcome: String(hit.meta.outcome ?? ""),
+      why,
+    });
+    if (results.length >= limit) break;
+  }
+  return results;
+}
+
+async function loadCaseDocs(): Promise<SearchDoc[]> {
+  const docs: SearchDoc[] = [];
+  const names = await caseNames();
+  for (const name of names) {
+    const review = await section<{ extraction?: { validation?: string } }>(name, "review.json");
+    if (review?.extraction?.validation !== "OK") continue;
+    const summary = await section<{
+      summary?: { headline?: string; summary?: string; key_points?: string[] };
+    }>(name, "summary.json");
+    const classification = await section<{
+      classification?: { civil_branch?: string; subtopic?: string };
+    }>(name, "classification.json");
+    const outcome = await section<{
+      outcome?: { cassation_outcome?: string; recurring_side?: string; reasoning_summary?: string };
+    }>(name, "outcome.json");
+    const issues = await section<{ issues?: Array<{ topic?: string; description?: string }> }>(name, "issues.json");
+    const facts = await section<{ facts?: Array<{ description?: string }> }>(name, "facts.json");
+    const argumentsFile = await section<{
+      arguments?: Array<{ description?: string; legal_basis?: string }>;
+    }>(name, "arguments.json");
+    const reasoning = await section<{
+      holdings?: Array<{
+        holding_id?: string;
+        statement?: string;
+        topic?: string;
+        doctrine?: string;
+        importance?: number;
+      }>;
+    }>(name, "reasoning.json");
+    const citedLaws = await section<{
+      citations?: Array<{ raw_text?: string; norma?: string; article?: string }>;
+    }>(name, "cited_laws.json");
+    const parties = await section<{ parties?: Array<{ name?: string }> }>(name, "parties.json");
+    const lawRefs = await section<{ refs?: Array<{ boe_id?: string | null }> }>(name, "law_refs.json");
+    const lawIds = (lawRefs?.refs ?? [])
+      .map((ref) => ref.boe_id)
+      .filter((value): value is string => Boolean(value))
+      .join(",");
+
+    const meta = {
+      branch: classification?.classification?.civil_branch ?? "UNKNOWN",
+      outcome: outcome?.outcome?.cassation_outcome ?? "UNKNOWN",
+      case: name,
+      laws: lawIds,
+    };
+    const parts = [
+      summary?.summary?.summary,
+      ...(summary?.summary?.key_points ?? []),
+      outcome?.outcome?.reasoning_summary,
+      ...(issues?.issues ?? []).flatMap((issue) => [issue.topic, issue.description]),
+      ...(facts?.facts ?? []).map((fact) => fact.description),
+      ...(argumentsFile?.arguments ?? []).flatMap((argument) => [argument.description, argument.legal_basis]),
+      ...(citedLaws?.citations ?? []).flatMap((citation) => [citation.raw_text, citation.norma]),
+      ...(parties?.parties ?? []).map((party) => party.name),
+    ].filter((value): value is string => Boolean(value && value.trim()));
+
+    docs.push({
+      id: name,
+      kind: "case",
+      title: summary?.summary?.headline ?? classification?.classification?.subtopic ?? name,
+      body: parts.join("\n"),
+      meta,
+    });
+
+    for (const holding of reasoning?.holdings ?? []) {
+      if (!holding.statement) continue;
+      docs.push({
+        id: `${name}#${holding.holding_id ?? "HOLD"}`,
+        kind: "holding",
+        title: holding.topic ?? holding.statement.slice(0, 80),
+        body: `${holding.statement}\n${holding.doctrine ?? ""}`,
+        meta: { ...meta, importance: String(holding.importance ?? 3) },
+      });
+    }
+  }
+  return docs;
+}
+
+async function loadArticleDocs(): Promise<SearchDoc[]> {
+  const docs: SearchDoc[] = [];
+  const norms = await listLaws();
+  for (const entry of norms) {
+    const norm = await getLaw(entry.boe_id);
+    if (!norm) continue;
+    for (const block of norm.blocks) {
+      if (!block.texto) continue;
+      docs.push({
+        id: `${norm.boe_id}#${block.id}`,
+        kind: "article",
+        title: `${block.titulo || block.id} · ${norm.boe_id}`,
+        body: `${norm.titulo}\n${block.texto}`,
+        meta: { boe_id: norm.boe_id, tipo: block.tipo, titulo: block.titulo },
+      });
+    }
+  }
+  return docs;
+}
+
