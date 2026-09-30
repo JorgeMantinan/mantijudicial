@@ -1417,3 +1417,81 @@ export async function getAuditoria(limit = 50): Promise<AuditoriaEntrada[]> {
   }
   return rows.slice(-limit).reverse();
 }
+
+export interface CostesIA {
+  enriquecerCasos: number;
+  enriquecerCoste: number;
+  viasInformes: number;
+  viasCoste: number;
+  comparaciones: number;
+  comparacionCoste: number;
+  escritos: number;
+  escritoCoste: number;
+  total: number;
+}
+
+let costesCache: { value: CostesIA; at: number } | null = null;
+
+/** Coste de IA registrado en los JSON de cada caso (en vivo, cache 60 s). */
+export async function getCostesIA(): Promise<CostesIA> {
+  if (costesCache && Date.now() - costesCache.at < 60_000) return costesCache.value;
+
+  const value: CostesIA = {
+    enriquecerCasos: 0,
+    enriquecerCoste: 0,
+    viasInformes: 0,
+    viasCoste: 0,
+    comparaciones: 0,
+    comparacionCoste: 0,
+    escritos: 0,
+    escritoCoste: 0,
+    total: 0,
+  };
+
+  const names = (await fs.readdir(path.join(repoRoot(), "cases")).catch(() => [] as string[])).filter(
+    (name) => /^case_\d{6}$/.test(name),
+  );
+
+  for (const name of names) {
+    const structured = path.join(repoRoot(), "cases", name, "structured");
+
+    const review = await readJson<{ extraction?: { cost?: number } }>(
+      path.join(structured, "review.json"),
+    );
+    if (typeof review?.extraction?.cost === "number") {
+      value.enriquecerCasos += 1;
+      value.enriquecerCoste += review.extraction.cost;
+    }
+
+    const vias = await readJson<{ analysis?: { cost?: number } }>(path.join(structured, "vias.json"));
+    if (typeof vias?.analysis?.cost === "number") {
+      value.viasInformes += 1;
+      value.viasCoste += vias.analysis.cost;
+    }
+
+    const escrito = await readJson<{ analysis?: { cost?: number } }>(
+      path.join(structured, "escrito.json"),
+    );
+    if (typeof escrito?.analysis?.cost === "number") {
+      value.escritos += 1;
+      value.escritoCoste += escrito.analysis.cost;
+    }
+
+    const files = await fs.readdir(structured).catch(() => [] as string[]);
+    for (const file of files) {
+      if (!/^compare_case_\d{6}\.json$/.test(file)) continue;
+      const comparacion = await readJson<{ analysis?: { cost?: number } }>(
+        path.join(structured, file),
+      );
+      if (typeof comparacion?.analysis?.cost === "number") {
+        value.comparaciones += 1;
+        value.comparacionCoste += comparacion.analysis.cost;
+      }
+    }
+  }
+
+  value.total =
+    value.enriquecerCoste + value.viasCoste + value.comparacionCoste + value.escritoCoste;
+  costesCache = { value, at: Date.now() };
+  return value;
+}

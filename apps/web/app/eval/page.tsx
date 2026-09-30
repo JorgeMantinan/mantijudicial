@@ -1,5 +1,5 @@
 import { requireActor } from "@/lib/auth";
-import { getEvalReport } from "@/lib/dataset";
+import { getCostesIA, getEvalReport } from "@/lib/dataset";
 import { LAW_STATUS, QUOTE, label } from "@/lib/labels";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +17,7 @@ function asDict(value: unknown): Dict {
 export default async function EvalPage() {
   await requireActor();
   const report = await getEvalReport();
+  const costes = await getCostesIA();
   if (!report) {
     return (
       <>
@@ -201,6 +202,30 @@ export default async function EvalPage() {
           </table>
         </>
       )}
+
+      <div className="section">
+        <h2>Coste en vivo (todos los análisis con IA)</h2>
+        <p className="small muted">
+          Leído de los JSON de cada caso, no del informe guardado: incluye comparaciones y
+          borradores de escrito. Orientativo; el importe real lo factura el proveedor de IA.
+        </p>
+        <div className="grid">
+          <div className="card">
+            <div className="value">${costes.total.toFixed(4)}</div>
+            <div className="label">total registrado</div>
+          </div>
+          <div className="card">
+            <div className="value">${costes.enriquecerCoste.toFixed(4)}</div>
+            <div className="label">{costes.enriquecerCasos} casos enriquecidos</div>
+          </div>
+          <div className="card">
+            <div className="value">${(costes.viasCoste + costes.comparacionCoste + costes.escritoCoste).toFixed(4)}</div>
+            <div className="label">
+              {costes.viasInformes} vías · {costes.comparaciones} comparaciones · {costes.escritos} borradores
+            </div>
+          </div>
+        </div>
+      </div>
 
       <h2>Coste de IA</h2>
       <table>

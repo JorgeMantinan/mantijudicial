@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { looksLikePdf, nextCaseId, parseIngestArgs, sanitizePdfName } from "./lib/ingest.js";
@@ -37,6 +38,26 @@ async function isPdf(filePath: string): Promise<boolean> {
 async function listCaseDirs(): Promise<string[]> {
   const names = await fs.readdir(CASES_DIR).catch(() => [] as string[]);
   return names.filter((name) => /^case_\d{6}$/.test(name));
+}
+
+async function sha256File(filePath: string): Promise<string> {
+  const buffer = await fs.readFile(filePath);
+  return createHash("sha256").update(buffer).digest("hex");
+}
+
+/** ¿Este PDF ya está en el corpus? Devuelve el caso que lo contiene. */
+async function findDuplicado(pdfPath: string): Promise<string | null> {
+  const hash = await sha256File(pdfPath);
+  for (const caseId of await listCaseDirs()) {
+    const dir = path.join(CASES_DIR, caseId, "original");
+    const names = await fs.readdir(dir).catch(() => [] as string[]);
+    for (const name of names) {
+      if (!name.toLowerCase().endsWith(".pdf")) continue;
+      const candidate = await sha256File(path.join(dir, name)).catch(() => null);
+      if (candidate === hash) return caseId;
+    }
+  }
+  return null;
 }
 
 async function patchMetadata(caseId: string, source: string): Promise<void> {
@@ -81,6 +102,17 @@ async function main(): Promise<void> {
   if (!(await isPdf(pdfPath))) {
     process.stderr.write(`No parece un PDF (falta la cabecera %PDF): ${pdfPath}\n`);
     process.exitCode = 1;
+    return;
+  }
+
+  const duplicado = await findDuplicado(pdfPath);
+  if (duplicado) {
+    process.stdout.write(
+      `\n[!] DUPLICADO: este PDF ya está en el corpus como ${duplicado}\n` +
+        `    Ficha: /cases/${duplicado}\n` +
+        `    No se crea un caso nuevo ni se consume IA.\n`,
+    );
+    process.exitCode = 2;
     return;
   }
 
