@@ -494,3 +494,40 @@ main.wrap {
     gap: 8px 12px;
   }
 }
+
+/* ---- Impresión: cortes de página limpios ---- */
+@media print {
+  thead {
+    display: table-header-group;
+  }
+
+  tr,
+  blockquote,
+  li {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+    break-inside: avoid;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  /* En papel sale el contenido aunque la sección esté plegada en pantalla */
+  details > :not(summary) {
+    display: block !important;
+  }
+
+  details > summary {
+    display: block !important;
+    font-weight: 700;
+    list-style: none;
+  }
+}

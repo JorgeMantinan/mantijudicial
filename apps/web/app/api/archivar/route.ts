@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { appendAudit } from "@pipeline/audit";
 import { canCreateCase } from "@pipeline/authorization";
 import { getActor } from "@/lib/auth";
 import { isArchived, setArchived } from "@/lib/dataset";
+import { auditPath } from "@/lib/grants";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,5 +30,11 @@ export async function POST(request: Request): Promise<NextResponse> {
   const archived = body.archived !== false;
 
   await setArchived(caseId, archived);
+  await appendAudit(auditPath(), {
+    actor: actor.userId,
+    action: archived ? "case.archived" : "case.restored",
+    resource: caseId,
+    details: { archived },
+  });
   return NextResponse.json({ ok: true, caseId, archived, antes: await isArchived(caseId) });
 }

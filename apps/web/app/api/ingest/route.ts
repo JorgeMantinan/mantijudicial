@@ -2,10 +2,12 @@ import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
+import { appendAudit } from "@pipeline/audit";
 import { canCreateCase } from "@pipeline/authorization";
 import { jobs } from "@/lib/jobs";
 import { getActor } from "@/lib/auth";
 import { repoRoot } from "@/lib/dataset";
+import { auditPath } from "@/lib/grants";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -89,7 +91,15 @@ export async function POST(request: Request): Promise<NextResponse> {
       jobs.patch(job.id, { status: "running" });
       try {
         const result = await runIngest(job.id, uploadPath, source);
-        if (result.caseId) jobs.patch(job.id, { caseId: result.caseId });
+        if (result.caseId) {
+          jobs.patch(job.id, { caseId: result.caseId });
+          await appendAudit(auditPath(), {
+            actor: actor.userId,
+            action: "case.ingest",
+            resource: result.caseId,
+            details: { source, archivo: file.name },
+          });
+        }
         jobs.patch(job.id, {
           status: result.code === 0 ? "done" : "error",
           finishedAt: new Date().toISOString(),

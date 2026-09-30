@@ -709,8 +709,10 @@ export default async function CaseDetailPage({
         )}
       </div>
 
-      <div className="section">
-        <h2>Comparaciones con otros casos</h2>
+      <details className="section">
+        <summary style={{ cursor: "pointer", fontSize: 18, fontWeight: 600 }}>
+          Comparaciones con otros casos
+        </summary>
         <p className="small muted">
           Huecos del expediente, argumentos efectivos y contraargumentos previstos. Análisis con IA
           pendiente de validación por un abogado.
@@ -835,7 +837,7 @@ export default async function CaseDetailPage({
           options={similar.map((item) => ({ id: item.id, title: item.title }))}
           existing={comparisons.map((item) => item.otro_caso)}
         />
-      </div>
+      </details>
 
       {escrito && escrito.report.cuerpo.length > 0 && (
         <div className="section">

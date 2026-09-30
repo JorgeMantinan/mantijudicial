@@ -151,6 +151,10 @@ export const AUDIT: Record<string, string> = {
   "note.create": "Nota creada",
   "note.delete": "Nota eliminada",
   "golden.confirm": "Golden confirmado",
+  "review.update": "Revisión guardada",
+  "case.ingest": "Caso subido",
+  "case.archived": "Caso archivado",
+  "case.restored": "Caso restaurado",
 };
 
 export const REVIEW: Record<string, string> = {

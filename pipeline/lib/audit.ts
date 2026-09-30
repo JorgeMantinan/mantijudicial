@@ -10,6 +10,8 @@ export type AuditAction =
   | "note.delete"
   | "case.ingest"
   | "case.reanalyze"
+  | "case.archived"
+  | "case.restored"
   | "user.create"
   | "user.mfa_enabled"
   | "auth.login"
