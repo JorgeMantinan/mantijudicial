@@ -2,6 +2,7 @@ import Link from "next/link";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import { runSearch } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
+import { findByIdentifier } from "@/lib/identifier";
 import { BRANCH, OUTCOME, SEARCH_KIND, label } from "@/lib/labels";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +29,7 @@ export default async function SearchPage({
 
   let hits: Awaited<ReturnType<typeof runSearch>>["hits"] = [];
   let docs = 0;
+  const exactos = query.length >= 4 ? await findByIdentifier(query) : [];
   if (query.length > 0) {
     const filters: Record<string, string> = {};
     if (params.branch) filters.branch = params.branch;
@@ -51,7 +53,7 @@ export default async function SearchPage({
       </p>
 
       <form className="filters" action="/search" method="get">
-        <input name="q" defaultValue={query} placeholder="p. ej. cláusula suelo nulidad restitución" />
+        <input name="q" defaultValue={query} placeholder="Texto, ECLI, ROJ (STS 3706/2026) o nº de recurso" />
         <select name="kind" defaultValue={params.kind ?? ""}>
           {KINDS.map((kind) => (
             <option key={kind.value} value={kind.value}>
@@ -84,6 +86,36 @@ export default async function SearchPage({
         <p className="small muted">
           {hits.length} resultados de {docs} documentos indexados.
         </p>
+      )}
+
+      {exactos.length > 0 && (
+        <div className="section">
+          <h2>Coincidencia exacta por identificador</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Tipo</th>
+                <th>Valor</th>
+                <th>Caso</th>
+              </tr>
+            </thead>
+            <tbody>
+              {exactos
+                .filter((item) => canViewCase(actor, item.caseId, orgId, grants))
+                .map((item) => (
+                  <tr key={`${item.caseId}-${item.field}`}>
+                    <td className="small">{item.field}</td>
+                    <td className="mono small">{item.value}</td>
+                    <td className="small">
+                      <Link href={`/cases/${item.caseId}`}>
+                        {item.headline || item.caseId}
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       <ol className="results">
