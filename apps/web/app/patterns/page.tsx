@@ -1,7 +1,9 @@
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
-import { computePatterns, listCases } from "@/lib/dataset";
+import { computePatterns, getContradicciones, listCases } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { ARG_OUTCOME, ARG_TYPE, BRANCH, OUTCOME, SIDE, label } from "@/lib/labels";
+import { OutcomeBadge } from "@/lib/ui";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +36,7 @@ export default async function PatternsPage() {
   const grants = await authorizationGrants();
   const cases = (await listCases()).filter((item) => canViewCase(actor, item.id, orgId, grants));
   const computed = await computePatterns(cases.map((item) => item.id));
+  const contradictorio = await getContradicciones();
   const patterns = computed
     ? { generated_at: new Date().toISOString(), disclaimer: DISCLAIMER, ...computed }
     : null;
@@ -81,6 +84,54 @@ export default async function PatternsPage() {
             </div>
           ))}
       </div>
+
+      {contradictorio.length > 0 && (
+        <>
+          <h2>Temas con criterio dividido</h2>
+          <p className="small muted">
+            Mismo tema, resultados opuestos: son los casos donde el tribunal ha resuelto en un
+            sentido y en otro. Útil para saber qué argumento es arriesgado. Es una{" "}
+            <strong>asociación</strong>, no una predicción.
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>Tema</th>
+                <th>Casos</th>
+                <th>Estimados</th>
+                <th>Desestimados</th>
+                <th>Ejemplos</th>
+              </tr>
+            </thead>
+            <tbody>
+              {contradictorio.map((item) => (
+                <tr key={item.topic}>
+                  <td>
+                    <Link href={`/evolucion?tema=${encodeURIComponent(item.topic)}`}>
+                      {item.topic}
+                    </Link>
+                  </td>
+                  <td>{item.cases}</td>
+                  <td>
+                    <span className="badge ok">{item.estimados}</span>
+                  </td>
+                  <td>
+                    <span className="badge ko">{item.desestimados}</span>
+                  </td>
+                  <td className="small">
+                    {item.ejemplos.slice(0, 3).map((ejemplo) => (
+                      <div key={ejemplo.caseId}>
+                        <span className="mono">{ejemplo.caseId.replace("case_", "")}</span>{" "}
+                        <OutcomeBadge outcome={ejemplo.outcome} /> {ejemplo.headline.slice(0, 70)}
+                      </div>
+                    ))}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
 
       <h2>Resultado por rama del derecho</h2>
       <table>

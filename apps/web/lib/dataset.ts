@@ -545,6 +545,50 @@ export async function getEvolucion(): Promise<EvolucionTema[]> {
     .sort((a, b) => b.cases - a.cases || a.topic.localeCompare(b.topic));
 }
 
+export interface Contradiccion {
+  topic: string;
+  cases: number;
+  estimados: number;
+  desestimados: number;
+  parciales: number;
+  ejemplos: Array<{ caseId: string; headline: string; outcome: string; frase: string }>;
+}
+
+/**
+ * Temas donde el TS se ha pronunciado en sentidos opuestos: base para la
+ * alerta de "criterio dividido" (asociación, no causalidad).
+ */
+export async function getContradicciones(minPorLado = 3): Promise<Contradiccion[]> {
+  const temas = await getEvolucion();
+  return temas
+    .map((tema) => {
+      const estimados = tema.distribution.ESTIMED ?? 0;
+      const desestimados = tema.distribution.DISMISSED ?? 0;
+      const parciales = tema.distribution.PARTIALLY_ESTIMATED ?? 0;
+      const ejemplos = [
+        ...tema.entries.filter((entry) => entry.outcome === "ESTIMED").slice(0, 2),
+        ...tema.entries.filter((entry) => entry.outcome === "DISMISSED").slice(0, 2),
+      ];
+      return {
+        topic: tema.topic,
+        cases: tema.cases,
+        estimados,
+        desestimados,
+        parciales,
+        ejemplos: ejemplos.map((entry) => ({
+          caseId: entry.caseId,
+          headline: entry.headline,
+          outcome: entry.outcome,
+          frase: entry.frase,
+        })),
+      };
+    })
+    .filter(
+      (item) => item.estimados >= minPorLado && item.desestimados >= minPorLado,
+    )
+    .sort((a, b) => b.estimados + b.desestimados - (a.estimados + a.desestimados));
+}
+
 export async function getCaseCitations(): Promise<Record<string, unknown> | null> {
   return readJson<Record<string, unknown>>(path.join(repoRoot(), "laws", "case_citations.json"));
 }
