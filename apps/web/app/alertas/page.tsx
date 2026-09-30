@@ -1,0 +1,188 @@
+import Link from "next/link";
+import { requireActor } from "@/lib/auth";
+import { getContradicciones, getReviewStats, getVigenciaAlerts } from "@/lib/dataset";
+import { jobs } from "@/lib/jobs";
+
+export const dynamic = "force-dynamic";
+
+function fecha(iso: string): string {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? iso : date.toLocaleString("es-ES");
+}
+
+export default async function AlertasPage() {
+  await requireActor();
+  const [contradictorio, vigencia, review] = await Promise.all([
+    getContradicciones(),
+    getVigenciaAlerts(),
+    getReviewStats(),
+  ]);
+  const fallos = jobs
+    .list()
+    .filter((job) => job.status === "error")
+    .slice()
+    .reverse();
+
+  const total = contradictorio.length + vigencia.length + review.pending.length + fallos.length;
+
+  return (
+    <>
+      <h1>Alertas</h1>
+      <p className="lead">
+        Señales que piden atención de un letrado: leyes que cambiaron después de tus sentencias,
+        temas con criterio dividido, casos sin revisar y trabajos fallidos.{" "}
+        <strong>{total} en total.</strong>
+      </p>
+
+      <div className="section">
+        <h2>Leyes que cambiaron después de la sentencia</h2>
+        <p className="small muted">
+          El artículo citado por el tribunal tiene hoy una versión distinta: si te apoyas en esa
+          cita, comprueba la versión vigente.
+        </p>
+        {vigencia.length === 0 ? (
+          <p className="small">Ninguna alerta: las leyes citadas no han cambiado desde tus sentencias.</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Norma y artículo</th>
+                <th>Versión en la sentencia</th>
+                <th>Versión actual</th>
+                <th>Casos afectados</th>
+              </tr>
+            </thead>
+            <tbody>
+              {vigencia.map((alerta) => (
+                <tr key={`${alerta.boe_id}-${alerta.block_id}`}>
+                  <td className="small">
+                    <strong>
+                      {alerta.norma} {alerta.titulo}
+                    </strong>
+                    <div className="mono small muted">{alerta.boe_id}</div>
+                  </td>
+                  <td className="small">{alerta.casos[0]?.version_en_sentencia ?? "—"}</td>
+                  <td className="small">
+                    <span className="badge warn">{alerta.version_actual}</span>
+                  </td>
+                  <td className="small">
+                    {alerta.casos.slice(0, 3).map((caso, index) => (
+                      <div key={caso.caseId}>
+                        <Link href={`/cases/${caso.caseId}`}>{caso.headline.slice(0, 60)}</Link>
+                        {caso.fecha_sentencia ? ` · ${caso.fecha_sentencia}` : ""}
+                      </div>
+                    ))}
+                    {alerta.casos.length > 3 && (
+                      <div className="muted">+{alerta.casos.length - 3} más</div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className="section">
+        <h2>Temas con criterio dividido</h2>
+        <p className="small muted">
+          El mismo tema resuelto en sentidos opuestos: saber qué argumento es arriesgado. Es una
+          asociación, no una predicción.
+        </p>
+        {contradictorio.length === 0 ? (
+          <p className="small">Ningún tema con el criterio dividido de momento.</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Tema</th>
+                <th>Estimados</th>
+                <th>Desestimados</th>
+                <th>Ejemplos</th>
+              </tr>
+            </thead>
+            <tbody>
+              {contradictorio.map((tema) => (
+                <tr key={tema.topic}>
+                  <td>
+                    <Link href={`/evolucion?tema=${encodeURIComponent(tema.topic)}`}>{tema.topic}</Link>
+                  </td>
+                  <td>
+                    <span className="badge ok">{tema.estimados}</span>
+                  </td>
+                  <td>
+                    <span className="badge ko">{tema.desestimados}</span>
+                  </td>
+                  <td className="small">
+                    {tema.ejemplos.slice(0, 2).map((ejemplo) => (
+                      <div key={ejemplo.caseId}>
+                        <Link href={`/cases/${ejemplo.caseId}`}>{ejemplo.headline.slice(0, 55)}</Link>
+                      </div>
+                    ))}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className="section">
+        <h2>Casos pendientes de revisión</h2>
+        {review.pending.length === 0 ? (
+          <p className="small">Todo revisado.</p>
+        ) : (
+          <>
+            <p className="small muted">
+              {review.pending.length} casos enriquecidos sin revisar de {review.total}.
+            </p>
+            <ul className="small">
+              {review.pending.slice(0, 8).map((item) => (
+                <li key={item.id}>
+                  <Link href={`/cases/${item.id}`}>{item.headline}</Link>
+                </li>
+              ))}
+            </ul>
+            <p className="small">
+              <Link href="/review">Ir al panel de revisión →</Link>
+            </p>
+          </>
+        )}
+      </div>
+
+      <div className="section">
+        <h2>Trabajos con error</h2>
+        <p className="small muted">
+          Solo se ven los de esta sesión de la aplicación (se borran al reiniciar).
+        </p>
+        {fallos.length === 0 ? (
+          <p className="small">Sin fallos.</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Trabajo</th>
+                <th>Cuándo</th>
+                <th>Error</th>
+              </tr>
+            </thead>
+            <tbody>
+              {fallos.map((job) => (
+                <tr key={job.id}>
+                  <td className="small">
+                    {job.kind}
+                    {job.caseId ? ` · ${job.caseId}` : ""}
+                  </td>
+                  <td className="small">{fecha(job.startedAt)}</td>
+                  <td className="small" style={{ color: "var(--red)" }}>
+                    {(job.error ?? "").slice(0, 300)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </>
+  );
+}

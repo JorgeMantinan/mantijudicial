@@ -462,6 +462,104 @@ export async function readFirstJson<T>(dirPath: string): Promise<T | null> {
   return null;
 }
 
+export interface VigenciaAlertCaso {
+  caseId: string;
+  headline: string;
+  fecha_sentencia: string | null;
+  version_en_sentencia: string | null;
+}
+
+export interface VigenciaAlert {
+  boe_id: string;
+  norma: string;
+  block_id: string;
+  article: number;
+  titulo: string;
+  version_actual: string;
+  casos: VigenciaAlertCaso[];
+}
+
+let vigenciaAlerts: { value: VigenciaAlert[]; at: number } | null = null;
+const VIGENCIA_ALERT_TTL_MS = 60_000;
+
+/**
+ * Artículos citados por tus casos cuya versión vigente del BOE es POSTERIOR
+ * a la fecha de la sentencia: la ley cambió después de que el tribunal
+ * resolviera y quien se apoye en esa cita debe mirar la versión actual.
+ */
+export async function getVigenciaAlerts(): Promise<VigenciaAlert[]> {
+  if (vigenciaAlerts && Date.now() - vigenciaAlerts.at < VIGENCIA_ALERT_TTL_MS) {
+    return vigenciaAlerts.value;
+  }
+  const cases = await listCases();
+  const headlines = new Map(cases.map((item) => [item.id, item.headline]));
+  const normCache = new Map<string, LawNorm | null>();
+  const groups = new Map<string, VigenciaAlert>();
+
+  for (const item of cases) {
+    const [meta, refs] = await Promise.all([
+      readFirstJson<{ resolution_date?: string }>(
+        path.join(repoRoot(), "cases", item.id, "metadata"),
+      ),
+      section<{
+        refs?: Array<{
+          status?: string;
+          boe_id?: string | null;
+          norma?: string;
+          articles?: Array<{ number?: number; block_id?: string | null }>;
+        }>;
+      }>(item.id, "law_refs.json"),
+    ]);
+    const raw = meta?.resolution_date ?? "";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) continue;
+    const fecha = raw.replace(/-/g, "");
+
+    for (const ref of refs?.refs ?? []) {
+      if (ref.status !== "VERIFIED" || !ref.boe_id) continue;
+      if (!normCache.has(ref.boe_id)) normCache.set(ref.boe_id, await getLaw(ref.boe_id));
+      const norm = normCache.get(ref.boe_id);
+      if (!norm) continue;
+
+      for (const article of ref.articles ?? []) {
+        if (!article.block_id || typeof article.number !== "number") continue;
+        const block = norm.blocks.find((item2) => item2.id === article.block_id);
+        if (!block || !(block.fecha_vigencia > fecha)) continue;
+
+        const key = `${ref.boe_id}|${block.id}`;
+        const entry =
+          groups.get(key) ??
+          ({
+            boe_id: ref.boe_id,
+            norma: ref.norma ?? "",
+            block_id: block.id,
+            article: article.number,
+            titulo: block.titulo,
+            version_actual: block.fecha_vigencia,
+            casos: [],
+          } satisfies VigenciaAlert);
+        if (entry.casos.some((caso) => caso.caseId === item.id)) continue;
+
+        const versionEnSentencia = [...(block.versions ?? [])]
+          .filter((version) => version.fecha_vigencia && version.fecha_vigencia <= fecha)
+          .sort((a, b) => a.fecha_vigencia.localeCompare(b.fecha_vigencia))
+          .pop()?.fecha_vigencia ?? null;
+
+        entry.casos.push({
+          caseId: item.id,
+          headline: headlines.get(item.id) ?? item.id,
+          fecha_sentencia: raw,
+          version_en_sentencia: versionEnSentencia,
+        });
+        groups.set(key, entry);
+      }
+    }
+  }
+
+  const value = [...groups.values()].sort((a, b) => b.casos.length - a.casos.length);
+  vigenciaAlerts = { value, at: Date.now() };
+  return value;
+}
+
 export interface SentenciaEnCorpus {
   raw: string;
   roj: string;

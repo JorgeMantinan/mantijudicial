@@ -648,7 +648,13 @@ export default async function CaseDetailPage({
                   className={`badge ${report.aplicabilidad === "ALTA" ? "ok" : report.aplicabilidad === "MEDIA" ? "warn" : ""}`}
                 >
                   aplicabilidad {report.aplicabilidad ?? "—"}
-                </span>
+                </span>{" "}
+                <Link
+                  className="small"
+                  href={`/cases/${id}/compare/${comparison.otro_caso}`}
+                >
+                  informe imprimible
+                </Link>
               </h3>
               {comparison.generated_at && (
                 <p className="small muted">{comparison.generated_at}</p>
