@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireActor, canViewCase, defaultOrgId } from "@/lib/auth";
 import { computePatterns, getEvalReport, getLawUsage, listCases, listLaws } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
+import { BRANCH, OUTCOME, label } from "@/lib/labels";
 
 export const dynamic = "force-dynamic";
 
@@ -80,7 +81,7 @@ export default async function Home() {
         <tbody>
           {outcomes.map((row) => (
             <tr key={row.name}>
-              <td>{row.name}</td>
+              <td title={row.name}>{label(OUTCOME, row.name)}</td>
               <td>{row.count}</td>
             </tr>
           ))}
@@ -98,8 +99,10 @@ export default async function Home() {
         <tbody>
           {branches.map((row) => (
             <tr key={row.name}>
-              <td>
-                <Link href={`/cases?branch=${encodeURIComponent(row.name)}`}>{row.name}</Link>
+              <td title={row.name}>
+                <Link href={`/cases?branch=${encodeURIComponent(row.name)}`}>
+                  {label(BRANCH, row.name)}
+                </Link>
               </td>
               <td>{row.count}</td>
             </tr>
@@ -197,8 +200,7 @@ export default async function Home() {
         </tbody>
       </table>
       <p className="small muted">
-        El informe completo se genera con <span className="mono">pnpm run eval</span> →{" "}
-        <span className="mono">cases/eval_report.json</span>.
+        <Link href="/eval">Ver el informe completo (corpus, coste de IA, citas y golden dataset) →</Link>
       </p>
     </>
   );

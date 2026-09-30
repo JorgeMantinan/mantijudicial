@@ -1,11 +1,18 @@
+export interface BoeVersion {
+  fecha_vigencia: string;
+  fecha_publicacion: string;
+  texto: string;
+}
+
 export interface BoeBlockSource {
   id: string;
   tipo: string;
   titulo: string;
-  fecha_actualizacion: string;
   fecha_vigencia: string;
   fecha_publicacion: string;
   texto: string;
+  /** Todas las versiones del bloque, de la más antigua a la más reciente. */
+  versions: BoeVersion[];
 }
 
 interface Tag {
@@ -150,30 +157,40 @@ function pickVersion(versions: Segment[], today: string): Segment | null {
 export function parseTextoXml(xml: string, today: string): BoeBlockSource[] {
   const tags = tokenize(xml);
   const blocks = segments(xml, tags, "bloque");
-  const versions = segments(xml, tags, "version");
+  const versionSegments = segments(xml, tags, "version");
   const out: BoeBlockSource[] = [];
 
   let pointer = 0;
   for (const block of blocks) {
-    while (pointer < versions.length && versions[pointer]!.end <= block.start) pointer += 1;
+    while (pointer < versionSegments.length && versionSegments[pointer]!.end <= block.start)
+      pointer += 1;
     const mine: Segment[] = [];
-    for (let i = pointer; i < versions.length; i += 1) {
-      const version = versions[i]!;
+    for (let i = pointer; i < versionSegments.length; i += 1) {
+      const version = versionSegments[i]!;
       if (version.start >= block.end) break;
       if (version.start >= block.innerStart && version.end <= block.innerEnd) mine.push(version);
     }
     const chosen = pickVersion(mine, today);
     if (!chosen) continue;
+    const allVersions = mine
+      .map((version) => ({
+        fecha_vigencia: version.attrs.fecha_vigencia ?? "",
+        fecha_publicacion: version.attrs.fecha_publicacion ?? "",
+        texto: innerToText(xml.slice(version.innerStart, version.innerEnd)),
+      }))
+      .filter((version) => version.texto.length > 0)
+      .sort((a, b) => a.fecha_vigencia.localeCompare(b.fecha_vigencia));
+    if (allVersions.length === 0) continue;
     const texto = innerToText(xml.slice(chosen.innerStart, chosen.innerEnd));
     if (texto.length === 0) continue;
     out.push({
       id: block.attrs.id ?? "",
       tipo: block.attrs.tipo ?? "",
       titulo: "",
-      fecha_actualizacion: "",
       fecha_vigencia: chosen.attrs.fecha_vigencia ?? "",
       fecha_publicacion: chosen.attrs.fecha_publicacion ?? "",
       texto,
+      versions: allVersions,
     });
   }
   return out;

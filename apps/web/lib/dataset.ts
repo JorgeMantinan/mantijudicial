@@ -169,6 +169,7 @@ export interface LawBlock {
   titulo: string;
   fecha_vigencia: string;
   texto: string;
+  versions?: Array<{ fecha_vigencia: string; fecha_publicacion: string; texto: string }>;
 }
 
 export interface LawNorm {

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import { runSearch } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
+import { BRANCH, OUTCOME, SEARCH_KIND, label } from "@/lib/labels";
 
 export const dynamic = "force-dynamic";
 
@@ -60,18 +61,19 @@ export default async function SearchPage({
         </select>
         <select name="branch" defaultValue={params.branch ?? ""}>
           <option value="">Todas las ramas</option>
-          <option value="CONTRACTUAL">CONTRACTUAL</option>
-          <option value="CONSUMER_ABUSIVE_CLAUSES">CONSUMER_ABUSIVE_CLAUSES</option>
-          <option value="COMMERCIAL">COMMERCIAL</option>
-          <option value="CIVIL_LIABILITY">CIVIL_LIABILITY</option>
-          <option value="LEASE_PROPERTY">LEASE_PROPERTY</option>
-          <option value="PROPERTY_COMMUNITY">PROPERTY_COMMUNITY</option>
+          {Object.entries(BRANCH).map(([value, text]) => (
+            <option key={value} value={value}>
+              {text}
+            </option>
+          ))}
         </select>
         <select name="outcome" defaultValue={params.outcome ?? ""}>
           <option value="">Cualquier resultado</option>
-          <option value="ESTIMED">ESTIMED</option>
-          <option value="DISMISSED">DISMISSED</option>
-          <option value="PARTIALLY_ESTIMATED">PARTIALLY_ESTIMATED</option>
+          {Object.entries(OUTCOME).map(([value, text]) => (
+            <option key={value} value={value}>
+              {text}
+            </option>
+          ))}
         </select>
         <button type="submit">Buscar</button>
       </form>
@@ -97,10 +99,11 @@ export default async function SearchPage({
               )}
             </div>
             <div className="small muted">
-              <span className="badge">{hit.kind}</span> {hit.id} · score {hit.score}
+              <span className="badge">{label(SEARCH_KIND, hit.kind)}</span> {hit.id} · score{" "}
+              {hit.score}
               {hit.phraseMatch ? " · frase exacta" : ""}
-              {hit.meta.branch ? ` · ${hit.meta.branch}` : ""}
-              {hit.meta.outcome ? ` · ${hit.meta.outcome}` : ""}
+              {hit.meta.branch ? ` · ${label(BRANCH, hit.meta.branch)}` : ""}
+              {hit.meta.outcome ? ` · ${label(OUTCOME, hit.meta.outcome)}` : ""}
             </div>
             <div className="small">«{hit.snippet}»</div>
             <div className="small muted">términos: {hit.matchedTerms.join(", ")}</div>

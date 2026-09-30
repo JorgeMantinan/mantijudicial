@@ -59,6 +59,15 @@ describe("parseTextoXml", () => {
     expect(article.texto).toBe("1. Primera línea.\n2. Segunda línea <detalle> ñ.");
   });
 
+  it("conserva todas las versiones, de la más antigua a la más reciente", () => {
+    expect(blocks[0]!.versions.map((version) => version.fecha_vigencia)).toEqual([
+      "18890816",
+      "20000101",
+    ]);
+    expect(blocks[0]!.versions[0]!.texto).toContain("Versión antigua");
+    expect(blocks[1]!.versions).toHaveLength(1);
+  });
+
   it("mantiene la única versión cuando no hay cambio", () => {
     expect(blocks[1]!.texto).toBe("Título preliminar");
   });

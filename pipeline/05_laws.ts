@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { BOE_API_BASE, boeGet, boeGetJson } from "./lib/boe_api.js";
-import { parseIndiceJson, parseTextoXml } from "./lib/boe_xml.js";
+import { parseIndiceJson, parseTextoXml, type BoeVersion } from "./lib/boe_xml.js";
 import { LAWS_DIR } from "./lib/paths.js";
 import { resolveNorm, type CatalogNorm, type NormTarget } from "./lib/norm_resolver.js";
 
@@ -34,6 +34,7 @@ interface LawFile {
     titulo: string;
     fecha_vigencia: string;
     texto: string;
+    versions: BoeVersion[];
   }>;
 }
 
@@ -166,6 +167,7 @@ async function fetchNorm(norm: CatalogNorm, delayMs: number): Promise<LawFile> {
       titulo: titles.get(block.id) ?? "",
       fecha_vigencia: block.fecha_vigencia,
       texto: block.texto,
+      versions: block.versions,
     }),
   );
   return {

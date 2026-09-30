@@ -1,6 +1,7 @@
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import { computePatterns, listCases } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
+import { ARG_OUTCOME, ARG_TYPE, BRANCH, OUTCOME, SIDE, label } from "@/lib/labels";
 
 export const dynamic = "force-dynamic";
 
@@ -19,11 +20,11 @@ type Group = {
 type ArgRow = { key: string; cases: number; outcomes: Record<string, number> };
 type LawRow = { boe_id: string; siglas: string[]; cases: number; outcomes: Record<string, number> };
 
-function dist(counts: Record<string, number> | undefined): string {
+function dist(counts: Record<string, number> | undefined, map: Record<string, string> = OUTCOME) {
   if (!counts) return "—";
   const parts = Object.entries(counts)
     .sort((a, b) => b[1] - a[1])
-    .map(([name, value]) => `${name} ${value}`);
+    .map(([name, value]) => `${map[name] ?? name} ${value}`);
   return parts.length > 0 ? parts.join(" · ") : "—";
 }
 
@@ -94,7 +95,7 @@ export default async function PatternsPage() {
         <tbody>
           {branch.map((group) => (
             <tr key={group.key}>
-              <td>{group.key}</td>
+              <td title={group.key}>{label(BRANCH, group.key)}</td>
               <td>{group.cases}</td>
               <td className="small">{dist(group.distribution.counts)}</td>
               <td>{group.share_estimated === null ? "—" : `${(group.share_estimated * 100).toFixed(0)}%`}</td>
@@ -116,7 +117,7 @@ export default async function PatternsPage() {
         <tbody>
           {side.map((group) => (
             <tr key={group.key}>
-              <td>{group.key}</td>
+              <td title={group.key}>{label(SIDE, group.key)}</td>
               <td>{group.cases}</td>
               <td className="small">{dist(group.distribution.counts)}</td>
               <td>{group.share_estimated === null ? "—" : `${(group.share_estimated * 100).toFixed(0)}%`}</td>
@@ -184,9 +185,9 @@ export default async function PatternsPage() {
         <tbody>
           {args.map((row) => (
             <tr key={row.key}>
-              <td>{row.key}</td>
+              <td title={row.key}>{label(ARG_TYPE, row.key)}</td>
               <td>{row.cases}</td>
-              <td className="small">{dist(row.outcomes)}</td>
+              <td className="small">{dist(row.outcomes, ARG_OUTCOME)}</td>
             </tr>
           ))}
         </tbody>
