@@ -31,9 +31,12 @@ Casos concretos: `pnpm eval -- --show`, `pnpm compare -- --a=case_000034`,
 
 ### Verificación obligatoria tras cualquier cambio
 
-1. `pnpm typecheck`
+1. `pnpm typecheck` — **solo cubre `pipeline/`** (el tsconfig de la raíz no
+   incluye `apps/web`).
 2. `pnpm test`
-3. `pnpm exec next build`
+3. `pnpm exec next build` — compila la web **y** hace su typecheck: es la
+   comprobación real de `apps/web` (o `pnpm --dir apps/web exec tsc --noEmit`
+   si solo quieres el typecheck).
 4. Si hay UI nueva: arrancar el server y comprobarlo (ver "Pruebas manuales").
 
 ## Datos y ramas

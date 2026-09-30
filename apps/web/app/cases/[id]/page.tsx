@@ -193,6 +193,26 @@ export default async function CaseDetailPage({
     notes?: string;
   };
 
+  const argumentosDetalle = (detail.arguments ?? []) as Array<{
+    description?: string;
+    type?: string;
+    outcome?: string;
+  }>;
+  const sinAnalizar = argumentosDetalle.filter((argumento) =>
+    ["", "UNKNOWN", "NOT_ANALYZED", "DESCONOCIDO"].includes((argumento.outcome ?? "").toUpperCase()),
+  );
+  const huecosVias = vias?.report.huecos ?? [];
+  const comprobarBorrador = escrito?.report.comprobar_antes ?? [];
+  const huecosComparaciones = comparisons.reduce(
+    (total, comparison) => total + ((comparison.report as CompareReport).huecos ?? []).length,
+    0,
+  );
+  const hayFaltas =
+    sinAnalizar.length > 0 ||
+    huecosVias.length > 0 ||
+    comprobarBorrador.length > 0 ||
+    huecosComparaciones > 0;
+
   return (
     <>
       <p className="small muted">
@@ -271,6 +291,61 @@ export default async function CaseDetailPage({
         )}
         {outcome.reasoning_summary && <blockquote>{outcome.reasoning_summary}</blockquote>}
       </div>
+
+      {hayFaltas && (
+        <div className="section">
+          <h2>Qué falta por concretar</h2>
+          <p className="small muted">
+            Consolidado de lo que los análisis señalan como pendiente: comprobaciones del borrador,
+            huecos del expediente y argumentos sin analizar.
+          </p>
+
+          {comprobarBorrador.length > 0 && (
+            <>
+              <h3>Comprobaciones del borrador de escrito ({comprobarBorrador.length})</h3>
+              <ul className="small">
+                {comprobarBorrador.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          {huecosVias.length > 0 && (
+            <>
+              <h3>Huecos del expediente ({huecosVias.length})</h3>
+              <ul className="small">
+                {huecosVias.map((hueco) => (
+                  <li key={hueco.descripcion}>
+                    <strong>{hueco.descripcion}</strong> — {hueco.como_cubrirlo}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          {sinAnalizar.length > 0 && (
+            <>
+              <h3>Argumentos sin analizar ({sinAnalizar.length})</h3>
+              <ul className="small">
+                {sinAnalizar.map((argumento, index) => (
+                  <li key={`${argumento.type ?? ""}-${index}`}>
+                    <span className="badge warn">{label(ARG_TYPE, argumento.type)}</span>{" "}
+                    {argumento.description}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          {huecosComparaciones > 0 && (
+            <p className="small">
+              Las comparaciones con otros casos acumulan <strong>{huecosComparaciones}</strong>{" "}
+              huecos más: están en la sección de abajo.
+            </p>
+          )}
+        </div>
+      )}
 
       {vias ? (
         <div className="section">
@@ -908,7 +983,7 @@ export default async function CaseDetailPage({
                   : ref.boe_id
                     ? `/laws/${ref.boe_id}`
                     : null;
-              return (
+                return (
                 <tr key={`${ref.norma}-${index}`}>
                   <td className="small">{ref.norma}</td>
                   <td className="small">

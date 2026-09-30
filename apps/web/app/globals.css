@@ -451,3 +451,46 @@ footer {
     text-decoration: none;
   }
 }
+
+/* ---- Adaptación a pantallas estrechas ---- */
+main.wrap {
+  overflow-x: auto;
+}
+
+@media (max-width: 960px) {
+  header.top .wrap {
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  header.top nav {
+    order: 3;
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+
+  nav a {
+    font-size: 13px;
+  }
+
+  .grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+
+  table {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 640px) {
+  .brand {
+    display: none;
+  }
+
+  header.top .wrap {
+    gap: 8px 12px;
+  }
+}

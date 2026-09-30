@@ -70,12 +70,16 @@ export default async function CasesPage({
     outcome: params.outcome,
     q: params.q,
   };
+  const csvQuery = new URLSearchParams(
+    Object.entries(base).filter((entry): entry is [string, string] => Boolean(entry[1])),
+  ).toString();
 
   return (
     <>
       <h1>Casos</h1>
       <p className="lead">
-        {cases.length} casos según los filtros aplicados. Pulsa una cabecera para ordenar.
+        {cases.length} casos según los filtros aplicados. Pulsa una cabecera para ordenar.{" "}
+        · <a href={`/api/export/casos${csvQuery ? `?${csvQuery}` : ""}`}>descargar CSV</a>
       </p>
 
       {canCreate && (
