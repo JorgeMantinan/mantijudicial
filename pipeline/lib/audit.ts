@@ -5,6 +5,7 @@ export type AuditAction =
   | "share.grant"
   | "share.revoke"
   | "review.update"
+  | "golden.confirm"
   | "note.create"
   | "note.delete"
   | "case.ingest"

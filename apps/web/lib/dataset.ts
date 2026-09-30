@@ -1,6 +1,13 @@
 import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
+import {
+  boeIdsInText,
+  detectOutcomeFromText,
+  detectSiglasInText,
+  falloSection,
+  type GoldenEntry,
+} from "@pipeline/eval";
 import { aggregate, type CaseSignals } from "@pipeline/patterns";
 import { buildIndex, search, type SearchDoc, type SearchHit } from "@pipeline/search";
 
@@ -288,6 +295,66 @@ export async function getComparisons(caseId: string): Promise<Comparison[]> {
     if (item?.report) out.push(item);
   }
   return out.sort((a, b) => String(b.generated_at).localeCompare(String(a.generated_at)));
+}
+
+export interface GoldenEvidence {
+  pdf: { fallo: string; outcome: string; siglas: string[]; boe_ids: string[]; sin_texto: boolean };
+  ia: {
+    outcome: string;
+    branch: string;
+    headline: string;
+    holdings: number;
+    facts: number;
+    verified_boe_ids: string[];
+  };
+}
+
+export interface GoldenInfo {
+  entry: GoldenEntry | null;
+  evidence: GoldenEvidence;
+}
+
+export async function getGoldenInfo(caseId: string): Promise<GoldenInfo | null> {
+  if (!/^case_\d{6}$/.test(caseId)) return null;
+  const dir = path.join(repoRoot(), "cases", caseId, "structured");
+  const text = await fs
+    .readFile(path.join(repoRoot(), "cases", caseId, "extracted", "judgment.txt"), "utf8")
+    .catch(() => "");
+  const [summary, classification, outcome, facts, reasoning, lawRefs, golden] = await Promise.all([
+    section<{ summary?: { headline?: string } }>(caseId, "summary.json"),
+    section<{ classification?: { civil_branch?: string } }>(caseId, "classification.json"),
+    section<{ outcome?: { cassation_outcome?: string } }>(caseId, "outcome.json"),
+    section<{ facts?: unknown[] }>(caseId, "facts.json"),
+    section<{ holdings?: unknown[] }>(caseId, "reasoning.json"),
+    section<{ refs?: Array<{ status?: string; boe_id?: string | null }> }>(caseId, "law_refs.json"),
+    readJson<{ entries?: GoldenEntry[] }>(path.join(repoRoot(), "cases", "golden.json")),
+  ]);
+
+  const evidence: GoldenEvidence = {
+    pdf: {
+      fallo: text ? falloSection(text).replace(/\s+/g, " ").slice(0, 500) : "",
+      outcome: text ? detectOutcomeFromText(text) : "UNKNOWN",
+      siglas: text ? detectSiglasInText(text) : [],
+      boe_ids: text ? boeIdsInText(text) : [],
+      sin_texto: text.length === 0,
+    },
+    ia: {
+      outcome: outcome?.outcome?.cassation_outcome ?? "UNKNOWN",
+      branch: classification?.classification?.civil_branch ?? "UNKNOWN",
+      headline: summary?.summary?.headline ?? "",
+      holdings: reasoning?.holdings?.length ?? 0,
+      facts: facts?.facts?.length ?? 0,
+      verified_boe_ids: [
+        ...new Set(
+          (lawRefs?.refs ?? [])
+            .filter((ref) => ref.status === "VERIFIED" && ref.boe_id)
+            .map((ref) => ref.boe_id as string),
+        ),
+      ],
+    },
+  };
+  const entry = golden?.entries?.find((item) => item.caseId === caseId) ?? null;
+  return { entry, evidence };
 }
 
 export async function getCaseCitations(): Promise<Record<string, unknown> | null> {

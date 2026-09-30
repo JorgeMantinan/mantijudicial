@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { canShareResource } from "@pipeline/authorization";
 import { canViewCase, caseResource, defaultOrgId, loadIdentity, requireActor } from "@/lib/auth";
-import { getCase, getComparisons, getSimilarCases, getVias, listLaws } from "@/lib/dataset";
+import { getCase, getComparisons, getGoldenInfo, getSimilarCases, getVias, listLaws } from "@/lib/dataset";
 import { authorizationGrants, loadGrantStore } from "@/lib/grants";
 import {
   ARG_OUTCOME,
@@ -27,6 +27,7 @@ import {
 } from "@/lib/labels";
 import { OutcomeBadge } from "@/lib/ui";
 import { ReviewForm } from "./review-form";
+import { GoldenPanel } from "./golden-panel";
 import { NotesPanel } from "./notes-panel";
 import { ReanalyzeButton } from "./reanalyze-button";
 import { ComparePanel } from "./compare-panel";
@@ -121,13 +122,14 @@ export default async function CaseDetailPage({
   const detail = await getCase(id);
   if (!detail) notFound();
 
-  const [laws, similar, vias, comparisons, identity, grantStore] = await Promise.all([
+  const [laws, similar, vias, comparisons, identity, grantStore, golden] = await Promise.all([
     listLaws(),
     getSimilarCases(id, 5),
     getVias(id),
     getComparisons(id),
     loadIdentity(),
     loadGrantStore(),
+    getGoldenInfo(id),
   ]);
 
   const users = identity.listUsers().map((user) => ({
@@ -214,6 +216,19 @@ export default async function CaseDetailPage({
           </p>
         )}
         <ReviewForm caseId={id} current={reviewBlock} />
+      </div>
+
+      <div className="section">
+        <h2>Validación del caso (golden dataset)</h2>
+        {golden ? (
+          <GoldenPanel
+            caseId={id}
+            initialEntry={golden.entry}
+            initialEvidence={golden.evidence}
+          />
+        ) : (
+          <p className="small muted">Sin evidencia disponible (falta el texto extraído).</p>
+        )}
       </div>
 
       <SharePanel

@@ -32,7 +32,7 @@ import {
   boeIdsInText,
   detectSiglasInText,
   siglaOfNorma,
-} from "./siglas.js";
+} from "./siglas";
 
 export { CHECKABLE_SIGLAS, boeIdsInText, detectSiglasInText, siglaOfNorma };
 
