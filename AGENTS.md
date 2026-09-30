@@ -73,7 +73,11 @@ Casos concretos: `pnpm eval -- --show`, `pnpm compare -- --a=case_000034`,
   `cases/<id>/structured/*.json` con `analysis` (modelo, coste, prompt_version).
   Costes orientativos: enriquecer caso ≈ $0,012; comparar ≈ $0,003;
   borrador de escrito ≈ $0,002.
-- Tests: `pipeline/lib/<modulo>.test.ts` con vitest (`describe/it/expect`),
+- **Datos en la web**: `apps/web/lib/dataset.ts` (casos, leyes, búsqueda,
+  evolución) + `apps/web/lib/dataset-estado.ts` (informes, alertas, costes,
+  calidad, sistema, búsquedas guardadas), re-exportado con `export *` para que
+  todo siga importándose desde `@/lib/dataset`.
+- **Tests**: `pipeline/lib/<modulo>.test.ts` con vitest (`describe/it/expect`),
   datos de prueba inline en español.
 
 ## Pruebas manuales (server de comprobación)
