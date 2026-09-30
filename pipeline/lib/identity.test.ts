@@ -101,6 +101,22 @@ describe("IdentityStore", () => {
     expect(store.actorFor(session)).toBeNull();
   });
 
+  it("cambia la contraseña y invalida las sesiones abiertas", () => {
+    const store = IdentityStore.empty();
+    const firm = store.createFirm("Despacho");
+    const user = store.registerUser({ email: "a@b.es", name: "A", password: "12345678" });
+    store.addMembership(user.id, firm.id, "ORG_ADMIN");
+    const now = new Date("2026-09-30T10:00:00.000Z");
+    const session = store.createSession(user.id, firm.id, now);
+
+    store.setPassword(user.id, "nueva-clave-9");
+    expect(store.authenticate("a@b.es", "12345678")).toBeNull();
+    expect(store.authenticate("a@b.es", "nueva-clave-9")?.id).toBe(user.id);
+    expect(store.revokeSessionsOf(user.id)).toBe(1);
+    expect(store.getSession(session.token, now)).toBeNull();
+    expect(() => store.setPassword(user.id, "corta")).toThrow("8 caracteres");
+  });
+
   it("persiste y recarga el almacén", async () => {
     const store = IdentityStore.empty();
     const firm = store.createFirm("Despacho local");

@@ -26,12 +26,12 @@ export default async function LoginPage() {
         </Suspense>
 
         <p className="auth-hint">
-          Primera vez sin usuarios:
+          Primera vez: <code>pnpm seed</code> crea el administrador.
           <br />
-          <code>pnpm seed</code> crea el administrador y imprime la contraseña.
+          ¿Olvidaste la contraseña?{" "}
+          <code>pnpm seed -- --reset-password=NUEVA_CONTRASEÑA</code>
           <br />
-          Desde la web, el administrador puede dar de alta a más gente en{" "}
-          <strong>Usuarios</strong>.
+          Altas de usuarios: menú <strong>Usuarios</strong> (solo administración).
         </p>
       </div>
     </div>

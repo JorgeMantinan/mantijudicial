@@ -221,6 +221,20 @@ export class IdentityStore {
     this.data.sessions = this.data.sessions.filter((item) => item.token !== token);
   }
 
+  /** Al cambiar una contraseña se invalidan todas las sesiones abiertas. */
+  revokeSessionsOf(userId: string): number {
+    const before = this.data.sessions.length;
+    this.data.sessions = this.data.sessions.filter((item) => item.userId !== userId);
+    return before - this.data.sessions.length;
+  }
+
+  setPassword(userId: string, password: string): void {
+    const user = this.data.users.find((item) => item.id === userId);
+    if (!user) throw new IdentityError("Usuario no encontrado");
+    if (password.length < 8) throw new IdentityError("La contraseña necesita 8 caracteres mínimo");
+    user.password_hash = hashPassword(password);
+  }
+
   pruneSessions(now = new Date()): number {
     const before = this.data.sessions.length;
     this.data.sessions = this.data.sessions.filter(

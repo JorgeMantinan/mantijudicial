@@ -13,6 +13,8 @@ interface Args {
   firm: string;
   password: string | null;
   force: boolean;
+  resetEmail: string;
+  resetPassword: string | null;
   add: { email: string; name: string; password: string; role: string; firm: string | null } | null;
 }
 
@@ -23,6 +25,8 @@ function parseArgs(argv: string[]): Args {
     firm: "Despacho local",
     password: null,
     force: false,
+    resetEmail: "admin@local.test",
+    resetPassword: null,
     add: null,
   };
   let addEmail: string | null = null;
@@ -42,10 +46,14 @@ function parseArgs(argv: string[]): Args {
     const passwordAdd = arg.match(/^--add-password=(.+)$/);
     const roleAdd = arg.match(/^--add-role=(.+)$/);
     const firmAdd = arg.match(/^--add-firm=(.+)$/);
+    const resetPwd = arg.match(/^--reset-password=(.+)$/);
+    const resetMail = arg.match(/^--reset-email=(.+)$/);
     if (email?.[1]) args.email = email[1];
     if (name?.[1]) args.name = name[1];
     if (firm?.[1]) args.firm = firm[1];
     if (password?.[1]) args.password = password[1];
+    if (resetPwd?.[1]) args.resetPassword = resetPwd[1];
+    if (resetMail?.[1]) args.resetEmail = resetMail[1];
     if (emailAdd?.[1]) addEmail = emailAdd[1];
     if (nameAdd?.[1]) addName = nameAdd[1];
     if (passwordAdd?.[1]) addPassword = passwordAdd[1];
@@ -68,6 +76,39 @@ function parseArgs(argv: string[]): Args {
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
+
+  if (args.resetPassword) {
+    const exists = await fs
+      .stat(IDENTITY_PATH)
+      .then(() => true)
+      .catch(() => false);
+    if (!exists) {
+      process.stderr.write("No existe el almacén: ejecuta pnpm seed primero.\n");
+      process.exitCode = 1;
+      return;
+    }
+    try {
+      const store = await IdentityStore.load(IDENTITY_PATH);
+      const user = store.findUserByEmail(args.resetEmail);
+      if (!user) {
+        process.stderr.write(`No existe el usuario: ${args.resetEmail}\n`);
+        process.exitCode = 1;
+        return;
+      }
+      store.setPassword(user.id, args.resetPassword);
+      const revoked = store.revokeSessionsOf(user.id);
+      await store.save(IDENTITY_PATH);
+      process.stdout.write("== CONTRASEÑA RESTABLECIDA ==\n");
+      process.stdout.write(`${user.email}\n`);
+      process.stdout.write(`Sesiones cerradas: ${revoked}\n`);
+      process.stdout.write("Ya puedes entrar con la nueva contraseña.\n");
+      return;
+    } catch (error) {
+      process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+      process.exitCode = 1;
+      return;
+    }
+  }
 
   if (args.add) {
     const exists = await fs
