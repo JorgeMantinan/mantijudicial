@@ -74,7 +74,7 @@ try {
     -d '{\"email\":\"carlos@local.test\",\"password\":\"carlos-12345\"}'
   Check "login carlos" ($login2 -match '"ok":true')
 
-  foreach ($ruta in @("/evolucion", "/patterns", "/alertas", "/informes?desde=2026-01-01&hasta=2026-12-31")) {
+  foreach ($ruta in @("/evolucion", "/patterns", "/alertas", "/review", "/informes?desde=2026-01-01&hasta=2026-12-31")) {
     curl.exe -s -b $jarC ($base + $ruta) -o $html
     $t = Get-Content $html -Raw -Encoding UTF8
     $ids = [regex]::Matches($t, 'href="/cases/(case_\d{6})"')

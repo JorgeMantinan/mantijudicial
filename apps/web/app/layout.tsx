@@ -3,6 +3,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { getActor } from "@/lib/auth";
 import { getReviewStats } from "@/lib/dataset";
+import { registrarRender } from "@/lib/timings";
 import { Shortcuts } from "@/components/shortcuts";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoutButton } from "./logout-button";
@@ -43,6 +44,8 @@ const NAV: Array<{ titulo?: string; links: Array<{ href: string; label: string }
 ];
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const inicio = performance.now();
+  const cuerpo = await Promise.resolve(children);
   const store = await cookies();
   const authenticated = Boolean(store.get("mj_session")?.value);
   const actor = authenticated ? await getActor() : null;
@@ -55,6 +58,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         )
       : NAV;
   const pending = authenticated ? (await getReviewStats()).pending.length : 0;
+  registrarRender(performance.now() - inicio);
 
   return (
     <html lang="es">
@@ -136,7 +140,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </div>
         </header>
         <main className="wrap" id="contenido">
-          {children}
+          {cuerpo}
         </main>
         <Shortcuts />
         <footer>

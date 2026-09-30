@@ -10,17 +10,22 @@ export const dynamic = "force-dynamic";
 export default async function EvolucionPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tema?: string }>;
+  searchParams: Promise<{ tema?: string; branch?: string; outcome?: string }>;
 }) {
   const actor = await requireActor();
   const orgId = await defaultOrgId();
   const grants = await authorizationGrants();
   const sp = await searchParams;
+  const branchFiltro = sp.branch ?? "";
+  const outcomeFiltro = sp.outcome ?? "";
   const brutas = await getEvolucion();
   const temas = brutas
     .map((tema) => {
-      const entries = tema.entries.filter((entry) =>
-        canViewCase(actor, entry.caseId, orgId, grants),
+      const entries = tema.entries.filter(
+        (entry) =>
+          canViewCase(actor, entry.caseId, orgId, grants) &&
+          (!branchFiltro || entry.branch === branchFiltro) &&
+          (!outcomeFiltro || entry.outcome === outcomeFiltro),
       );
       const distribution: Record<string, number> = {};
       for (const entry of entries) {
@@ -47,6 +52,32 @@ export default async function EvolucionPage({
         Cómo ha ido evolucionando cada tema (<em>ratio decidendi</em>) a lo largo del corpus, con
         su fecha, su resultado y la frase del tribunal. Solo temas con 3 casos o más.
       </p>
+
+      <form className="filters" action="/evolucion" method="get">
+        {sp.tema && <input type="hidden" name="tema" value={sp.tema} />}
+        <select name="branch" defaultValue={branchFiltro} aria-label="Filtrar por rama">
+          <option value="">Todas las ramas</option>
+          {Object.entries(BRANCH).map(([value, texto]) => (
+            <option key={value} value={value}>
+              {texto}
+            </option>
+          ))}
+        </select>
+        <select name="outcome" defaultValue={outcomeFiltro} aria-label="Filtrar por resultado">
+          <option value="">Cualquier resultado</option>
+          {Object.entries(OUTCOME).map(([value, texto]) => (
+            <option key={value} value={value}>
+              {texto}
+            </option>
+          ))}
+        </select>
+        <button type="submit">Filtrar</button>
+        {(branchFiltro || outcomeFiltro) && (
+          <Link className="small" href="/evolucion">
+            limpiar
+          </Link>
+        )}
+      </form>
 
       {temas.length === 0 && <p className="muted">No hay temas con suficientes casos.</p>}
 

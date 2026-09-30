@@ -1,6 +1,7 @@
 import { requireActor } from "@/lib/auth";
 import Link from "next/link";
 import { getCalidadCorpus, getCostesIA, getEvalReport, getSistemaInfo } from "@/lib/dataset";
+import { ultimasMediciones } from "@/lib/timings";
 import { LAW_STATUS, QUOTE, label } from "@/lib/labels";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,7 @@ export default async function EvalPage() {
   const costes = await getCostesIA();
   const calidad = await getCalidadCorpus();
   const sistema = await getSistemaInfo();
+  const mediciones = ultimasMediciones();
   if (!report) {
     return (
       <>
@@ -283,6 +285,28 @@ export default async function EvalPage() {
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div className="section">
+        <h2>Tiempos de render (esta sesión)</h2>
+        <p className="small muted">
+          Últimas páginas servidas por el servidor (solo memoria: se borran al reiniciar).
+        </p>
+        {mediciones.length === 0 ? (
+          <p className="small">Sin mediciones todavía: recarga un par de páginas.</p>
+        ) : (
+          <table>
+            <tbody>
+              {mediciones.map((medicion) => (
+                <tr key={`${medicion.at}-${medicion.ms}`}>
+                  <td className="mono small">{new Date(medicion.at).toLocaleTimeString("es-ES")}</td>
+                  <td className="small">render</td>
+                  <td style={{ textAlign: "right" }}>{medicion.ms} ms</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <div className="section">
