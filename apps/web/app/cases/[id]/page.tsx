@@ -169,6 +169,12 @@ export default async function CaseDetailPage({
           {reviewBlock.reviewed_by ? ` por ${reviewBlock.reviewed_by}` : ""}
         </span>
         {detail.stale && <span className="badge warn">el PDF cambió desde el análisis</span>}
+        <span className="no-print">
+          {" · "}
+          <a href={`/api/export?resource=${id}`}>exportar JSON</a>
+          {" · "}
+          <Link href={`/cases/${id}/print`}>imprimir ficha</Link>
+        </span>
       </p>
 
       <ReanalyzeButton caseId={id} stale={detail.stale} />
