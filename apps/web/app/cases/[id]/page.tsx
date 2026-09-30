@@ -209,6 +209,8 @@ export default async function CaseDetailPage({
           <a href={`/api/export?resource=${id}`}>exportar JSON</a>
           {" · "}
           <Link href={`/cases/${id}/print`}>imprimir ficha</Link>
+          {" · "}
+          <Link href={`/cases/${id}/dossier`}>dossier para el cliente</Link>
         </span>
       </p>
 
