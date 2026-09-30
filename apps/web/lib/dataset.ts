@@ -52,6 +52,8 @@ export interface CaseListItem {
   reviewStatus: string;
   /** El PDF es más nuevo que la última extracción: toca reanalizar. */
   stale: boolean;
+  /** Archivado: se oculta de la lista de casos (no se borra nada). */
+  archived: boolean;
 }
 
 async function isStale(caseId: string, generatedAt: string | undefined): Promise<boolean> {
@@ -98,6 +100,24 @@ async function section<T>(caseId: string, file: string): Promise<T | null> {
   return readJson<T>(path.join(repoRoot(), "cases", caseId, "structured", file));
 }
 
+function archivedFlagPath(caseId: string): string {
+  return path.join(repoRoot(), "cases", caseId, "archived.flag");
+}
+
+/** ¿Está archivado el caso? (marcador en cases/<id>/archived.flag). */
+export async function isArchived(caseId: string): Promise<boolean> {
+  return fs
+    .access(archivedFlagPath(caseId))
+    .then(() => true)
+    .catch(() => false);
+}
+
+export async function setArchived(caseId: string, archived: boolean): Promise<void> {
+  const file = archivedFlagPath(caseId);
+  if (archived) await fs.writeFile(file, `${new Date().toISOString()}\n`, "utf8");
+  else await fs.rm(file, { force: true });
+}
+
 export async function listCases(filters: {
   branch?: string;
   outcome?: string;
@@ -128,6 +148,7 @@ export async function listCases(filters: {
       reviewStatus:
         (review as { review?: { status?: string } } | null)?.review?.status ?? "UNREVIEWED",
       stale: await isStale(name, generatedAt),
+      archived: await isArchived(name),
     };
     if (filters.branch && item.branch !== filters.branch) continue;
     if (filters.outcome && item.outcome !== filters.outcome) continue;
@@ -171,6 +192,7 @@ export async function getCase(caseId: string): Promise<CaseDetail | null> {
     recurringSide: (outcome?.outcome as { recurring_side?: string } | undefined)?.recurring_side ?? "UNKNOWN",
     enriched: (review?.extraction as { validation?: string } | undefined)?.validation === "OK",
     reviewStatus: (review?.review as { status?: string } | undefined)?.status ?? "UNREVIEWED",
+    archived: await isArchived(caseId),
     stale: await isStale(
       caseId,
       (review?.extraction as { generated_at?: string } | undefined)?.generated_at,

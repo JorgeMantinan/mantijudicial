@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { canShareResource } from "@pipeline/authorization";
+import { canCreateCase, canShareResource } from "@pipeline/authorization";
 import { canViewCase, caseResource, defaultOrgId, loadIdentity, requireActor } from "@/lib/auth";
 import { getCase, getComparisons, getEscrito, getGoldenInfo, getReviewStats, getSentenciasCitadas, getSimilarCases, getVigenciaChecks, getVias, listLaws } from "@/lib/dataset";
 import { authorizationGrants, loadGrantStore } from "@/lib/grants";
@@ -28,6 +28,7 @@ import {
 } from "@/lib/labels";
 import { OutcomeBadge } from "@/lib/ui";
 import { ReviewForm } from "./review-form";
+import { ArchiveButton } from "./archive-button";
 import { GoldenPanel } from "./golden-panel";
 import { NotesPanel } from "./notes-panel";
 import { ReanalyzeButton } from "./reanalyze-button";
@@ -164,6 +165,7 @@ export default async function CaseDetailPage({
     revokedAt: grant.revokedAt,
   }));
   const canShare = canShareResource(actor, caseResource(id, orgId));
+  const canCreate = canCreateCase(actor);
   const lawTitles = new Map(laws.map((law) => [law.boe_id, law.titulo]));
   const outcome = (detail.outcomeDetail?.outcome ?? {}) as {
     cassation_outcome?: string;
@@ -234,6 +236,8 @@ export default async function CaseDetailPage({
           <Link href={`/cases/${id}/print`}>imprimir ficha</Link>
           {" · "}
           <Link href={`/cases/${id}/dossier`}>dossier para el cliente</Link>
+          {" · "}
+          <ArchiveButton caseId={id} archived={detail.archived} canArchive={canCreate} />
         </span>
       </p>
 

@@ -39,6 +39,7 @@ export default async function CasesPage({
     q?: string;
     sort?: string;
     dir?: string;
+    archivados?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -53,12 +54,16 @@ export default async function CasesPage({
       q: params.q,
     })
   ).filter((item) => canViewCase(actor, item.id, orgId, grants));
+  const visibles =
+    params.archivados === "1"
+      ? cases
+      : cases.filter((item) => !item.archived);
 
   const sort = (SORTS as readonly string[]).includes(params.sort ?? "")
     ? (params.sort as SortKey)
     : "case";
   const dir = params.dir === "desc" ? "desc" : "asc";
-  const sorted = [...cases].sort((a, b) => {
+  const sorted = [...visibles].sort((a, b) => {
     const av = sortValue(a, sort);
     const bv = sortValue(b, sort);
     const cmp = typeof av === "number" && typeof bv === "number" ? av - bv : String(av).localeCompare(String(bv), "es");
@@ -69,6 +74,7 @@ export default async function CasesPage({
     branch: params.branch,
     outcome: params.outcome,
     q: params.q,
+    archivados: params.archivados,
   };
   const csvQuery = new URLSearchParams(
     Object.entries(base).filter((entry): entry is [string, string] => Boolean(entry[1])),
@@ -78,7 +84,7 @@ export default async function CasesPage({
     <>
       <h1>Casos</h1>
       <p className="lead">
-        {cases.length} casos según los filtros aplicados. Pulsa una cabecera para ordenar.{" "}
+        {visibles.length} casos según los filtros aplicados. Pulsa una cabecera para ordenar.{" "}
         · <a href={`/api/export/casos${csvQuery ? `?${csvQuery}` : ""}`}>descargar CSV</a>
       </p>
 
@@ -115,6 +121,15 @@ export default async function CasesPage({
             </option>
           ))}
         </select>
+        <label className="small" style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <input
+            type="checkbox"
+            name="archivados"
+            value="1"
+            defaultChecked={params.archivados === "1"}
+          />
+          mostrar archivados
+        </label>
         <button type="submit">Filtrar</button>
       </form>
 
@@ -134,6 +149,11 @@ export default async function CasesPage({
             <tr key={item.id}>
               <td className="mono">
                 <Link href={`/cases/${item.id}`}>{item.id.replace("case_", "")}</Link>
+                {item.archived && (
+                  <span className="badge" style={{ marginLeft: 6 }}>
+                    archivado
+                  </span>
+                )}
               </td>
               <td>
                 <Link href={`/cases/${item.id}`}>{item.headline}</Link>

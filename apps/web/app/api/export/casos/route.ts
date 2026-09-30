@@ -20,12 +20,15 @@ export async function GET(request: Request): Promise<Response> {
   const branch = url.searchParams.get("branch") ?? undefined;
   const outcome = url.searchParams.get("outcome") ?? undefined;
   const q = url.searchParams.get("q") ?? undefined;
+  const archivados = url.searchParams.get("archivados") === "1";
 
   const orgId = await defaultOrgId();
   const grants = await authorizationGrants();
   const casos = (
     await listCases({ branch, outcome, q })
-  ).filter((item) => canViewCase(actor, item.id, orgId, grants));
+  )
+    .filter((item) => canViewCase(actor, item.id, orgId, grants))
+    .filter((item) => (archivados ? true : !item.archived));
 
   const filas: string[] = [
     ["caso", "asunto", "rama", "resultado", "recurrente", "revisado", "enriquecido"].join(";"),

@@ -134,6 +134,11 @@ export default async function AyudaPage() {
             En cada ficha: «exportar JSON» (datos completos), «imprimir ficha», «dossier para el
             cliente» y el «informe imprimible» de cada comparación.
           </li>
+          <li>
+            <strong>Archivar</strong>: en la ficha, «Archivar» oculta el caso de la lista de{" "}
+            <Link href="/cases">Casos</Link> sin borrar nada (con la casilla «mostrar archivados»
+            vuelve a aparecer).
+          </li>
         </ul>
       </div>
 
