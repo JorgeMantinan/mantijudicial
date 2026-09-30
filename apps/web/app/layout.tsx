@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { getActor } from "@/lib/auth";
 import { getReviewStats } from "@/lib/dataset";
 import { Shortcuts } from "@/components/shortcuts";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoutButton } from "./logout-button";
 import "./globals.css";
 
@@ -58,6 +59,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="es">
       <body>
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{if(localStorage.getItem('mj-tema')==='light'){document.documentElement.setAttribute('data-theme','light');}}catch(e){}})();",
+          }}
+        />
         <header className="top">
           <div className="wrap">
             <div className="brand">
@@ -102,6 +109,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 </span>
               ))}
             </nav>
+            <ThemeToggle />
             {authenticated ? (
               <LogoutButton />
             ) : (

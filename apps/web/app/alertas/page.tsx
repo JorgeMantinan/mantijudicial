@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PrintButton } from "@/components/print-button";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
-import { getContradicciones, getReviewStats, getVigenciaAlerts } from "@/lib/dataset";
+import { getCalidadCorpus, getContradicciones, getReviewStats, getVigenciaAlerts } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { jobs } from "@/lib/jobs";
 
@@ -18,10 +18,11 @@ export default async function AlertasPage() {
   const grants = await authorizationGrants();
   const puedeVer = (caseId: string) => canViewCase(actor, caseId, orgId, grants);
 
-  const [vigenciaBruta, contradictorioBruto, reviewBruto] = await Promise.all([
+  const [vigenciaBruta, contradictorioBruto, reviewBruto, calidad] = await Promise.all([
     getVigenciaAlerts(),
     getContradicciones(),
     getReviewStats(),
+    getCalidadCorpus(),
   ]);
   const vigencia = vigenciaBruta
     .map((alerta) => ({ ...alerta, casos: alerta.casos.filter((caso) => puedeVer(caso.caseId)) }))
@@ -36,13 +37,21 @@ export default async function AlertasPage() {
     ...reviewBruto,
     pending: reviewBruto.pending.filter((item) => puedeVer(item.id)),
   };
+  const stale = calidad.stale.filter(puedeVer);
+  const escaneados = calidad.escaneados.filter(puedeVer);
   const fallos = jobs
     .list()
     .filter((job) => job.status === "error")
     .slice()
     .reverse();
 
-  const total = contradictorio.length + vigencia.length + review.pending.length + fallos.length;
+  const total =
+    contradictorio.length +
+    vigencia.length +
+    review.pending.length +
+    fallos.length +
+    stale.length +
+    escaneados.length;
 
   return (
     <article className="print-sheet">
@@ -173,6 +182,29 @@ export default async function AlertasPage() {
           </>
         )}
       </div>
+
+      {(stale.length > 0 || escaneados.length > 0) && (
+        <div className="section">
+          <h2>PDFs con problemas</h2>
+          <p className="small muted">
+            El PDF cambió desde el análisis o no se le pudo extraer texto: toca reanalizarlos.
+          </p>
+          <ul className="small">
+            {stale.map((id) => (
+              <li key={`s-${id}`}>
+                <Link href={`/cases/${id}`}>{id.replace("case_", "")}</Link> — el PDF es más nuevo
+                que el análisis
+              </li>
+            ))}
+            {escaneados.map((id) => (
+              <li key={`e-${id}`}>
+                <Link href={`/cases/${id}`}>{id.replace("case_", "")}</Link> — sin texto extraíble
+                (posible escaneo)
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="section">
         <h2>Trabajos con error</h2>

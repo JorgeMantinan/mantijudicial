@@ -1425,7 +1425,7 @@ export interface AuditoriaEntrada {
 }
 
 /** Últimas entradas de data/audit.log (la más reciente primero). */
-export async function getAuditoria(limit = 50): Promise<AuditoriaEntrada[]> {
+export async function getAuditoria(limit = 50, resource?: string): Promise<AuditoriaEntrada[]> {
   const text = await fs
     .readFile(path.join(repoRoot(), "data", "audit.log"), "utf8")
     .catch(() => "");
@@ -1438,7 +1438,8 @@ export async function getAuditoria(limit = 50): Promise<AuditoriaEntrada[]> {
       // línea corrupta: se ignora
     }
   }
-  return rows.slice(-limit).reverse();
+  const filtradas = resource ? rows.filter((entrada) => entrada.resource === resource) : rows;
+  return filtradas.slice(-limit).reverse();
 }
 
 export interface CostesIA {

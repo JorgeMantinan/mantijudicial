@@ -2,11 +2,12 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { canCreateCase, canShareResource } from "@pipeline/authorization";
 import { canViewCase, caseResource, defaultOrgId, loadIdentity, requireActor } from "@/lib/auth";
-import { getCase, getComparisons, getEscrito, getGoldenInfo, getReviewStats, getSentenciasCitadas, getSimilarCases, getVigenciaChecks, getVias, listLaws } from "@/lib/dataset";
+import { getAuditoria, getCase, getComparisons, getEscrito, getGoldenInfo, getReviewStats, getSentenciasCitadas, getSimilarCases, getVigenciaChecks, getVias, listLaws } from "@/lib/dataset";
 import { authorizationGrants, loadGrantStore } from "@/lib/grants";
 import {
   ARG_OUTCOME,
   ARG_TYPE,
+  AUDIT,
   BRANCH,
   CLAIM_OUTCOME,
   EVENT,
@@ -129,7 +130,7 @@ export default async function CaseDetailPage({
   const detail = await getCase(id);
   if (!detail) notFound();
 
-  const [laws, similar, vias, comparisons, identity, grantStore, golden, sentencias, vigencias, escrito, reviewStats] =
+  const [laws, similar, vias, comparisons, identity, grantStore, golden, sentencias, vigencias, escrito, reviewStats, actividadCaso] =
     await Promise.all([
       listLaws(),
       getSimilarCases(id, 5),
@@ -142,6 +143,7 @@ export default async function CaseDetailPage({
       getVigenciaChecks(id),
       getEscrito(id),
       getReviewStats(),
+      getAuditoria(15, id),
     ]);
 
   const nextPendiente = reviewStats.pending.find((item) => item.id !== id)?.id ?? null;
@@ -1078,6 +1080,36 @@ export default async function CaseDetailPage({
                       <span className="badge ok">sin cambios</span>
                     )}
                   </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {actividadCaso.length > 0 && (
+        <div className="section">
+          <h2>Actividad de este caso</h2>
+          <p className="small muted">
+            Entradas de <span className="mono">data/audit.log</span> con este caso (compartir,
+            revisar, archivar, subir).
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th style={{ width: 170 }}>Cuándo</th>
+                <th>Quién</th>
+                <th>Qué</th>
+              </tr>
+            </thead>
+            <tbody>
+              {actividadCaso.map((entrada, index) => (
+                <tr key={`${entrada.at}-${index}`}>
+                  <td className="small mono">
+                    {entrada.at ? new Date(entrada.at).toLocaleString("es-ES") : "—"}
+                  </td>
+                  <td className="small">{userLabels.get(entrada.actor) ?? entrada.actor}</td>
+                  <td className="small">{label(AUDIT, entrada.action)}</td>
                 </tr>
               ))}
             </tbody>

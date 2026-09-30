@@ -9,6 +9,21 @@
   --green: #3fb950;
   --red: #f85149;
   --amber: #d29922;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --bg: #f6f8fa;
+  --panel: #ffffff;
+  --panel-2: #eef1f4;
+  --line: #d6dde4;
+  --text: #1f2328;
+  --muted: #59636e;
+  --accent: #0969da;
+  --green: #1a7f37;
+  --red: #cf222e;
+  --amber: #9a6700;
+  color-scheme: light;
 }
 
 * {
