@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { getActor } from "@/lib/auth";
+import { getReviewStats } from "@/lib/dataset";
 import { LogoutButton } from "./logout-button";
 import "./globals.css";
 
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
 const NAV = [
   { href: "/", label: "Resumen" },
   { href: "/cases", label: "Casos" },
+  { href: "/review", label: "Revisión" },
   { href: "/search", label: "Búsqueda" },
   { href: "/laws", label: "Legislación" },
   { href: "/patterns", label: "Patrones" },
@@ -24,6 +26,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const authenticated = Boolean(store.get("mj_session")?.value);
   const actor = authenticated ? await getActor() : null;
   const links = actor?.role === "ORG_ADMIN" ? [...NAV, { href: "/users", label: "Usuarios" }] : NAV;
+  const pending = authenticated ? (await getReviewStats()).pending.length : 0;
 
   return (
     <html lang="es">
@@ -33,10 +36,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <div className="brand">
               Manti<span>Judicial</span>
             </div>
-            <nav style={{ display: "flex", gap: 18, flex: 1 }}>
+            <nav style={{ display: "flex", gap: 18, flex: 1, alignItems: "center" }}>
               {links.map((item) => (
                 <Link key={item.href} href={item.href}>
                   {item.label}
+                  {item.href === "/review" && pending > 0 && (
+                    <span className="badge warn" style={{ marginLeft: 6 }}>
+                      {pending}
+                    </span>
+                  )}
                 </Link>
               ))}
             </nav>

@@ -41,6 +41,7 @@ export interface CaseListItem {
   outcome: string;
   recurringSide: string;
   enriched: boolean;
+  reviewStatus: string;
 }
 
 export interface CaseDetail extends CaseListItem {
@@ -92,7 +93,9 @@ export async function listCases(filters: {
       branch: classification?.classification?.civil_branch ?? "UNKNOWN",
       outcome: outcome?.outcome?.cassation_outcome ?? "UNKNOWN",
       recurringSide: outcome?.outcome?.recurring_side ?? "UNKNOWN",
-    enriched: (review?.extraction as { validation?: string } | undefined)?.validation === "OK",
+      enriched: review?.extraction?.validation === "OK",
+      reviewStatus:
+        (review as { review?: { status?: string } } | null)?.review?.status ?? "UNREVIEWED",
     };
     if (filters.branch && item.branch !== filters.branch) continue;
     if (filters.outcome && item.outcome !== filters.outcome) continue;
@@ -135,6 +138,7 @@ export async function getCase(caseId: string): Promise<CaseDetail | null> {
     outcome: (outcome?.outcome as { cassation_outcome?: string } | undefined)?.cassation_outcome ?? "UNKNOWN",
     recurringSide: (outcome?.outcome as { recurring_side?: string } | undefined)?.recurring_side ?? "UNKNOWN",
     enriched: (review?.extraction as { validation?: string } | undefined)?.validation === "OK",
+    reviewStatus: (review?.review as { status?: string } | undefined)?.status ?? "UNREVIEWED",
     summary: summary,
     parties: parties?.parties ?? [],
     claims: claims?.claims ?? [],
@@ -360,7 +364,41 @@ export async function computePatterns(
   return aggregate(valid, minSupport);
 }
 
-export interface OutcomeTotals {  total: number;
+export interface ReviewStats {
+  total: number;
+  enriched: number;
+  byStatus: Record<string, number>;
+  pending: CaseListItem[];
+  next: CaseListItem | null;
+  cachedAt: number;
+}
+
+let reviewStats: { value: ReviewStats; at: number } | null = null;
+
+const REVIEW_TTL_MS = 15_000;
+
+export async function getReviewStats(force = false): Promise<ReviewStats> {
+  if (!force && reviewStats && Date.now() - reviewStats.at < REVIEW_TTL_MS) return reviewStats.value;
+  const all = await listCases();
+  const byStatus: Record<string, number> = {};
+  for (const item of all) byStatus[item.reviewStatus] = (byStatus[item.reviewStatus] ?? 0) + 1;
+  const pending = all
+    .filter((item) => item.enriched && item.reviewStatus === "UNREVIEWED")
+    .sort((a, b) => a.id.localeCompare(b.id));
+  const value: ReviewStats = {
+    total: all.length,
+    enriched: all.filter((item) => item.enriched).length,
+    byStatus,
+    pending,
+    next: pending[0] ?? null,
+    cachedAt: Date.now(),
+  };
+  reviewStats = { value, at: Date.now() };
+  return value;
+}
+
+export interface OutcomeTotals {
+  total: number;
   enriched: number;
   byBranch: Array<{ branch: string; count: number }>;
   byOutcome: Array<{ outcome: string; count: number }>;

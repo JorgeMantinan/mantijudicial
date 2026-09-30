@@ -27,6 +27,7 @@ import {
 } from "@/lib/labels";
 import { OutcomeBadge } from "@/lib/ui";
 import { ReviewForm } from "./review-form";
+import { NotesPanel } from "./notes-panel";
 import { SharePanel, type ShareGrantView } from "./share-panel";
 
 export const dynamic = "force-dynamic";
@@ -189,6 +190,8 @@ export default async function CaseDetailPage({
         currentUserId={actor.userId}
         grants={shareGrants}
       />
+
+      <NotesPanel caseId={id} />
 
       <div className="section">
         <h2>Resumen</h2>

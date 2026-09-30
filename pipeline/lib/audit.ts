@@ -5,8 +5,12 @@ export type AuditAction =
   | "share.grant"
   | "share.revoke"
   | "review.update"
+  | "note.create"
+  | "note.delete"
   | "case.ingest"
+  | "case.reanalyze"
   | "user.create"
+  | "user.mfa_enabled"
   | "auth.login"
   | "auth.login_failed"
   | "auth.logout";
