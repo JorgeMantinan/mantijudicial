@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { canShareResource } from "@pipeline/authorization";
 import { canViewCase, caseResource, defaultOrgId, loadIdentity, requireActor } from "@/lib/auth";
-import { getCase, getComparisons, getGoldenInfo, getSentenciasCitadas, getSimilarCases, getVigenciaChecks, getVias, listLaws } from "@/lib/dataset";
+import { getCase, getComparisons, getEscrito, getGoldenInfo, getSentenciasCitadas, getSimilarCases, getVigenciaChecks, getVias, listLaws } from "@/lib/dataset";
 import { authorizationGrants, loadGrantStore } from "@/lib/grants";
 import {
   ARG_OUTCOME,
@@ -10,6 +10,7 @@ import {
   BRANCH,
   CLAIM_OUTCOME,
   EVENT,
+  ESCRITO_TIPO,
   FACT_STATUS,
   FACT_TYPE,
   FORCE,
@@ -127,7 +128,7 @@ export default async function CaseDetailPage({
   const detail = await getCase(id);
   if (!detail) notFound();
 
-  const [laws, similar, vias, comparisons, identity, grantStore, golden, sentencias, vigencias] =
+  const [laws, similar, vias, comparisons, identity, grantStore, golden, sentencias, vigencias, escrito] =
     await Promise.all([
       listLaws(),
       getSimilarCases(id, 5),
@@ -138,6 +139,7 @@ export default async function CaseDetailPage({
       getGoldenInfo(id),
       getSentenciasCitadas(id),
       getVigenciaChecks(id),
+      getEscrito(id),
     ]);
 
   const users = identity.listUsers().map((user) => ({
@@ -744,6 +746,98 @@ export default async function CaseDetailPage({
           existing={comparisons.map((item) => item.otro_caso)}
         />
       </div>
+
+      {escrito && escrito.report.cuerpo.length > 0 && (
+        <div className="section">
+          <h2>Borrador de escrito (IA)</h2>
+          <div className="notice">
+            Generado por IA a partir de este caso y de las normas verificadas del BOE. Es un punto de
+            partida, no un escrito presentado: debe revisarlo un letrado antes de usarlo.
+          </div>
+
+          <p>
+            <strong>{label(ESCRITO_TIPO, escrito.report.tipo)}</strong> · {escrito.report.asunto}
+          </p>
+          <p className="small muted">
+            {escrito.report.encabezado?.tribunal || "Tribunal por confirmar"}
+            {escrito.report.encabezado?.numero_recurso
+              ? ` · Recurso ${escrito.report.encabezado.numero_recurso}`
+              : ""}
+            {escrito.report.encabezado?.procurador ? ` · Procurador ${escrito.report.encabezado.procurador}` : ""}
+            {escrito.report.encabezado?.letrado ? ` · Letrado ${escrito.report.encabezado.letrado}` : ""}
+          </p>
+
+          {escrito.report.cuerpo.map((bloque) => (
+            <article key={bloque.titulo}>
+              <h3>{bloque.titulo}</h3>
+              <p>{bloque.texto}</p>
+            </article>
+          ))}
+
+          {(escrito.report.pedidos?.length ?? 0) > 0 && (
+            <>
+              <h3>Pedidos</h3>
+              <ol className="small">
+                {escrito.report.pedidos?.map((pedido) => <li key={pedido}>{pedido}</li>)}
+              </ol>
+            </>
+          )}
+
+          {(escrito.report.citas?.length ?? 0) > 0 && (
+            <>
+              <h3>Citas verificadas</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Texto</th>
+                    <th>Fuente</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {escrito.report.citas?.map((cita) => (
+                    <tr key={`${cita.fuente}-${cita.texto.slice(0, 24)}`}>
+                      <td className="small">{cita.texto}</td>
+                      <td className="mono small">{cita.fuente}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+
+          {(escrito.report.comprobar_antes?.length ?? 0) > 0 && (
+            <>
+              <h3>Comprobar antes de presentar</h3>
+              <ul className="small">
+                {escrito.report.comprobar_antes?.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          {(escrito.report.avisos?.length ?? 0) > 0 && (
+            <ul className="small muted">
+              {escrito.report.avisos?.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          )}
+
+          <p className="small muted">
+            {escrito.analysis?.generated_at
+              ? `Generado el ${new Date(escrito.analysis.generated_at).toLocaleString("es-ES")}`
+              : ""}
+            {escrito.analysis?.model ? ` · modelo ${escrito.analysis.model}` : ""}
+            {typeof escrito.analysis?.cost === "number"
+              ? ` · coste $${escrito.analysis.cost.toFixed(4)}`
+              : ""}
+            {(escrito.analysis?.leyes?.length ?? 0) > 0
+              ? ` · normas usadas: ${escrito.analysis?.leyes?.join(", ")}`
+              : ""}
+          </p>
+        </div>
+      )}
 
       {sentencias.length > 0 && (
         <div className="section">

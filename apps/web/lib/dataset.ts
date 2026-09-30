@@ -278,6 +278,43 @@ export async function getVias(caseId: string): Promise<ViasOutput | null> {
   return readJson<ViasOutput>(path.join(repoRoot(), "cases", caseId, "structured", "vias.json"));
 }
 
+export interface EscritoBlock {
+  titulo: string;
+  texto: string;
+}
+
+export interface EscritoReport {
+  case_id: string;
+  tipo: string;
+  asunto: string;
+  encabezado?: { tribunal?: string; numero_recurso?: string; procurador?: string; letrado?: string };
+  cuerpo: EscritoBlock[];
+  pedidos?: string[];
+  citas?: Array<{ texto: string; fuente: string }>;
+  comprobar_antes?: string[];
+  avisos?: string[];
+}
+
+export interface EscritoFile {
+  case_id: string;
+  analysis?: {
+    provider?: string;
+    model?: string;
+    prompt_version?: string;
+    generated_at?: string;
+    cost?: number;
+    attempts?: number;
+    leyes?: string[];
+    similares?: string[];
+  };
+  report: EscritoReport;
+}
+
+export async function getEscrito(caseId: string): Promise<EscritoFile | null> {
+  if (!/^case_\d{6}$/.test(caseId)) return null;
+  return readJson<EscritoFile>(path.join(repoRoot(), "cases", caseId, "structured", "escrito.json"));
+}
+
 export interface Comparison {
   otro_caso: string;
   generated_at?: string;

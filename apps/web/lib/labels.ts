@@ -82,6 +82,12 @@ export const SCOPE: Record<string, string> = {
   NONE: "Ninguno",
 };
 
+export const ESCRITO_TIPO: Record<string, string> = {
+  RECURSO_CASACION: "Recurso de casación",
+  ALEGACIONES: "Alegaciones",
+  OPOSICION: "Oposición",
+};
+
 export const FACT_TYPE: Record<string, string> = {
   FACTUAL: "Hecho",
   PROCEDURAL: "Procesal",

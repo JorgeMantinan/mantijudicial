@@ -4,6 +4,7 @@ import { OpencodeCliProvider, type AIProvider } from "./lib/ai_provider.js";
 import { extractJson } from "./lib/json_extract.js";
 import { CASES_DIR, REPO_ROOT, caseDir } from "./lib/paths.js";
 import { buildIndex, search } from "./lib/search.js";
+import { loadSignals } from "./lib/signals.js";
 import {
   COMPARE_PROMPT_VERSION,
   renderCompareContext,
@@ -39,80 +40,6 @@ function parseArgs(argv: string[]): Args {
     else if (/^case_\d{6}$/.test(arg) && !args.other) args.other = arg;
   }
   return args;
-}
-
-async function readJson<T>(filePath: string): Promise<T | null> {
-  try {
-    return JSON.parse(await fs.readFile(filePath, "utf8")) as T;
-  } catch {
-    return null;
-  }
-}
-
-async function section<T>(caseId: string, file: string): Promise<T | null> {
-  return readJson<T>(path.join(CASES_DIR, caseId, "structured", file));
-}
-
-async function loadSignals(caseId: string): Promise<CaseSignals | null> {
-  const [summary, classification, outcome, facts, claims, issues, args, reasoning, lawRefs] =
-    await Promise.all([
-      section<{
-        summary?: { headline?: string; summary?: string; key_points?: string[] };
-      }>(caseId, "summary.json"),
-      section<{ classification?: { civil_branch?: string; subtopic?: string } }>(caseId, "classification.json"),
-      section<{
-        outcome?: { cassation_outcome?: string; recurring_side?: string };
-      }>(caseId, "outcome.json"),
-      section<{ facts?: Array<{ description?: string }> }>(caseId, "facts.json"),
-      section<{ claims?: Array<{ description?: string }> }>(caseId, "claims.json"),
-      section<{ issues?: Array<{ topic?: string; description?: string }> }>(caseId, "issues.json"),
-      section<{ arguments?: Array<{ side?: string; type?: string; outcome?: string; description?: string }> }>(
-        caseId,
-        "arguments.json",
-      ),
-      section<{ holdings?: Array<{ topic?: string; statement?: string; doctrine?: string }> }>(
-        caseId,
-        "reasoning.json",
-      ),
-      section<{ refs?: Array<{ norma?: string; article_raw?: string; boe_id?: string | null; status?: string }> }>(
-        caseId,
-        "law_refs.json",
-      ),
-    ]);
-
-  if (!summary?.summary?.headline) return null;
-
-  return {
-    id: caseId,
-    headline: summary.summary.headline,
-    subtopic: classification?.classification?.subtopic ?? "",
-    branch: classification?.classification?.civil_branch ?? "UNKNOWN",
-    outcome: outcome?.outcome?.cassation_outcome ?? "UNKNOWN",
-    recurringSide: outcome?.outcome?.recurring_side ?? "UNKNOWN",
-    summary: summary.summary.summary ?? "",
-    keyPoints: summary.summary.key_points ?? [],
-    facts: (facts?.facts ?? []).map((fact) => fact.description ?? ""),
-    claims: (claims?.claims ?? []).map((claim) => claim.description ?? ""),
-    issues: (issues?.issues ?? []).map((issue) => `${issue.topic ?? ""}: ${issue.description ?? ""}`),
-    argumentsList: (args?.arguments ?? []).map(
-      (argument) =>
-        `[${argument.side ?? "?"}/${argument.type ?? "?"} · ${argument.outcome ?? "?"}] ${argument.description ?? ""}`,
-    ),
-    holdings: (reasoning?.holdings ?? [])
-      .filter((holding) => Boolean(holding.statement))
-      .map((holding) => ({
-        topic: holding.topic ?? "",
-        statement: holding.statement ?? "",
-        doctrine: holding.doctrine ?? "UNKNOWN",
-      })),
-    laws: (lawRefs?.refs ?? [])
-      .filter((ref) => ref.status === "VERIFIED")
-      .map((ref) => ({
-        norma: ref.norma ?? "",
-        article: ref.article_raw ?? "",
-        boeId: ref.boe_id ?? null,
-      })),
-  };
 }
 
 async function pickSimilar(primaryId: string): Promise<string | null> {

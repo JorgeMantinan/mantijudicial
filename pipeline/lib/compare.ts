@@ -180,7 +180,7 @@ export interface CaseSignals {
   laws: Array<{ norma: string; article: string; boeId: string | null }>;
 }
 
-function renderCase(signals: CaseSignals): string {
+export function renderCase(signals: CaseSignals): string {
   const lines: string[] = [];
   lines.push(`### ${signals.id} — ${signals.headline}`);
   if (signals.subtopic) lines.push(`Subtema: ${signals.subtopic}`);
