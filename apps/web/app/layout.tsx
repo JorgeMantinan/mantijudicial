@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
+import { getActor } from "@/lib/auth";
 import { LogoutButton } from "./logout-button";
 import "./globals.css";
 
@@ -20,6 +21,8 @@ const NAV = [
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const store = await cookies();
   const authenticated = Boolean(store.get("mj_session")?.value);
+  const actor = authenticated ? await getActor() : null;
+  const links = actor?.role === "ORG_ADMIN" ? [...NAV, { href: "/users", label: "Usuarios" }] : NAV;
 
   return (
     <html lang="es">
@@ -30,7 +33,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               Manti<span>Judicial</span>
             </div>
             <nav style={{ display: "flex", gap: 18, flex: 1 }}>
-              {NAV.map((item) => (
+              {links.map((item) => (
                 <Link key={item.href} href={item.href}>
                   {item.label}
                 </Link>

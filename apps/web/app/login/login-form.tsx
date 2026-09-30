@@ -33,35 +33,33 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={submit} style={{ display: "grid", gap: 12, maxWidth: 360 }}>
-      <label className="small muted" style={{ display: "grid", gap: 4 }}>
+    <form onSubmit={submit} className="auth-form">
+      <label className="auth-field">
         Correo
         <input
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           autoComplete="username"
+          placeholder="tu@correo.com"
           required
         />
       </label>
-      <label className="small muted" style={{ display: "grid", gap: 4 }}>
+      <label className="auth-field">
         Contraseña
         <input
           type="password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           autoComplete="current-password"
+          placeholder="••••••••"
           required
         />
       </label>
       <button type="submit" disabled={isPending}>
         {isPending ? "Entrando…" : "Entrar"}
       </button>
-      {error && (
-        <p className="small" style={{ color: "var(--red)", margin: 0 }}>
-          {error}
-        </p>
-      )}
+      {error && <p className="auth-error">{error}</p>}
     </form>
   );
 }

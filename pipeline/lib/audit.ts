@@ -6,6 +6,7 @@ export type AuditAction =
   | "share.revoke"
   | "review.update"
   | "case.ingest"
+  | "user.create"
   | "auth.login"
   | "auth.login_failed"
   | "auth.logout";
