@@ -73,6 +73,13 @@ export default async function UsersPage({
         <UserForm />
       </div>
 
+      {!identity.mfaEnabled(actor.userId) && (
+        <div className="notice" style={{ borderColor: "var(--red)" }}>
+          <strong>Doble factor no activado en tu cuenta.</strong> Actíalo abajo (MFA): protege el
+          acceso a todos los casos del despacho.
+        </div>
+      )}
+
       <MfaPanel />
 
       <table>

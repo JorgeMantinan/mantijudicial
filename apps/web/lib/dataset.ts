@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { execSync } from "node:child_process";
 import {
   boeIdsInText,
   detectOutcomeFromText,
@@ -1587,4 +1588,83 @@ export async function deleteBusqueda(nombre: string): Promise<BusquedaGuardada[]
   const siguiente = actuales.filter((busqueda) => busqueda.nombre !== nombre);
   await fs.writeFile(busquedasPath(), `${JSON.stringify(siguiente, null, 2)}\n`, "utf8");
   return siguiente;
+}
+
+async function dirSize(dir: string): Promise<number> {
+  const entries = await fs.readdir(dir, { withFileTypes: true }).catch(() => []);
+  let total = 0;
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) total += await dirSize(full);
+    else {
+      const stat = await fs.stat(full).catch(() => null);
+      total += stat?.size ?? 0;
+    }
+  }
+  return total;
+}
+
+export interface SistemaInfo {
+  node: string;
+  git: string | null;
+  version: string;
+  casos: number;
+  normas: number;
+  bytesCases: number;
+  bytesLaws: number;
+  ultimaSentencia: string | null;
+  ultimaCopia: string | null;
+}
+
+let sistemaCache: { value: SistemaInfo; at: number } | null = null;
+
+/** Estado del sistema para el panel de /eval (cache 60 s). */
+export async function getSistemaInfo(): Promise<SistemaInfo> {
+  if (sistemaCache && Date.now() - sistemaCache.at < 60_000) return sistemaCache.value;
+
+  const [items, normas, evolucion, pkg] = await Promise.all([
+    listCases(),
+    listLaws(),
+    getEvolucion(),
+    readJson<{ version?: string }>(path.join(repoRoot(), "package.json")),
+  ]);
+  const [bytesCases, bytesLaws] = await Promise.all([
+    dirSize(path.join(repoRoot(), "cases")),
+    dirSize(path.join(repoRoot(), "laws")),
+  ]);
+
+  let git: string | null = null;
+  try {
+    git = execSync("git rev-parse --short HEAD", {
+      cwd: repoRoot(),
+      windowsHide: true,
+      stdio: ["ignore", "pipe", "ignore"],
+    })
+      .toString()
+      .trim();
+  } catch {
+    git = null;
+  }
+
+  const fechas = evolucion
+    .flatMap((tema) => tema.entries.map((entry) => entry.fecha.slice(0, 10)))
+    .filter((fecha) => /^\d{4}-\d{2}-\d{2}$/.test(fecha))
+    .sort();
+  const copias = (await fs.readdir(path.join(repoRoot(), "backups")).catch(() => [] as string[]))
+    .filter((name) => name.endsWith(".zip"))
+    .sort();
+
+  const value: SistemaInfo = {
+    node: process.version,
+    git,
+    version: pkg?.version ?? "—",
+    casos: items.length,
+    normas: normas.length,
+    bytesCases,
+    bytesLaws,
+    ultimaSentencia: fechas.length > 0 ? fechas[fechas.length - 1] : null,
+    ultimaCopia: copias.length > 0 ? copias[copias.length - 1] : null,
+  };
+  sistemaCache = { value, at: Date.now() };
+  return value;
 }

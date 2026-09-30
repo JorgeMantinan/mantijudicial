@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { PrintButton } from "@/components/print-button";
-import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
+import { canViewCase, defaultOrgId, loadIdentity, requireActor } from "@/lib/auth";
 import { getContradicciones, getReviewStats, getVigenciaAlerts, listCases } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 
@@ -12,11 +12,12 @@ export default async function ResumenPage() {
   const grants = await authorizationGrants();
   const puedeVer = (caseId: string) => canViewCase(actor, caseId, orgId, grants);
 
-  const [todos, stats, vigencia, contradictorio] = await Promise.all([
+  const [todos, stats, vigencia, contradictorio, identity] = await Promise.all([
     listCases(),
     getReviewStats(),
     getVigenciaAlerts(),
     getContradicciones(),
+    loadIdentity(),
   ]);
 
   const casos = todos.filter((item) => puedeVer(item.id));
@@ -42,6 +43,11 @@ export default async function ResumenPage() {
 
       <h1 style={{ marginTop: 0 }}>Resumen del día</h1>
       <p className="small">{hoy} · MantiJudicial</p>
+      {!identity.mfaEnabled(actor.userId) && (
+        <p className="small no-print" style={{ color: "var(--red)" }}>
+          Recuerdo: no tienes activado el doble factor (actívalo en <Link href="/users">Usuarios</Link>).
+        </p>
+      )}
 
       <div className="grid">
         <div className="card">

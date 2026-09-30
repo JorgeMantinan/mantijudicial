@@ -1,6 +1,6 @@
 import { requireActor } from "@/lib/auth";
 import Link from "next/link";
-import { getCalidadCorpus, getCostesIA, getEvalReport } from "@/lib/dataset";
+import { getCalidadCorpus, getCostesIA, getEvalReport, getSistemaInfo } from "@/lib/dataset";
 import { LAW_STATUS, QUOTE, label } from "@/lib/labels";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +20,7 @@ export default async function EvalPage() {
   const report = await getEvalReport();
   const costes = await getCostesIA();
   const calidad = await getCalidadCorpus();
+  const sistema = await getSistemaInfo();
   if (!report) {
     return (
       <>
@@ -242,6 +243,43 @@ export default async function EvalPage() {
             ))}
           </ul>
         )}
+      </div>
+
+      <div className="section">
+        <h2>Sistema</h2>
+        <table>
+          <tbody>
+            <tr>
+              <td className="small">Versión de la app</td>
+              <td className="mono small">{sistema.version}</td>
+            </tr>
+            <tr>
+              <td className="small">Commit</td>
+              <td className="mono small">{sistema.git ?? "—"}</td>
+            </tr>
+            <tr>
+              <td className="small">Node</td>
+              <td className="mono small">{sistema.node}</td>
+            </tr>
+            <tr>
+              <td className="small">Corpus</td>
+              <td className="small">
+                {sistema.casos} casos ({Math.round(sistema.bytesCases / 1024 / 1024)} MB) ·{" "}
+                {sistema.normas} normas ({Math.round(sistema.bytesLaws / 1024 / 1024)} MB)
+              </td>
+            </tr>
+            <tr>
+              <td className="small">Última sentencia del corpus</td>
+              <td className="mono small">{sistema.ultimaSentencia ?? "—"}</td>
+            </tr>
+            <tr>
+              <td className="small">Última copia de seguridad</td>
+              <td className="mono small">
+                {sistema.ultimaCopia ?? "ninguna (scripts/backup.ps1)"}
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       <div className="section">
