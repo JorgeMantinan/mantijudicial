@@ -9,6 +9,8 @@ export function LoginForm() {
   const [isPending, startTransition] = useTransition();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
+  const [mfaRequired, setMfaRequired] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function submit(event: React.FormEvent) {
@@ -17,17 +19,22 @@ export function LoginForm() {
     const response = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, code: mfaRequired ? code : undefined }),
     }).catch(() => null);
     if (!response) {
       setError("No se pudo contactar con el servidor");
       return;
     }
-    const payload = (await response.json().catch(() => ({}))) as { error?: string };
+    const payload = (await response.json().catch(() => ({}))) as {
+      error?: string;
+      mfaRequired?: boolean;
+    };
     if (!response.ok) {
+      if (payload.mfaRequired) setMfaRequired(true);
       setError(payload.error ?? "Error al iniciar sesión");
       return;
     }
+    setMfaRequired(false);
     const next = params.get("next");
     startTransition(() => router.push(next && next.startsWith("/") ? next : "/"));
   }
@@ -56,6 +63,20 @@ export function LoginForm() {
           required
         />
       </label>
+      {mfaRequired && (
+        <label className="auth-field">
+          Código de doble factor
+          <input
+            inputMode="numeric"
+            maxLength={6}
+            value={code}
+            onChange={(event) => setCode(event.target.value)}
+            placeholder="123456"
+            required
+            autoFocus
+          />
+        </label>
+      )}
       <button type="submit" disabled={isPending}>
         {isPending ? "Entrando…" : "Entrar"}
       </button>

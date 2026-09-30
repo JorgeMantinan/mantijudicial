@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { Actor, Role } from "./authorization.js";
+import { generateSecret, otpauthUri, verifyTotp } from "./totp";
 
 const SCRYPT_OPTIONS = { N: 16384, r: 8, p: 1 };
 const KEYLEN = 64;
@@ -13,6 +14,9 @@ export interface User {
   name: string;
   password_hash: string;
   created_at: string;
+  /** TOTP pendiente de confirmar (solo si mfa_enabled es true está activo). */
+  mfa_secret?: string | null;
+  mfa_enabled?: boolean;
 }
 
 export interface Firm {
@@ -233,6 +237,48 @@ export class IdentityStore {
     if (!user) throw new IdentityError("Usuario no encontrado");
     if (password.length < 8) throw new IdentityError("La contraseña necesita 8 caracteres mínimo");
     user.password_hash = hashPassword(password);
+  }
+
+  /** Genera y guarda el secreto TOTP; queda inactivo hasta confirmarlo con un código. */
+  setupMfa(userId: string): { secret: string; uri: string } {
+    const user = this.data.users.find((item) => item.id === userId);
+    if (!user) throw new IdentityError("Usuario no encontrado");
+    const secret = generateSecret();
+    user.mfa_secret = secret;
+    user.mfa_enabled = false;
+    return { secret, uri: otpauthUri(secret, user.email) };
+  }
+
+  confirmMfa(userId: string, code: string): boolean {
+    const user = this.data.users.find((item) => item.id === userId);
+    if (!user?.mfa_secret) throw new IdentityError("Primero hay que generar el código");
+    if (!verifyTotp(user.mfa_secret, code)) return false;
+    user.mfa_enabled = true;
+    return true;
+  }
+
+  disableMfa(userId: string, code: string): boolean {
+    const user = this.data.users.find((item) => item.id === userId);
+    if (!user?.mfa_secret) return false;
+    if (!verifyTotp(user.mfa_secret, code)) return false;
+    user.mfa_secret = null;
+    user.mfa_enabled = false;
+    this.revokeSessionsOf(userId);
+    return true;
+  }
+
+  mfaEnabled(userId: string): boolean {
+    return this.data.users.find((item) => item.id === userId)?.mfa_enabled === true;
+  }
+
+  /** true si el código TOTP es válido para este usuario (o no tiene MFA). */
+  checkMfa(userId: string, code: string | undefined): boolean {
+    const user = this.data.users.find((item) => item.id === userId);
+    if (!user) return false;
+    if (!user.mfa_enabled) return true;
+    if (!user.mfa_secret) return false;
+    if (!code) return false;
+    return verifyTotp(user.mfa_secret, code);
   }
 
   pruneSessions(now = new Date()): number {

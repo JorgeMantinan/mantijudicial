@@ -4,6 +4,7 @@ import { loadIdentity, requireActor } from "@/lib/auth";
 import { ROLE, label } from "@/lib/labels";
 import { SortTh } from "@/lib/sort-th";
 import { UserForm } from "./user-form";
+import { MfaPanel } from "./mfa-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,8 @@ export default async function UsersPage({
         <h2>Crear usuario</h2>
         <UserForm />
       </div>
+
+      <MfaPanel />
 
       <table>
         <thead>

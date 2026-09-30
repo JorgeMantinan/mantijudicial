@@ -9,6 +9,7 @@ import {
   isValidEmail,
   verifyPassword,
 } from "./identity.js";
+import { totp } from "./totp.js";
 
 const tmp = path.join(os.tmpdir(), `mj-identity-${process.pid}-${Date.now()}`);
 const storePath = path.join(tmp, "identity.json");
@@ -115,6 +116,31 @@ describe("IdentityStore", () => {
     expect(store.revokeSessionsOf(user.id)).toBe(1);
     expect(store.getSession(session.token, now)).toBeNull();
     expect(() => store.setPassword(user.id, "corta")).toThrow("8 caracteres");
+  });
+
+  it("activa, verifica y desactiva el doble factor (TOTP)", () => {
+    const store = IdentityStore.empty();
+    const firm = store.createFirm("Despacho");
+    const user = store.registerUser({ email: "mfa@b.es", name: "MFA", password: "12345678" });
+    store.addMembership(user.id, firm.id, "LAWYER");
+
+    const { secret, uri } = store.setupMfa(user.id);
+    expect(secret).toHaveLength(32);
+    expect(uri).toContain("otpauth://totp/");
+    expect(store.mfaEnabled(user.id)).toBe(false);
+
+    const code = totp(secret);
+    expect(store.confirmMfa(user.id, "000000")).toBe(false);
+    expect(store.confirmMfa(user.id, code)).toBe(true);
+    expect(store.mfaEnabled(user.id)).toBe(true);
+
+    expect(store.checkMfa(user.id, undefined)).toBe(false);
+    expect(store.checkMfa(user.id, totp(secret))).toBe(true);
+    expect(store.checkMfa(user.id, "999999")).toBe(false);
+
+    expect(store.disableMfa(user.id, totp(secret))).toBe(true);
+    expect(store.mfaEnabled(user.id)).toBe(false);
+    expect(store.checkMfa(user.id, undefined)).toBe(true);
   });
 
   it("persiste y recarga el almacén", async () => {
