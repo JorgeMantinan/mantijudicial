@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { OpencodeCliProvider, type AIProvider } from "./lib/ai_provider.js";
+import { createAIProvider, type AIProvider } from "./lib/ai_provider.js";
 import { extractJson } from "./lib/json_extract.js";
 import { CASES_DIR, REPO_ROOT, caseDir } from "./lib/paths.js";
 import { buildIndex, search } from "./lib/search.js";
@@ -158,7 +158,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  const provider = new OpencodeCliProvider();
+  const provider = createAIProvider();
   process.stdout.write(`Proveedor: ${provider.name} | Modelo: ${args.model}\n`);
   process.stdout.write(`Comparando ${args.primary} con ${other ?? "(automático)"}…\n`);
   const started = Date.now();

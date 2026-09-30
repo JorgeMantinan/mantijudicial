@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { OpencodeCliProvider, type AIProvider } from "./lib/ai_provider.js";
+import { createAIProvider, type AIProvider } from "./lib/ai_provider.js";
 import {
   PROMPT_VERSION,
   SECTION_FILES,
@@ -361,7 +361,7 @@ type Entry = Awaited<ReturnType<typeof scanCases>>[number];
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
-  const provider = new OpencodeCliProvider();
+  const provider = createAIProvider();
   let entries = await scanCases();
 
   const selectTargets = (list: Entry[]): Entry[] => {

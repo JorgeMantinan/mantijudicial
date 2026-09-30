@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { OpencodeCliProvider, type AIProvider } from "./lib/ai_provider.js";
+import { createAIProvider, type AIProvider } from "./lib/ai_provider.js";
 import { extractJson } from "./lib/json_extract.js";
 import { REPO_ROOT, caseDir } from "./lib/paths.js";
 import {
@@ -189,7 +189,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  const provider = new OpencodeCliProvider();
+  const provider = createAIProvider();
   process.stdout.write(`Proveedor: ${provider.name} | Modelo: ${args.model}\n`);
   process.stdout.write(`Redactando borrador (${args.tipo}) para ${args.caseId}…\n`);
   const started = Date.now();

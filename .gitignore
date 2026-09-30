@@ -17,5 +17,8 @@ data/
 /cases/
 /laws/
 
+# Copia de trabajo que descarga scripts/render-bootstrap.sh (solo en servidor)
+/.corpus/
+
 # Build de Next.js
 apps/web/.next/
