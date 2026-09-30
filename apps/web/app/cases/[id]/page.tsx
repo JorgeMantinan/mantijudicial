@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { canShareResource } from "@pipeline/authorization";
 import { canViewCase, caseResource, defaultOrgId, loadIdentity, requireActor } from "@/lib/auth";
-import { getCase, getSimilarCases, getVias, listLaws } from "@/lib/dataset";
+import { getCase, getComparisons, getSimilarCases, getVias, listLaws } from "@/lib/dataset";
 import { authorizationGrants, loadGrantStore } from "@/lib/grants";
 import {
   ARG_OUTCOME,
@@ -29,6 +29,7 @@ import { OutcomeBadge } from "@/lib/ui";
 import { ReviewForm } from "./review-form";
 import { NotesPanel } from "./notes-panel";
 import { ReanalyzeButton } from "./reanalyze-button";
+import { ComparePanel } from "./compare-panel";
 import { SharePanel, type ShareGrantView } from "./share-panel";
 
 export const dynamic = "force-dynamic";
@@ -72,6 +73,27 @@ type Holding = {
 };
 type Issue = { issue_id?: string; topic?: string; description?: string; importance?: number };
 type Citation = { citation_id?: string; raw_text?: string; norma?: string; article?: string; relevance?: string };
+type CompareReport = {
+  aplicabilidad?: string;
+  conclusion?: string;
+  similitudes?: Array<{ aspecto?: string; detalle?: string; apoyo_case_id?: string }>;
+  diferencias?: Array<{ aspecto?: string; detalle?: string; impacto?: string }>;
+  argumentos_efectivos?: Array<{
+    argumento?: string;
+    apoyo_case_id?: string;
+    apoyo_frase?: string;
+    resultado?: string;
+  }>;
+  huecos?: Array<{ descripcion?: string; como_cubrirlo?: string }>;
+  contraargumentos?: Array<{
+    del_contrario?: string;
+    nuestra_respuesta?: string;
+    apoyo_case_id?: string;
+  }>;
+  riesgos?: string[];
+  avisos?: string[];
+};
+
 type Ref = {
   norma?: string;
   article_raw?: string;
@@ -99,10 +121,11 @@ export default async function CaseDetailPage({
   const detail = await getCase(id);
   if (!detail) notFound();
 
-  const [laws, similar, vias, identity, grantStore] = await Promise.all([
+  const [laws, similar, vias, comparisons, identity, grantStore] = await Promise.all([
     listLaws(),
     getSimilarCases(id, 5),
     getVias(id),
+    getComparisons(id),
     loadIdentity(),
     loadGrantStore(),
   ]);
@@ -575,6 +598,128 @@ export default async function CaseDetailPage({
             </tbody>
           </table>
         )}
+      </div>
+
+      <div className="section">
+        <h2>Comparaciones con otros casos</h2>
+        <p className="small muted">
+          Huecos del expediente, argumentos efectivos y contraargumentos previstos. Análisis con IA
+          pendiente de validación por un abogado.
+        </p>
+
+        {comparisons.map((comparison) => {
+          const report = comparison.report as CompareReport;
+          return (
+            <article
+              key={comparison.otro_caso}
+              style={{ borderTop: "1px solid var(--line)", paddingTop: 12, marginTop: 12 }}
+            >
+              <h3 style={{ marginBottom: 4 }}>
+                vs.{" "}
+                <Link href={`/cases/${comparison.otro_caso}`}>{comparison.otro_caso}</Link>{" "}
+                <span
+                  className={`badge ${report.aplicabilidad === "ALTA" ? "ok" : report.aplicabilidad === "MEDIA" ? "warn" : ""}`}
+                >
+                  aplicabilidad {report.aplicabilidad ?? "—"}
+                </span>
+              </h3>
+              {comparison.generated_at && (
+                <p className="small muted">{comparison.generated_at}</p>
+              )}
+
+              {report.conclusion && <blockquote>{report.conclusion}</blockquote>}
+
+              {report.similitudes && report.similitudes.length > 0 && (
+                <>
+                  <h3>Similitudes</h3>
+                  <ul className="small">
+                    {report.similitudes.map((item, index) => (
+                      <li key={index}>
+                        <strong>{item.aspecto}:</strong> {item.detalle}{" "}
+                        {item.apoyo_case_id?.startsWith("case_") && (
+                          <Link href={`/cases/${item.apoyo_case_id}`}>{item.apoyo_case_id}</Link>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+
+              {report.diferencias && report.diferencias.length > 0 && (
+                <>
+                  <h3>Diferencias</h3>
+                  <ul className="small">
+                    {report.diferencias.map((item, index) => (
+                      <li key={index}>
+                        <strong>{item.aspecto}:</strong> {item.detalle}{" "}
+                        {item.impacto && <em>(impacto: {item.impacto})</em>}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+
+              {report.huecos && report.huecos.length > 0 && (
+                <>
+                  <h3>Huecos del expediente</h3>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Qué falta</th>
+                        <th>Cómo cubrirlo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {report.huecos.map((item, index) => (
+                        <tr key={index}>
+                          <td className="small">{item.descripcion}</td>
+                          <td className="small">{item.como_cubrirlo}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+
+              {report.contraargumentos && report.contraargumentos.length > 0 && (
+                <>
+                  <h3>Contraargumentos previstos</h3>
+                  <ul className="small">
+                    {report.contraargumentos.map((item, index) => (
+                      <li key={index}>
+                        <strong>Puede decir la parte contraria:</strong> {item.del_contrario}
+                        <br />
+                        <strong>Respuesta:</strong> {item.nuestra_respuesta}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+
+              {report.riesgos && report.riesgos.length > 0 && (
+                <>
+                  <h3>Riesgos</h3>
+                  <ul className="small">
+                    {report.riesgos.map((item, index) => (
+                      <li key={index}>{item}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+
+              {report.avisos && report.avisos.length > 0 && (
+                <div className="notice">{report.avisos.join(" ")}</div>
+              )}
+            </article>
+          );
+        })}
+
+        <h3>Generar una comparación</h3>
+        <ComparePanel
+          caseId={id}
+          options={similar.map((item) => ({ id: item.id, title: item.title }))}
+          existing={comparisons.map((item) => item.otro_caso)}
+        />
       </div>
 
       <div className="section">

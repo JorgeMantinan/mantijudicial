@@ -270,6 +270,26 @@ export async function getVias(caseId: string): Promise<ViasOutput | null> {
   return readJson<ViasOutput>(path.join(repoRoot(), "cases", caseId, "structured", "vias.json"));
 }
 
+export interface Comparison {
+  otro_caso: string;
+  generated_at?: string;
+  analysis?: { model?: string; cost?: number };
+  report: Record<string, unknown>;
+}
+
+export async function getComparisons(caseId: string): Promise<Comparison[]> {
+  if (!/^case_\d{6}$/.test(caseId)) return [];
+  const dir = path.join(repoRoot(), "cases", caseId, "structured");
+  const names = await fs.readdir(dir).catch(() => [] as string[]);
+  const out: Comparison[] = [];
+  for (const name of names) {
+    if (!/^compare_case_\d{6}\.json$/.test(name)) continue;
+    const item = await readJson<Comparison>(path.join(dir, name));
+    if (item?.report) out.push(item);
+  }
+  return out.sort((a, b) => String(b.generated_at).localeCompare(String(a.generated_at)));
+}
+
 export async function getCaseCitations(): Promise<Record<string, unknown> | null> {
   return readJson<Record<string, unknown>>(path.join(repoRoot(), "laws", "case_citations.json"));
 }

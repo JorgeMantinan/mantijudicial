@@ -25,7 +25,8 @@
     "seed": "tsx pipeline/11_seed.ts",
     "eval": "tsx pipeline/12_eval.ts",
     "supplement": "tsx pipeline/13_supplement.ts",
-    "eval:show": "tsx pipeline/12_eval.ts --show"
+    "eval:show": "tsx pipeline/12_eval.ts --show",
+    "compare": "tsx pipeline/14_compare.ts"
   },
   "engines": {
     "node": ">=20.0.0"
