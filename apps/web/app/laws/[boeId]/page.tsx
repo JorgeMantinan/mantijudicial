@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireActor } from "@/lib/auth";
 import { getLaw, type LawBlock } from "@/lib/dataset";
 import { BLOCK_TIPO, label } from "@/lib/labels";
+import { BlockIndex } from "./block-index";
 
 export const dynamic = "force-dynamic";
 
@@ -130,46 +131,22 @@ export default async function LawDetailPage({
         </div>
       ) : (
         <>
-          <form className="filters" action={`/laws/${norm.boe_id}`} method="get">
-            <input name="q" defaultValue={sp.q ?? ""} placeholder="Filtrar bloques (p. ej. Art 1124)" />
-            <button type="submit">Filtrar</button>
-            {sp.q && (
-              <Link className="small" href={`/laws/${norm.boe_id}`}>
-                limpiar
-              </Link>
-            )}
-          </form>
-
           <p className="small muted">
-            {rows.length} bloques del índice de estructura. Cada fila indica su jerarquía (libro,
-            título, capítulo…); el texto mostrado es la versión <strong>vigente</strong>.
+            Índice completo de {norm.blocks.length} bloques. Escribe para filtrar al vuelo (incluye
+            todos los artículos); el texto mostrado en cada ficha es la versión{" "}
+            <strong>vigente</strong>.
           </p>
-
-          <table>
-            <thead>
-              <tr>
-                <th>Bloque</th>
-                <th>Tipo</th>
-                <th>Vigencia</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((block) => (
-                <tr key={block.id}>
-                  <td>
-                    <Link href={`/laws/${norm.boe_id}?block=${encodeURIComponent(block.id)}`}>
-                      {block.titulo || block.id}
-                    </Link>
-                    {block.path.length > 1 && (
-                      <div className="small muted">{block.path.slice(0, -1).join(" › ")}</div>
-                    )}
-                  </td>
-                  <td className="small">{label(BLOCK_TIPO, block.tipo)}</td>
-                  <td className="mono small">{fechaEs(block.fecha_vigencia)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <BlockIndex
+            boeId={norm.boe_id}
+            initial={sp.q ?? ""}
+            blocks={norm.blocks.map((block) => ({
+              id: block.id,
+              titulo: block.titulo,
+              tipo: label(BLOCK_TIPO, block.tipo),
+              fecha: fechaEs(block.fecha_vigencia),
+              path: withPaths([block])[0]?.path ?? [],
+            }))}
+          />
         </>
       )}
     </>
