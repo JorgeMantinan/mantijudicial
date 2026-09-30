@@ -16,6 +16,7 @@ const NAV = [
   { href: "/cases", label: "Casos" },
   { href: "/review", label: "Revisión" },
   { href: "/plazos", label: "Plazos" },
+  { href: "/evolucion", label: "Evolución" },
   { href: "/search", label: "Búsqueda" },
   { href: "/laws", label: "Legislación" },
   { href: "/patterns", label: "Patrones" },

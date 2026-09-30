@@ -9,7 +9,7 @@ import {
   type GoldenEntry,
 } from "@pipeline/eval";
 import { matchWithCorpus } from "@pipeline/sentencias";
-import { aggregate, type CaseSignals } from "@pipeline/patterns";
+import { aggregate, normalizeKey, type CaseSignals } from "@pipeline/patterns";
 import { buildIndex, search, type SearchDoc, type SearchHit } from "@pipeline/search";
 
 const INDEX_TTL_MS = 30_000;
@@ -459,6 +459,90 @@ export async function getSentenciasCitadas(caseId: string): Promise<SentenciaEnC
       caseId: item.caseId,
       ecli: item.ecli,
     }));
+}
+
+export interface EvolucionCaso {
+  fecha: string;
+  caseId: string;
+  headline: string;
+  outcome: string;
+  branch: string;
+  frase: string;
+  doctrine: string;
+}
+
+export interface EvolucionTema {
+  topic: string;
+  cases: number;
+  distribution: Record<string, number>;
+  first: string;
+  last: string;
+  entries: EvolucionCaso[];
+}
+
+/** Evolución de un mismo tema (holding) a lo largo del corpus, por fecha. */
+export async function getEvolucion(): Promise<EvolucionTema[]> {
+  const caseNames = (await fs.readdir(path.join(repoRoot(), "cases"))).filter((name) =>
+    /^case_\d{6}$/.test(name),
+  );
+  const groups = new Map<
+    string,
+    { cases: Map<string, EvolucionCaso>; distribution: Record<string, number> }
+  >();
+
+  for (const caseId of caseNames) {
+    const [meta, reasoning, classification, outcome, summary] = await Promise.all([
+      readFirstJson<{ resolution_date?: string }>(path.join(repoRoot(), "cases", caseId, "metadata")),
+      section<{ holdings?: Array<{ topic?: string; statement?: string; doctrine?: string }> }>(
+        caseId,
+        "reasoning.json",
+      ),
+      section<{ classification?: { civil_branch?: string } }>(caseId, "classification.json"),
+      section<{ outcome?: { cassation_outcome?: string } }>(caseId, "outcome.json"),
+      section<{ summary?: { headline?: string } }>(caseId, "summary.json"),
+    ]);
+    const review = await section<{ extraction?: { validation?: string } }>(caseId, "review.json");
+    if (review?.extraction?.validation !== "OK") continue;
+    const fecha = meta?.resolution_date ?? "";
+    const caseOutcome = outcome?.outcome?.cassation_outcome ?? "UNKNOWN";
+
+    for (const holding of reasoning?.holdings ?? []) {
+      const key = normalizeKey(holding.topic ?? "");
+      if (!key) continue;
+      const group = groups.get(key) ?? {
+        cases: new Map<string, EvolucionCaso>(),
+        distribution: {},
+      };
+      if (!group.cases.has(caseId)) {
+        group.cases.set(caseId, {
+          fecha,
+          caseId,
+          headline: summary?.summary?.headline ?? caseId,
+          outcome: caseOutcome,
+          branch: classification?.classification?.civil_branch ?? "UNKNOWN",
+          frase: holding.statement ?? "",
+          doctrine: holding.doctrine ?? "UNKNOWN",
+        });
+        group.distribution[caseOutcome] = (group.distribution[caseOutcome] ?? 0) + 1;
+      }
+      groups.set(key, group);
+    }
+  }
+
+  return [...groups.entries()]
+    .map(([topic, group]) => {
+      const entries = [...group.cases.values()].sort((a, b) => a.fecha.localeCompare(b.fecha));
+      return {
+        topic,
+        cases: entries.length,
+        distribution: group.distribution,
+        first: entries[0]?.fecha ?? "",
+        last: entries[entries.length - 1]?.fecha ?? "",
+        entries,
+      };
+    })
+    .filter((item) => item.cases >= 3)
+    .sort((a, b) => b.cases - a.cases || a.topic.localeCompare(b.topic));
 }
 
 export async function getCaseCitations(): Promise<Record<string, unknown> | null> {
