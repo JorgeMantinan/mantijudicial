@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { requireActor } from "@/lib/auth";
+import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import { getEvolucion } from "@/lib/dataset";
+import { authorizationGrants } from "@/lib/grants";
 import { BRANCH, OUTCOME, label } from "@/lib/labels";
 import { OutcomeBadge } from "@/lib/ui";
 
@@ -11,9 +12,31 @@ export default async function EvolucionPage({
 }: {
   searchParams: Promise<{ tema?: string }>;
 }) {
-  await requireActor();
+  const actor = await requireActor();
+  const orgId = await defaultOrgId();
+  const grants = await authorizationGrants();
   const sp = await searchParams;
-  const temas = await getEvolucion();
+  const brutas = await getEvolucion();
+  const temas = brutas
+    .map((tema) => {
+      const entries = tema.entries.filter((entry) =>
+        canViewCase(actor, entry.caseId, orgId, grants),
+      );
+      const distribution: Record<string, number> = {};
+      for (const entry of entries) {
+        distribution[entry.outcome] = (distribution[entry.outcome] ?? 0) + 1;
+      }
+      const fechas = entries.map((entry) => entry.fecha).sort();
+      return {
+        ...tema,
+        entries,
+        cases: entries.length,
+        distribution,
+        first: fechas[0] ?? tema.first,
+        last: fechas[fechas.length - 1] ?? tema.last,
+      };
+    })
+    .filter((tema) => tema.cases > 0);
   const activo =
     (sp.tema ? temas.find((item) => item.topic === sp.tema) : undefined) ?? temas[0] ?? null;
 

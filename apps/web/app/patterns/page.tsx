@@ -36,7 +36,14 @@ export default async function PatternsPage() {
   const grants = await authorizationGrants();
   const cases = (await listCases()).filter((item) => canViewCase(actor, item.id, orgId, grants));
   const computed = await computePatterns(cases.map((item) => item.id));
-  const contradictorio = await getContradicciones();
+  const contradictorio = (await getContradicciones())
+    .map((tema) => ({
+      ...tema,
+      ejemplos: tema.ejemplos.filter((ejemplo) =>
+        canViewCase(actor, ejemplo.caseId, orgId, grants),
+      ),
+    }))
+    .filter((tema) => tema.ejemplos.length > 0);
   const patterns = computed
     ? { generated_at: new Date().toISOString(), disclaimer: DISCLAIMER, ...computed }
     : null;
