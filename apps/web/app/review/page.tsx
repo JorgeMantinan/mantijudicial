@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { requireActor } from "@/lib/auth";
 import { getRevisionPorPersona, getReviewStats, listCases } from "@/lib/dataset";
-import { BRANCH, OUTCOME, REVIEW, label } from "@/lib/labels";
-import { OutcomeBadge } from "@/lib/ui";
+import { REVIEW, label } from "@/lib/labels";
+import { ReviewTable } from "./review-table";
 
 export const dynamic = "force-dynamic";
 
@@ -108,41 +108,15 @@ export default async function ReviewPage({
         <button type="submit">Ver</button>
       </form>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Caso</th>
-            <th>Asunto</th>
-            <th>Rama</th>
-            <th>Resultado</th>
-            <th>Revisión</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {filtered.map((item) => (
-            <tr key={item.id}>
-              <td className="mono">{item.id.replace("case_", "")}</td>
-              <td>{item.headline}</td>
-              <td className="small">{label(BRANCH, item.branch)}</td>
-              <td>
-                <OutcomeBadge outcome={item.outcome} />
-              </td>
-              <td>
-                <span
-                  className={`badge ${item.reviewStatus === "UNREVIEWED" ? "warn" : item.reviewStatus === "REJECTED" ? "ko" : "ok"}`}
-                  title={item.reviewStatus}
-                >
-                  {label(REVIEW, item.reviewStatus)}
-                </span>
-              </td>
-              <td>
-                <Link href={`/cases/${item.id}`}>abrir →</Link>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <ReviewTable
+        rows={filtered.map((item) => ({
+          id: item.id,
+          headline: item.headline,
+          branch: item.branch,
+          outcome: item.outcome,
+          reviewStatus: item.reviewStatus,
+        }))}
+      />
 
       {filtered.length === 0 && <p className="muted">No hay casos con ese estado.</p>}
     </>

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { getActor } from "@/lib/auth";
 import { getReviewStats } from "@/lib/dataset";
+import { Shortcuts } from "@/components/shortcuts";
 import { LogoutButton } from "./logout-button";
 import "./globals.css";
 
@@ -62,6 +63,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </div>
         </header>
         <main className="wrap">{children}</main>
+        <Shortcuts />
         <footer>
           <div className="wrap">
             Corpus de sentencias del Tribunal Supremo + texto consolidado del BOE. Los textos
