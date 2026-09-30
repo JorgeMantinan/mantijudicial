@@ -15,7 +15,7 @@ type SortKey = (typeof SORTS)[number];
 export default async function UsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sort?: string; dir?: string }>;
+  searchParams: Promise<{ sort?: string; dir?: string; accion?: string; persona?: string }>;
 }) {
   const actor = await requireActor();
   if (actor.role !== "ORG_ADMIN") redirect("/");
@@ -36,7 +36,15 @@ export default async function UsersPage({
     };
   });
 
-  const auditoria = await getAuditoria(40);
+  const auditoriaBruta = await getAuditoria(300);
+  const accionSel = params.accion ?? "";
+  const personaSel = params.persona ?? "";
+  const auditoria = auditoriaBruta
+    .filter((entrada) => !accionSel || entrada.action === accionSel)
+    .filter((entrada) => !personaSel || entrada.actor === personaSel)
+    .slice(0, 40);
+  const accionesDisponibles = [...new Set(auditoriaBruta.map((entrada) => entrada.action))].sort();
+  const personasDisponibles = [...new Set(auditoriaBruta.map((entrada) => entrada.actor))];
   const nombres = new Map(users.map((user) => [user.id, user.name]));
 
   const sort = (SORTS as readonly string[]).includes(params.sort ?? "")
@@ -99,8 +107,40 @@ export default async function UsersPage({
         <p className="small muted">
           Últimas entradas de <span className="mono">data/audit.log</span> (sin notas privadas).
         </p>
+        <form className="filters" action="/users" method="get">
+          <label className="small muted" style={{ display: "grid", gap: 4 }}>
+            Acción
+            <select name="accion" defaultValue={accionSel}>
+              <option value="">Todas</option>
+              {accionesDisponibles.map((accion) => (
+                <option key={accion} value={accion}>
+                  {label(AUDIT, accion)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="small muted" style={{ display: "grid", gap: 4 }}>
+            Persona
+            <select name="persona" defaultValue={personaSel}>
+              <option value="">Todas</option>
+              {personasDisponibles.map((persona) => (
+                <option key={persona} value={persona}>
+                  {nombres.get(persona) ?? persona}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="submit" style={{ marginTop: 18 }}>
+            Filtrar
+          </button>
+          {(accionSel || personaSel) && (
+            <Link className="small" href="/users" style={{ marginTop: 22 }}>
+              limpiar
+            </Link>
+          )}
+        </form>
         {auditoria.length === 0 ? (
-          <p className="small">Sin actividad registrada.</p>
+          <p className="small">Sin actividad con ese filtro.</p>
         ) : (
           <table>
             <thead>

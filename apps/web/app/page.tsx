@@ -112,6 +112,9 @@ export default async function Home() {
           <li>
             <Link href="/novedades">Novedades</Link> — qué se ha ido añadiendo a la plataforma
           </li>
+          <li>
+            <Link href="/resumen">Resumen imprimible</Link> — lo del día en una hoja A4
+          </li>
         </ul>
       </div>
 

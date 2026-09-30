@@ -20,5 +20,8 @@ data/
 # Copia de trabajo que descarga scripts/render-bootstrap.sh (solo en servidor)
 /.corpus/
 
+# Copias de seguridad locales (scripts/backup.ps1)
+/backups/
+
 # Build de Next.js
 apps/web/.next/
