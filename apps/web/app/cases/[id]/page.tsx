@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { canShareResource } from "@pipeline/authorization";
 import { canViewCase, caseResource, defaultOrgId, loadIdentity, requireActor } from "@/lib/auth";
-import { getCase, getComparisons, getGoldenInfo, getSimilarCases, getVias, listLaws } from "@/lib/dataset";
+import { getCase, getComparisons, getGoldenInfo, getSentenciasCitadas, getSimilarCases, getVigenciaChecks, getVias, listLaws } from "@/lib/dataset";
 import { authorizationGrants, loadGrantStore } from "@/lib/grants";
 import {
   ARG_OUTCOME,
@@ -108,6 +108,11 @@ type Ref = {
 };
 type Decision = { instance?: string; court?: string; date?: string; result?: string; description?: string };
 
+function fechaEs(yyyymmdd: string | null | undefined): string {
+  if (!yyyymmdd || !/^\d{8}$/.test(yyyymmdd)) return yyyymmdd || "—";
+  return `${yyyymmdd.slice(6, 8)}/${yyyymmdd.slice(4, 6)}/${yyyymmdd.slice(0, 4)}`;
+}
+
 export default async function CaseDetailPage({
   params,
 }: {
@@ -122,15 +127,18 @@ export default async function CaseDetailPage({
   const detail = await getCase(id);
   if (!detail) notFound();
 
-  const [laws, similar, vias, comparisons, identity, grantStore, golden] = await Promise.all([
-    listLaws(),
-    getSimilarCases(id, 5),
-    getVias(id),
-    getComparisons(id),
-    loadIdentity(),
-    loadGrantStore(),
-    getGoldenInfo(id),
-  ]);
+  const [laws, similar, vias, comparisons, identity, grantStore, golden, sentencias, vigencias] =
+    await Promise.all([
+      listLaws(),
+      getSimilarCases(id, 5),
+      getVias(id),
+      getComparisons(id),
+      loadIdentity(),
+      loadGrantStore(),
+      getGoldenInfo(id),
+      getSentenciasCitadas(id),
+      getVigenciaChecks(id),
+    ]);
 
   const users = identity.listUsers().map((user) => ({
     id: user.id,
@@ -737,6 +745,44 @@ export default async function CaseDetailPage({
         />
       </div>
 
+      {sentencias.length > 0 && (
+        <div className="section">
+          <h2>Sentencias citadas en este texto</h2>
+          <p className="small muted">
+            Detectadas por reglas en el propio PDF y cruzadas con tu corpus de sentencias.
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>Cita</th>
+                <th>¿La tienes?</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sentencias.map((item) => (
+                <tr key={`${item.roj}-${item.raw.slice(0, 24)}`}>
+                  <td className="small">
+                    <strong>{item.raw}</strong>
+                    {item.tipo !== "SENTENCIA" && (
+                      <div className="mono small muted">{item.roj}</div>
+                    )}
+                  </td>
+                  <td className="small">
+                    {item.enCorpus && item.caseId ? (
+                      <Link href={`/cases/${item.caseId}`}>
+                        {item.caseId.replace("case_", "")} {item.ecli ? `· ${item.ecli}` : ""}
+                      </Link>
+                    ) : (
+                      <span className="badge">no está en tu corpus</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       <div className="section">
         <h2>Leyes citadas</h2>
         <table>
@@ -798,6 +844,58 @@ export default async function CaseDetailPage({
           </tbody>
         </table>
       </div>
+
+      {vigencias.length > 0 && (
+        <div className="section">
+          <h2>Vigencia de las leyes citadas</h2>
+          <p className="small muted">
+            Compara la fecha de la sentencia con la versión vigente de cada artículo citado: si la
+            versión actual es posterior, el texto puede haber cambiado desde la sentencia.
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>Artículo</th>
+                <th>Norma</th>
+                <th>En la sentencia</th>
+                <th>Versión actual</th>
+              </tr>
+            </thead>
+            <tbody>
+              {vigencias.map((item) => (
+                <tr key={`${item.boe_id}-${item.block_id}`}>
+                  <td className="mono small">
+                    art. {item.article}
+                    {item.titulo ? ` (${item.titulo})` : ""}
+                  </td>
+                  <td className="small">
+                    <Link href={`/laws/${item.boe_id}?block=${item.block_id}`}>{item.norma}</Link>
+                  </td>
+                  <td className="mono small">{fechaEs(item.version_en_sentencia)}</td>
+                  <td className="small">
+                    {item.cambio_posterior ? (
+                      <>
+                        <span className="badge warn">
+                          cambió después ({fechaEs(item.version_actual)})
+                        </span>{" "}
+                        {item.version_en_sentencia && (
+                          <Link
+                            href={`/laws/${item.boe_id}?block=${item.block_id}&version=${item.version_en_sentencia}`}
+                          >
+                            ver texto vigente entonces
+                          </Link>
+                        )}
+                      </>
+                    ) : (
+                      <span className="badge ok">sin cambios</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="section">
         <h2>Trazabilidad de la extracción</h2>

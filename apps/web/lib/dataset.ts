@@ -8,6 +8,7 @@ import {
   falloSection,
   type GoldenEntry,
 } from "@pipeline/eval";
+import { matchWithCorpus } from "@pipeline/sentencias";
 import { aggregate, type CaseSignals } from "@pipeline/patterns";
 import { buildIndex, search, type SearchDoc, type SearchHit } from "@pipeline/search";
 
@@ -355,6 +356,109 @@ export async function getGoldenInfo(caseId: string): Promise<GoldenInfo | null> 
   };
   const entry = golden?.entries?.find((item) => item.caseId === caseId) ?? null;
   return { entry, evidence };
+}
+
+export interface VigenciaCheck {
+  boe_id: string;
+  norma: string;
+  block_id: string;
+  article: number;
+  titulo: string;
+  fecha_sentencia: string | null;
+  version_en_sentencia: string | null;
+  version_actual: string;
+  cambio_posterior: boolean;
+}
+
+/** ¿Ha cambiado el artículo citado DESPUÉS de la fecha de la sentencia? */
+export async function getVigenciaChecks(caseId: string): Promise<VigenciaCheck[]> {
+  const [meta, lawRefs] = await Promise.all([
+    readFirstJson<{ resolution_date?: string }>(path.join(repoRoot(), "cases", caseId, "metadata")),
+    section<{ refs?: Array<{ status?: string; boe_id?: string | null; norma?: string; articles?: Array<{ number?: number; block_id?: string | null }> }> }>(
+      caseId,
+      "law_refs.json",
+    ),
+  ]);
+  const fecha = meta?.resolution_date && /^\d{4}-\d{2}-\d{2}$/.test(meta.resolution_date)
+    ? meta.resolution_date.replace(/-/g, "")
+    : null;
+
+  const out: VigenciaCheck[] = [];
+  for (const ref of lawRefs?.refs ?? []) {
+    if (ref.status !== "VERIFIED" || !ref.boe_id) continue;
+    const norm = await getLaw(ref.boe_id);
+    if (!norm) continue;
+    for (const article of ref.articles ?? []) {
+      if (!article.block_id || typeof article.number !== "number") continue;
+      const block = norm.blocks.find((item) => item.id === article.block_id);
+      if (!block) continue;
+      const versions = block.versions ?? [];
+      const aplicable = fecha
+        ? [...versions]
+            .filter((version) => version.fecha_vigencia && version.fecha_vigencia <= fecha)
+            .sort((a, b) => a.fecha_vigencia.localeCompare(b.fecha_vigencia))
+            .pop() ?? null
+        : null;
+      out.push({
+        boe_id: ref.boe_id,
+        norma: ref.norma ?? "",
+        block_id: block.id,
+        article: article.number,
+        titulo: block.titulo,
+        fecha_sentencia: fecha ?? null,
+        version_en_sentencia: aplicable?.fecha_vigencia ?? null,
+        version_actual: block.fecha_vigencia,
+        cambio_posterior: Boolean(fecha && block.fecha_vigencia > fecha),
+      });
+    }
+  }
+  return out;
+}
+
+export async function readFirstJson<T>(dirPath: string): Promise<T | null> {
+  const names = await fs.readdir(dirPath).catch(() => [] as string[]);
+  for (const name of names) {
+    if (!name.endsWith(".json")) continue;
+    const value = await readJson<T>(path.join(dirPath, name));
+    if (value) return value;
+  }
+  return null;
+}
+
+export interface SentenciaEnCorpus {
+  raw: string;
+  roj: string;
+  tipo: "STS" | "ATS" | "SENTENCIA";
+  enCorpus: boolean;
+  caseId: string | null;
+  ecli: string | null;
+}
+
+/** Sentencias que este caso cita y que (tal vez) ya tienes en el corpus. */
+export async function getSentenciasCitadas(caseId: string): Promise<SentenciaEnCorpus[]> {
+  const text = await fs
+    .readFile(path.join(repoRoot(), "cases", caseId, "extracted", "judgment.txt"), "utf8")
+    .catch(() => "");
+  if (!text) return [];
+  const manifest = await readJson<{
+    entries?: Array<{ caseDir: string; pdf: { roj: string | null; ecli: string | null } }>;
+  }>(path.join(repoRoot(), "cases", "manifest.json"));
+  const corpus = (manifest?.entries ?? []).map((entry) => ({
+    caseDir: entry.caseDir,
+    roj: entry.pdf.roj,
+    ecli: entry.pdf.ecli,
+  }));
+  const own = corpus.find((entry) => entry.caseDir === caseId)?.roj ?? null;
+  return matchWithCorpus(text, corpus)
+    .filter((item) => item.roj !== own)
+    .map((item) => ({
+      raw: item.raw,
+      roj: item.roj,
+      tipo: item.tipo,
+      enCorpus: item.enCorpus,
+      caseId: item.caseId,
+      ecli: item.ecli,
+    }));
 }
 
 export async function getCaseCitations(): Promise<Record<string, unknown> | null> {
