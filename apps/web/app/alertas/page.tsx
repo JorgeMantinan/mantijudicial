@@ -4,6 +4,7 @@ import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import { getCalidadCorpus, getContradicciones, getReviewStats, getVigenciaAlerts } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { jobs } from "@/lib/jobs";
+import { SortTh } from "@/lib/sort-th";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,17 @@ function fecha(iso: string): string {
   return Number.isNaN(date.getTime()) ? iso : date.toLocaleString("es-ES");
 }
 
-export default async function AlertasPage() {
+export default async function AlertasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sort?: string; dir?: string }>;
+}) {
+  const sp = await searchParams;
+  const sortKey = sp.sort ?? "";
+  const dir = sp.dir === "desc" ? "desc" : "asc";
+  const factor = dir === "desc" ? -1 : 1;
+  const cmpTexto = (a: string, b: string) => a.localeCompare(b, "es") * factor;
+  const cmpNumero = (a: number, b: number) => (a - b) * factor;
   const actor = await requireActor();
   const orgId = await defaultOrgId();
   const grants = await authorizationGrants();
@@ -33,6 +44,18 @@ export default async function AlertasPage() {
       ejemplos: tema.ejemplos.filter((ejemplo) => puedeVer(ejemplo.caseId)),
     }))
     .filter((tema) => tema.ejemplos.length > 0);
+
+  const vigenciaOrden = [...vigencia].sort((a, b) => {
+    if (sortKey === "vig-norma") return cmpTexto(`${a.norma} ${a.titulo}`, `${b.norma} ${b.titulo}`);
+    if (sortKey === "vig-casos") return cmpNumero(a.casos.length, b.casos.length);
+    return b.casos.length - a.casos.length;
+  });
+  const temasOrden = [...contradictorio].sort((a, b) => {
+    if (sortKey === "tem-tema") return cmpTexto(a.topic, b.topic);
+    if (sortKey === "tem-estimados") return cmpNumero(a.estimados, b.estimados);
+    if (sortKey === "tem-desestimados") return cmpNumero(a.desestimados, b.desestimados);
+    return b.estimados + b.desestimados - (a.estimados + a.desestimados);
+  });
   const review = {
     ...reviewBruto,
     pending: reviewBruto.pending.filter((item) => puedeVer(item.id)),
@@ -80,14 +103,26 @@ export default async function AlertasPage() {
           <table>
             <thead>
               <tr>
-                <th>Norma y artículo</th>
+                <SortTh
+                  path="/alertas"
+                  sortKey="vig-norma"
+                  current={sortKey}
+                  dir={dir}
+                  label="Norma y artículo"
+                />
                 <th>Versión en la sentencia</th>
                 <th>Versión actual</th>
-                <th>Casos afectados</th>
+                <SortTh
+                  path="/alertas"
+                  sortKey="vig-casos"
+                  current={sortKey}
+                  dir={dir}
+                  label="Casos afectados"
+                />
               </tr>
             </thead>
             <tbody>
-              {vigencia.map((alerta) => (
+              {vigenciaOrden.map((alerta) => (
                 <tr key={`${alerta.boe_id}-${alerta.block_id}`}>
                   <td className="small">
                     <strong>
@@ -129,14 +164,32 @@ export default async function AlertasPage() {
           <table>
             <thead>
               <tr>
-                <th>Tema</th>
-                <th>Estimados</th>
-                <th>Desestimados</th>
+                <SortTh
+                  path="/alertas"
+                  sortKey="tem-tema"
+                  current={sortKey}
+                  dir={dir}
+                  label="Tema"
+                />
+                <SortTh
+                  path="/alertas"
+                  sortKey="tem-estimados"
+                  current={sortKey}
+                  dir={dir}
+                  label="Estimados"
+                />
+                <SortTh
+                  path="/alertas"
+                  sortKey="tem-desestimados"
+                  current={sortKey}
+                  dir={dir}
+                  label="Desestimados"
+                />
                 <th>Ejemplos</th>
               </tr>
             </thead>
             <tbody>
-              {contradictorio.map((tema) => (
+              {temasOrden.map((tema) => (
                 <tr key={tema.topic}>
                   <td>
                     <Link href={`/temas/${encodeURIComponent(tema.topic)}`}>{tema.topic}</Link>

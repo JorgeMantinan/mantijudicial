@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { PrintButton } from "@/components/print-button";
+import { Sumario } from "@/components/sumario";
 import { canViewCase, defaultOrgId, loadIdentity, requireActor } from "@/lib/auth";
 import { getCase, getVias, listLaws } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
@@ -62,6 +63,7 @@ export default async function DossierPage({ params }: { params: Promise<{ id: st
         <Link href={`/cases/${id}`}>← Volver a la ficha interna</Link>
       </p>
       <PrintButton />
+      <Sumario />
 
       <p className="small" style={{ letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>
         Dossier del asunto

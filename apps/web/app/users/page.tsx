@@ -80,6 +80,24 @@ export default async function UsersPage({
         </div>
       )}
 
+      <div className="section">
+        <h2>Doble factor (MFA)</h2>
+        <ol className="small">
+          <li>
+            Instala una app de códigos: <strong>Google Authenticator</strong>, <strong>Authy</strong>{" "}
+            o <strong>1Password</strong> (cualquier una que siga el estándar TOTP).
+          </li>
+          <li>
+            En el panel de abajo, pulsa el botón de activar, <strong>escanea el QR</strong> (o copia
+            la clave) y escribe el código de 6 dígitos que muestra la app.
+          </li>
+          <li>
+            <strong>Guarda los códigos de respaldo</strong>: si pierdes el móvil, sin ellos solo un
+            administrador puede desactivarlo.
+          </li>
+        </ol>
+      </div>
+
       <MfaPanel />
 
       <table>
