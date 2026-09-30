@@ -1517,3 +1517,40 @@ export async function getCostesIA(): Promise<CostesIA> {
   costesCache = { value, at: Date.now() };
   return value;
 }
+
+export interface CalidadCorpus {
+  total: number;
+  escaneados: string[];
+  stale: string[];
+  sinEnriquecer: string[];
+  sinRevisar: string[];
+}
+
+let calidadCache: { value: CalidadCorpus; at: number } | null = null;
+
+/** Estado de salud del corpus (cache 60 s). */
+export async function getCalidadCorpus(): Promise<CalidadCorpus> {
+  if (calidadCache && Date.now() - calidadCache.at < 60_000) return calidadCache.value;
+
+  const items = await listCases();
+  const value: CalidadCorpus = {
+    total: items.length,
+    escaneados: [],
+    stale: [],
+    sinEnriquecer: items.filter((item) => !item.enriched).map((item) => item.id),
+    sinRevisar: items
+      .filter((item) => item.enriched && item.reviewStatus === "UNREVIEWED")
+      .map((item) => item.id),
+  };
+
+  for (const item of items) {
+    if (item.stale) value.stale.push(item.id);
+    const quality = await readJson<{ hasText?: boolean }>(
+      path.join(repoRoot(), "cases", item.id, "extracted", "quality.json"),
+    );
+    if (quality && quality.hasText === false) value.escaneados.push(item.id);
+  }
+
+  calidadCache = { value, at: Date.now() };
+  return value;
+}

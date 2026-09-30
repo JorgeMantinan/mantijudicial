@@ -969,8 +969,10 @@ export default async function CaseDetailPage({
         </div>
       )}
 
-      <div className="section">
-        <h2>Leyes citadas</h2>
+      <details className="section">
+        <summary style={{ cursor: "pointer", fontSize: 18, fontWeight: 600 }}>
+          Leyes citadas
+        </summary>
         <table>
           <thead>
             <tr>
@@ -1029,7 +1031,7 @@ export default async function CaseDetailPage({
               ))}
           </tbody>
         </table>
-      </div>
+      </details>
 
       {vigencias.length > 0 && (
         <div className="section">
@@ -1083,8 +1085,10 @@ export default async function CaseDetailPage({
         </div>
       )}
 
-      <div className="section">
-        <h2>Trazabilidad de la extracción</h2>
+      <details className="section">
+        <summary style={{ cursor: "pointer", fontSize: 18, fontWeight: 600 }}>
+          Trazabilidad de la extracción
+        </summary>
         <dl className="kv">
           <dt>Validación</dt>
           <dd>{detail.enriched ? "Correcta" : review.validation === "PENDING" ? "Pendiente" : (review.validation ?? "Pendiente")}</dd>
@@ -1099,7 +1103,7 @@ export default async function CaseDetailPage({
           <dt>Generado</dt>
           <dd className="mono">{review.generated_at ?? "—"}</dd>
         </dl>
-      </div>
+      </details>
     </>
   );
 }

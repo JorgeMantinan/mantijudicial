@@ -22,7 +22,7 @@ function validar(value: string | undefined, fallback: string): string {
 export default async function InformesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ desde?: string; hasta?: string }>;
+  searchParams: Promise<{ desde?: string; hasta?: string; desde2?: string; hasta2?: string }>;
 }) {
   const actor = await requireActor();
   const orgId = await defaultOrgId();
@@ -36,6 +36,32 @@ export default async function InformesPage({
   const informe = await getInforme(desde, hasta, (caseId) =>
     canViewCase(actor, caseId, orgId, grants),
   );
+
+  // Periodo B por defecto: el inmediatamente anterior de la misma duración.
+  const dias = Math.max(
+    1,
+    Math.round((Date.parse(hasta) - Date.parse(desde)) / 86_400_000) || 30,
+  );
+  const fmt = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+  const inicio = Date.parse(desde);
+  const desde2 = validar(sp.desde2, fmt(inicio - (dias + 1) * 86_400_000));
+  const hasta2 = validar(sp.hasta2, fmt(inicio - 86_400_000));
+  const informeB = await getInforme(desde2, hasta2, (caseId) =>
+    canViewCase(actor, caseId, orgId, grants),
+  );
+  const unionOutcomes = [
+    ...new Set([...Object.keys(informe.porResultado), ...Object.keys(informeB.porResultado)]),
+  ];
+  const comparacion: Array<{ nombre: string; a: number; b: number }> = [
+    { nombre: "Sentencias", a: informe.casos.length, b: informeB.casos.length },
+    { nombre: "Pendientes de revisar", a: informe.pendientes, b: informeB.pendientes },
+    { nombre: "Temas activos", a: informe.temas.length, b: informeB.temas.length },
+    ...unionOutcomes.map((key) => ({
+      nombre: `Resultado: ${label(OUTCOME, key)}`,
+      a: informe.porResultado[key] ?? 0,
+      b: informeB.porResultado[key] ?? 0,
+    })),
+  ];
 
   return (
     <article className="print-sheet">
@@ -60,6 +86,14 @@ export default async function InformesPage({
           Hasta
           <input type="date" name="hasta" defaultValue={hasta} />
         </label>
+        <label className="small muted" style={{ display: "grid", gap: 4 }}>
+          Comparar desde
+          <input type="date" name="desde2" defaultValue={desde2} />
+        </label>
+        <label className="small muted" style={{ display: "grid", gap: 4 }}>
+          Comparar hasta
+          <input type="date" name="hasta2" defaultValue={hasta2} />
+        </label>
         <button type="submit" style={{ marginTop: 18 }}>
           Actualizar
         </button>
@@ -82,6 +116,41 @@ export default async function InformesPage({
           <div className="value">{informe.leyes.length}</div>
           <div className="label">normas citadas (top)</div>
         </div>
+      </div>
+
+      <div className="section">
+        <h2>Comparación de periodos</h2>
+        <p className="small muted">
+          A = {desde} → {hasta} · B = {desde2} → {hasta2} (periodo anterior de la misma duración).
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Métrica</th>
+              <th style={{ textAlign: "right" }}>A</th>
+              <th style={{ textAlign: "right" }}>B</th>
+              <th style={{ textAlign: "right" }}>Δ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {comparacion.map((fila) => {
+              const delta = fila.a - fila.b;
+              return (
+                <tr key={fila.nombre}>
+                  <td className="small">{fila.nombre}</td>
+                  <td style={{ textAlign: "right" }}>{fila.a}</td>
+                  <td style={{ textAlign: "right" }}>{fila.b}</td>
+                  <td
+                    className="small"
+                    style={{ textAlign: "right", color: delta > 0 ? "var(--green)" : delta < 0 ? "var(--red)" : undefined }}
+                  >
+                    {delta > 0 ? `+${delta}` : String(delta)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
       <div className="section">

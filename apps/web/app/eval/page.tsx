@@ -1,5 +1,6 @@
 import { requireActor } from "@/lib/auth";
-import { getCostesIA, getEvalReport } from "@/lib/dataset";
+import Link from "next/link";
+import { getCalidadCorpus, getCostesIA, getEvalReport } from "@/lib/dataset";
 import { LAW_STATUS, QUOTE, label } from "@/lib/labels";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,7 @@ export default async function EvalPage() {
   await requireActor();
   const report = await getEvalReport();
   const costes = await getCostesIA();
+  const calidad = await getCalidadCorpus();
   if (!report) {
     return (
       <>
@@ -202,6 +204,45 @@ export default async function EvalPage() {
           </table>
         </>
       )}
+
+      <div className="section">
+        <h2>Calidad del corpus</h2>
+        <p className="small muted">
+          Qué falta arreglar o revisar en {calidad.total} casos, en un vistazo.
+        </p>
+        <div className="grid">
+          <div className="card">
+            <div className="value">{calidad.escaneados.length}</div>
+            <div className="label">PDF sin texto extraíble</div>
+          </div>
+          <div className="card">
+            <div className="value">{calidad.stale.length}</div>
+            <div className="label">PDF más nuevo que el análisis</div>
+          </div>
+          <div className="card">
+            <div className="value">{calidad.sinEnriquecer.length}</div>
+            <div className="label">sin enriquecer</div>
+          </div>
+          <div className="card">
+            <div className="value">{calidad.sinRevisar.length}</div>
+            <div className="label">enriquecidos sin revisar</div>
+          </div>
+        </div>
+        {(calidad.escaneados.length > 0 || calidad.stale.length > 0) && (
+          <ul className="small" style={{ marginTop: 12 }}>
+            {calidad.escaneados.slice(0, 6).map((id) => (
+              <li key={`e-${id}`}>
+                Sin texto: <Link href={`/cases/${id}`}>{id.replace("case_", "")}</Link>
+              </li>
+            ))}
+            {calidad.stale.slice(0, 6).map((id) => (
+              <li key={`s-${id}`}>
+                Reanalizar: <Link href={`/cases/${id}`}>{id.replace("case_", "")}</Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       <div className="section">
         <h2>Coste en vivo (todos los análisis con IA)</h2>
