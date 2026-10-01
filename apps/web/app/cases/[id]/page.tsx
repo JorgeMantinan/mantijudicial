@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { canCreateCase, canShareResource } from "@pipeline/authorization";
 import { canViewCase, caseResource, defaultOrgId, loadIdentity, requireActor } from "@/lib/auth";
-import { getAuditoria, getCase, getComparisons, getEscrito, getGoldenInfo, getReviewStats, getSentenciasCitadas, getSimilarCases, getVigenciaChecks, getVias, listLaws } from "@/lib/dataset";
+import { getAuditoria, getCase, getComparisons, getDoctrinaCitada, getEscrito, getGoldenInfo, getReviewStats, getSentenciasCitadas, getSimilarCases, getVigenciaChecks, getVias, listLaws } from "@/lib/dataset";
 import { authorizationGrants, loadGrantStore } from "@/lib/grants";
 import {
   ARG_OUTCOME,
@@ -112,6 +112,16 @@ type Ref = {
 };
 type Decision = { instance?: string; court?: string; date?: string; result?: string; description?: string };
 
+const PAPELES: Record<string, string> = {
+  DOCTRINE_APPLIED: "Doctrina aplicada",
+  DISTINGUISHED: "Distinguida",
+  QUESTIONED: "Puesta en duda",
+  REJECTED: "No aplicada",
+  CITED: "Citada",
+  MENTIONED: "Mencionada",
+  FOLLOWED: "Seguida",
+};
+
 function fechaEs(yyyymmdd: string | null | undefined): string {
   if (!yyyymmdd || !/^\d{8}$/.test(yyyymmdd)) return yyyymmdd || "—";
   return `${yyyymmdd.slice(6, 8)}/${yyyymmdd.slice(4, 6)}/${yyyymmdd.slice(0, 4)}`;
@@ -131,7 +141,7 @@ export default async function CaseDetailPage({
   const detail = await getCase(id);
   if (!detail) notFound();
 
-  const [laws, similar, vias, comparisons, identity, grantStore, golden, sentencias, vigencias, escrito, reviewStats, actividadCaso] =
+  const [laws, similar, vias, comparisons, identity, grantStore, golden, sentencias, vigencias, escrito, reviewStats, actividadCaso, doctrina] =
     await Promise.all([
       listLaws(),
       getSimilarCases(id, 5),
@@ -145,6 +155,7 @@ export default async function CaseDetailPage({
       getEscrito(id),
       getReviewStats(),
       getAuditoria(15, id),
+      getDoctrinaCitada(id),
     ]);
 
   const nextPendiente = reviewStats.pending.find((item) => item.id !== id)?.id ?? null;
@@ -965,6 +976,47 @@ export default async function CaseDetailPage({
                       </Link>
                     ) : (
                       <span className="badge">no está en tu corpus</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {doctrina.length > 0 && (
+        <div className="section">
+          <h2>Doctrina citada por las partes</h2>
+          <p className="small muted">
+            Sentencias que se citan en el propio texto, con la frase citada. Si ya la tienes en el
+            corpus, la enlazamos: es doctrina que puedes leer entera y reutilizar.
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>Cita</th>
+                <th style={{ width: 110 }}>Fecha</th>
+                <th>Papel en el asunto</th>
+                <th>¿En tu corpus?</th>
+              </tr>
+            </thead>
+            <tbody>
+              {doctrina.map((cita) => (
+                <tr key={cita.ref}>
+                  <td className="small">
+                    <strong>{cita.ref}</strong>
+                    {cita.quote && <div className="muted">«{cita.quote}…»</div>}
+                  </td>
+                  <td className="mono small">{cita.date || "—"}</td>
+                  <td className="small">
+                    {PAPELES[cita.role] ?? cita.role.replace(/_/g, " ").toLowerCase()}
+                  </td>
+                  <td className="small">
+                    {cita.enCorpus && cita.caseId ? (
+                      <Link href={`/cases/${cita.caseId}`}>sí, está →</Link>
+                    ) : (
+                      <span className="muted">no</span>
                     )}
                   </td>
                 </tr>

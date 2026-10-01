@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Bar } from "@/components/bar";
 import { PrintButton } from "@/components/print-button";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
-import { getInforme } from "@/lib/dataset";
+import { getInforme, getVigenciaAlerts } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { BRANCH, OUTCOME, label } from "@/lib/labels";
 import { SortTh } from "@/lib/sort-th";
@@ -61,6 +61,17 @@ export default async function InformesPage({
     canViewCase(actor, caseId, orgId, grants),
   { branch: sp.branch, outcome: sp.outcome },
   );
+  const alertasPeriodo = (await getVigenciaAlerts())
+    .map((alerta) => ({
+      ...alerta,
+      casos: alerta.casos.filter((caso) => {
+        const fecha = caso.fecha_sentencia ?? "";
+        return fecha >= desde && fecha <= hasta && canViewCase(actor, caso.caseId, orgId, grants);
+      }),
+    }))
+    .filter((alerta) => alerta.casos.length > 0)
+    .slice(0, 8);
+
   const unionOutcomes = [
     ...new Set([...Object.keys(informe.porResultado), ...Object.keys(informeB.porResultado)]),
   ];
@@ -319,6 +330,42 @@ export default async function InformesPage({
           </tbody>
         </table>
       </div>
+
+      {alertasPeriodo.length > 0 && (
+        <div className="section">
+          <h2>Atención que pide este periodo</h2>
+          <p className="small muted">
+            Leyes citadas por las sentencias de <strong>este rango</strong> cuya versión vigente es
+            posterior a la sentencia: conviene mirarlas antes de citar ese artículo.
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>Norma y artículo</th>
+                <th>De qué trata</th>
+                <th>Casos del periodo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {alertasPeriodo.map((alerta) => (
+                <tr key={`${alerta.boe_id}-${alerta.block_id}`}>
+                  <td className="small">
+                    <strong>
+                      {alerta.norma} {alerta.titulo}
+                    </strong>
+                    <div className="mono muted small">{alerta.boe_id}</div>
+                  </td>
+                  <td className="small">{alerta.resumen}…</td>
+                  <td className="small">
+                    {alerta.casos.length} caso{alerta.casos.length === 1 ? "" : "s"} (desde{" "}
+                    {alerta.casos[0]?.fecha_sentencia})
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="section">
         <h2>Temas más trabajados</h2>

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PrintButton } from "@/components/print-button";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
-import { getTema } from "@/lib/dataset";
+import { filtrarFrasesDelTema, getGruposFrases, getTema } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { ARG_OUTCOME, ARG_TYPE, BRANCH, OUTCOME, label } from "@/lib/labels";
 import { OutcomeBadge } from "@/lib/ui";
@@ -60,6 +60,10 @@ export default async function TemaPage({
     if (sp.outcome) p.set("outcome", sp.outcome);
     return `/temas/${encodeURIComponent(tema.topic)}?${p.toString()}`;
   };
+  const frasesTema = filtrarFrasesDelTema(
+    await getGruposFrases(),
+    new Set(entradas.map((entrada) => entrada.caseId)),
+  );
 
   return (
     <article className="print-sheet">
@@ -230,6 +234,45 @@ export default async function TemaPage({
           </table>
         )}
       </div>
+
+      {frasesTema.length > 0 && (
+        <div className="section">
+          <h2>Frases del tema (y cómo acabaron)</h2>
+          <p className="small muted">
+            Frases parecidas dentro de <em>este tema</em> con ≥2 casos del tema y mayoría de
+            resultado (≥70%). Misma lógica que en Patrones, pero solo con estos casos.
+          </p>
+          <ul className="small">
+            {frasesTema.map((grupo) => (
+              <li key={grupo.ejemplo} style={{ marginBottom: 6 }}>
+                «{grupo.ejemplo}»{" "}
+                <span className={`badge ${grupo.homogenea >= 90 ? "ok" : "warn"}`}>
+                  {grupo.homogenea}% igual
+                </span>{" "}
+                {Object.entries(grupo.distribucion).map(([outcome, cantidad]) => (
+                  <span
+                    key={outcome}
+                    className={`badge ${outcome === "ESTIMED" ? "ok" : outcome === "DISMISSED" ? "ko" : "warn"}`}
+                    style={{ marginRight: 4 }}
+                  >
+                    {label(OUTCOME, outcome)} {cantidad}
+                  </span>
+                ))}
+                {grupo.casos.slice(0, 4).map((caso) => (
+                  <Link
+                    key={caso.caseId}
+                    href={`/cases/${caso.caseId}`}
+                    style={{ marginRight: 6 }}
+                    title={caso.headline}
+                  >
+                    {caso.caseId.replace("case_", "")}
+                  </Link>
+                ))}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <p className="small muted">
         Ficha generada automáticamente a partir de tu corpus. Los análisis de IA asociados están

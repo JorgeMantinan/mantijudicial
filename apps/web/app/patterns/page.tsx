@@ -1,6 +1,6 @@
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import { PrintButton } from "@/components/print-button";
-import { computePatterns, getContradicciones, getGruposFrases, listCases } from "@/lib/dataset";
+import { computePatterns, getContradicciones, getExitoArgumentos, getGruposFrases, listCases } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { ARG_OUTCOME, ARG_TYPE, BRANCH, OUTCOME, SIDE, label } from "@/lib/labels";
 import { OutcomeBadge } from "@/lib/ui";
@@ -37,6 +37,7 @@ export default async function PatternsPage() {
   const grants = await authorizationGrants();
   const cases = (await listCases()).filter((item) => canViewCase(actor, item.id, orgId, grants));
   const computed = await computePatterns(cases.map((item) => item.id));
+  const exito = await getExitoArgumentos();
   const gruposFrases = await getGruposFrases();
   const contradictorio = (await getContradicciones())
     .map((tema) => ({
@@ -178,6 +179,49 @@ export default async function PatternsPage() {
             );
           })
         )}
+      </div>
+
+      <div className="section">
+        <h2>Éxito por tipo de argumento y lado</h2>
+        <p className="small muted">
+          Agregado global de los argumentos registrados en todo el corpus. El porcentaje es
+          aceptados sobre (aceptados + rechazados); lo que no está analizado no cuenta. Sirve para
+          priorizar líneas de defensa: es una <strong>asociación</strong>, no una garantía.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Tipo de argumento</th>
+              <th>Quién lo alega</th>
+              <th>Aceptados</th>
+              <th>Rechazados</th>
+              <th>Parciales</th>
+              <th>Éxito</th>
+            </tr>
+          </thead>
+          <tbody>
+            {exito.map((fila) => (
+              <tr key={`${fila.tipo}-${fila.lado}`}>
+                <td className="small">{label(ARG_TYPE, fila.tipo)}</td>
+                <td className="small">{label(SIDE, fila.lado)}</td>
+                <td>
+                  <span className="badge ok">{fila.aceptados}</span>
+                </td>
+                <td>
+                  <span className="badge ko">{fila.rechazados}</span>
+                </td>
+                <td className="small">{fila.parciales}</td>
+                <td>
+                  <span
+                    className={`badge ${fila.exito >= 60 ? "ok" : fila.exito >= 40 ? "warn" : "ko"}`}
+                  >
+                    {fila.exito}%
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       {contradictorio.length > 0 && (

@@ -754,7 +754,10 @@ export interface EvolucionTema {
 }
 
 /** Evolución de un mismo tema (holding) a lo largo del corpus, por fecha. */
+let evolucionCache: { value: EvolucionTema[]; at: number } | null = null;
+
 export async function getEvolucion(): Promise<EvolucionTema[]> {
+  if (evolucionCache && Date.now() - evolucionCache.at < 60_000) return evolucionCache.value;
   const caseNames = (await fs.readdir(path.join(repoRoot(), "cases"))).filter((name) =>
     /^case_\d{6}$/.test(name),
   );
@@ -802,7 +805,7 @@ export async function getEvolucion(): Promise<EvolucionTema[]> {
     }
   }
 
-  return [...groups.entries()]
+  const value = [...groups.entries()]
     .map(([topic, group]) => {
       const entries = [...group.cases.values()].sort((a, b) => a.fecha.localeCompare(b.fecha));
       return {
@@ -816,6 +819,8 @@ export async function getEvolucion(): Promise<EvolucionTema[]> {
     })
     .filter((item) => item.cases >= 3)
     .sort((a, b) => b.cases - a.cases || a.topic.localeCompare(b.topic));
+  evolucionCache = { value, at: Date.now() };
+  return value;
 }
 
 export interface Contradiccion {
@@ -1310,4 +1315,121 @@ export async function getGruposFrases(): Promise<GrupoFrasesView[]> {
   ];
   frasesCache = { value, at: Date.now() };
   return value;
+}
+
+export interface DoctrinaCitada {
+  ref: string;
+  date: string;
+  quote: string;
+  role: string;
+  enCorpus: boolean;
+  caseId: string | null;
+}
+
+/** Sentencias que las partes citan (con su texto) y si las tienes en el corpus. */
+export async function getDoctrinaCitada(caseId: string): Promise<DoctrinaCitada[]> {
+  const ficha = await readJson<{
+    citations?: Array<{ ref?: string; date?: string; quote?: string; role?: string }>;
+  }>(path.join(repoRoot(), "cases", caseId, "structured", "cited_case_law.json"));
+  const manifest = await readJson<{
+    entries?: Array<{ caseDir: string; pdf: { roj: string | null } }>;
+  }>(path.join(repoRoot(), "cases", "manifest.json"));
+  const rojos = (manifest?.entries ?? [])
+    .map((entry) => ({ caseDir: entry.caseDir, roj: entry.pdf.roj }))
+    .filter((entry): entry is { caseDir: string; roj: string } => Boolean(entry.roj));
+
+  const vistas = new Set<string>();
+  const out: DoctrinaCitada[] = [];
+  for (const cita of ficha?.citations ?? []) {
+    const ref = (cita.ref ?? "").trim();
+    if (!ref || vistas.has(ref)) continue;
+    vistas.add(ref);
+    const enCorpus = rojos.find((entry) => ref.includes(entry.roj!));
+    out.push({
+      ref,
+      date: cita.date ?? "",
+      quote: (cita.quote ?? "").replace(/\s+/g, " ").slice(0, 180),
+      role: cita.role ?? "",
+      enCorpus: Boolean(enCorpus),
+      caseId: enCorpus?.caseDir ?? null,
+    });
+    if (out.length >= 12) break;
+  }
+  return out;
+}
+
+export interface ExitoArgumento {
+  tipo: string;
+  lado: string;
+  aceptados: number;
+  rechazados: number;
+  parciales: number;
+  sinAnalizar: number;
+  total: number;
+  exito: number;
+}
+
+let exitoCache: { value: ExitoArgumento[]; at: number } | null = null;
+
+/** Éxito global de cada tipo de argumento y de cada lado (cache 60 s). */
+export async function getExitoArgumentos(): Promise<ExitoArgumento[]> {
+  if (exitoCache && Date.now() - exitoCache.at < 60_000) return exitoCache.value;
+
+  const mapa = new Map<string, ExitoArgumento>();
+  for (const item of await listCases()) {
+    const args = await section<{
+      arguments?: Array<{ type?: string; side?: string; outcome?: string }>;
+    }>(item.id, "arguments.json");
+    for (const argumento of args?.arguments ?? []) {
+      const tipo = (argumento.type ?? "UNKNOWN").toUpperCase();
+      const lado = (argumento.side ?? "UNKNOWN").toUpperCase();
+      const key = `${tipo}|${lado}`;
+      const fila =
+        mapa.get(key) ??
+        ({ tipo, lado, aceptados: 0, rechazados: 0, parciales: 0, sinAnalizar: 0, total: 0, exito: 0 } satisfies ExitoArgumento);
+      fila.total += 1;
+      const outcome = (argumento.outcome ?? "").toUpperCase();
+      if (outcome === "ACCEPTED") fila.aceptados += 1;
+      else if (outcome === "REJECTED") fila.rechazados += 1;
+      else if (outcome === "PARTIALLY_ACCEPTED") fila.parciales += 1;
+      else fila.sinAnalizar += 1;
+      mapa.set(key, fila);
+    }
+  }
+
+  const value = [...mapa.values()]
+    .map((fila) => ({
+      ...fila,
+      exito:
+        fila.aceptados + fila.rechazados > 0
+          ? Math.round((fila.aceptados * 100) / (fila.aceptados + fila.rechazados))
+          : 0,
+    }))
+    .filter((fila) => fila.aceptados + fila.rechazados >= 3)
+    .sort((a, b) => b.aceptados + b.rechazados - (a.aceptados + a.rechazados));
+  exitoCache = { value, at: Date.now() };
+  return value;
+}
+
+/** Los grupos globales de frases recontados sobre los casos de un tema. */
+export function filtrarFrasesDelTema(
+  grupos: GrupoFrasesView[],
+  caseIds: Set<string>,
+): GrupoFrasesView[] {
+  return grupos
+    .map((grupo) => ({ ...grupo, casos: grupo.casos.filter((caso) => caseIds.has(caso.caseId)) }))
+    .map((grupo) => {
+      const distribucion: Record<string, number> = {};
+      for (const caso of grupo.casos) distribucion[caso.outcome] = (distribucion[caso.outcome] ?? 0) + 1;
+      const maximo = grupo.casos.length > 0 ? Math.max(...Object.values(distribucion)) : 0;
+      return {
+        ...grupo,
+        distribucion,
+        homogenea: grupo.casos.length > 0 ? Math.round((maximo * 100) / grupo.casos.length) : 0,
+        total: grupo.casos.length,
+      };
+    })
+    .filter((grupo) => grupo.total >= 2)
+    .sort((a, b) => b.homogenea - a.homogenea || b.total - a.total)
+    .slice(0, 5);
 }
