@@ -342,8 +342,12 @@ export default async function CaseDetailPage({
           {recomendaciones.frases.length > 0 && (
             <>
               <h3>Frases recomendadas (con su historial)</h3>
+              <p className="small muted">
+                Primero las más sólidas (más casos y más repetido el resultado); al final, las
+                restantes.
+              </p>
               <ul className="small">
-                {recomendaciones.frases.map((grupo) => (
+                {recomendaciones.frases.slice(0, 5).map((grupo) => (
                   <li key={grupo.ejemplo} style={{ marginBottom: 4 }}>
                     <Link href={`/patrones/frase?e=${encodeURIComponent(grupo.ejemplo)}`}>
                       {grupo.ejemplo.length > 140 ? `${grupo.ejemplo.slice(0, 140)}…` : grupo.ejemplo}
@@ -363,14 +367,45 @@ export default async function CaseDetailPage({
                   </li>
                 ))}
               </ul>
+              {recomendaciones.frases.length > 5 && (
+                <details>
+                  <summary style={{ cursor: "pointer", fontSize: 13 }}>
+                    Ver más ({recomendaciones.frases.length - 5} frases recomendadas)
+                  </summary>
+                  <ul className="small">
+                    {recomendaciones.frases.slice(5).map((grupo) => (
+                      <li key={grupo.ejemplo} style={{ marginBottom: 4 }}>
+                        <Link href={`/patrones/frase?e=${encodeURIComponent(grupo.ejemplo)}`}>
+                          {grupo.ejemplo.length > 140
+                            ? `${grupo.ejemplo.slice(0, 140)}…`
+                            : grupo.ejemplo}
+                        </Link>{" "}
+                        <span className={`badge ${grupo.homogenea >= 90 ? "ok" : "warn"}`}>
+                          {grupo.homogenea}% igual
+                        </span>{" "}
+                        {Object.entries(grupo.distribucion).map(([outcome, cantidad]) => (
+                          <span
+                            key={outcome}
+                            className={`badge ${outcome === "ESTIMED" ? "ok" : outcome === "DISMISSED" ? "ko" : "warn"}`}
+                            style={{ marginRight: 4 }}
+                          >
+                            {label(OUTCOME, outcome)} {cantidad}
+                          </span>
+                        ))}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
             </>
           )}
 
           {recomendaciones.argumentos.length > 0 && (
             <>
               <h3>Argumentos que les funcionaron</h3>
+              <p className="small muted">Ordenados por importancia y aceptados en esos casos.</p>
               <ul className="small">
-                {recomendaciones.argumentos.map((argumento, index) => (
+                {recomendaciones.argumentos.slice(0, 5).map((argumento, index) => (
                   <li key={`${argumento.caseId}-${index}`} style={{ marginBottom: 4 }}>
                     <span className="badge ok">{label(ARG_TYPE, argumento.type)}</span>{" "}
                     {argumento.description}{" "}
@@ -380,6 +415,24 @@ export default async function CaseDetailPage({
                   </li>
                 ))}
               </ul>
+              {recomendaciones.argumentos.length > 5 && (
+                <details>
+                  <summary style={{ cursor: "pointer", fontSize: 13 }}>
+                    Ver más ({recomendaciones.argumentos.length - 5} argumentos)
+                  </summary>
+                  <ul className="small">
+                    {recomendaciones.argumentos.slice(5).map((argumento, index) => (
+                      <li key={`${argumento.caseId}-x-${index}`} style={{ marginBottom: 4 }}>
+                        <span className="badge ok">{label(ARG_TYPE, argumento.type)}</span>{" "}
+                        {argumento.description}{" "}
+                        <Link href={`/cases/${argumento.caseId}`}>
+                          ({argumento.caseId.replace("case_", "")})
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
             </>
           )}
 

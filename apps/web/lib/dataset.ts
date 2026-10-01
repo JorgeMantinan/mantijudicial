@@ -1478,6 +1478,7 @@ export async function getExitoArgumentos(): Promise<ExitoArgumento[]> {
 export function filtrarFrasesDelTema(
   grupos: GrupoFrasesView[],
   caseIds: Set<string>,
+  limite = 5,
 ): GrupoFrasesView[] {
   return grupos
     .map((grupo) => ({ ...grupo, casos: grupo.casos.filter((caso) => caseIds.has(caso.caseId)) }))
@@ -1494,7 +1495,7 @@ export function filtrarFrasesDelTema(
     })
     .filter((grupo) => grupo.total >= 2)
     .sort((a, b) => b.homogenea - a.homogenea || b.total - a.total)
-    .slice(0, 5);
+    .slice(0, limite);
 }
 
 function patronesVistosPath(): string {
@@ -1659,7 +1660,7 @@ export async function getRecomendaciones(
   similares: string[],
 ): Promise<Recomendaciones> {
   const conjunto = new Set([caseId, ...similares]);
-  const frases = filtrarFrasesDelTema(await getGruposFrases(), conjunto);
+  const frases = filtrarFrasesDelTema(await getGruposFrases(), conjunto, 12);
 
   const argumentos: Recomendaciones["argumentos"] = [];
   const leyesMap = new Map<string, Recomendaciones["leyes"][number]>();
@@ -1688,7 +1689,7 @@ export async function getRecomendaciones(
       .filter((argumento) => (argumento.outcome ?? "").toUpperCase() === "ACCEPTED")
       .sort((a, b) => (b.importance ?? 0) - (a.importance ?? 0));
     for (const argumento of aceptados) {
-      if (argumentos.length >= 8) break;
+      if (argumentos.length >= 12) break;
       argumentos.push({
         caseId: id,
         type: (argumento.type ?? "").toUpperCase(),
