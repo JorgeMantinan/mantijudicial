@@ -17,8 +17,15 @@ la lista de pendientes. No hace falta releer el historial.
 
 ## Política de coste (importante)
 
-- **No ejecutar CLIs de IA** (`pnpm enrich|vias|compare|escrito` ni nada que
-  llame a `opencode run`) sin pedirlo explícitamente.
+- **Regla del dueño (2026-09-30, hasta nuevo aviso): NO se gasta IA de pago
+  salvo que él la lance desde la aplicación web.** Es decir:
+  - Prohibido para el agente: `pnpm enrich|vias|compare|escrito` ni nada que
+    llame a `opencode run`; ningún análisis de documentos por iniciativa propia.
+  - Permitido: lo que **el usuario pulsa en la web** (subir caso, reanalizar,
+    comparar…), que es su dinero y su decisión.
+  - La conversación del agente se mantiene barata: respuestas cortas, comandos
+    agrupados, sin releer ficheros sin necesidad.
+- **Render y Supabase: no tocar hasta su aviso explícito.** Olvidado por ahora.
 - Coste histórico ≈ **$0,90** (76 casos enriquecidos); a la vista en
   `/eval → Coste en vivo`.
 
