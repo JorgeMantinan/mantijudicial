@@ -156,6 +156,7 @@ export default async function ReviewPage({
       </form>
 
       <ReviewTable
+        siguiente={siguiente?.id ?? null}
         rows={filtered.map((item) => ({
           id: item.id,
           headline: item.headline,

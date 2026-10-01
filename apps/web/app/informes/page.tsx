@@ -29,6 +29,8 @@ export default async function InformesPage({
     hasta2?: string;
     sort?: string;
     dir?: string;
+    branch?: string;
+    outcome?: string;
   }>;
 }) {
   const actor = await requireActor();
@@ -42,6 +44,7 @@ export default async function InformesPage({
 
   const informe = await getInforme(desde, hasta, (caseId) =>
     canViewCase(actor, caseId, orgId, grants),
+  { branch: sp.branch, outcome: sp.outcome },
   );
 
   // Periodo B por defecto: el inmediatamente anterior de la misma duración.
@@ -55,6 +58,7 @@ export default async function InformesPage({
   const hasta2 = validar(sp.hasta2, fmt(inicio - 86_400_000));
   const informeB = await getInforme(desde2, hasta2, (caseId) =>
     canViewCase(actor, caseId, orgId, grants),
+  { branch: sp.branch, outcome: sp.outcome },
   );
   const unionOutcomes = [
     ...new Set([...Object.keys(informe.porResultado), ...Object.keys(informeB.porResultado)]),
@@ -87,6 +91,8 @@ export default async function InformesPage({
     params.set("hasta", hasta);
     params.set("desde2", desde2);
     params.set("hasta2", hasta2);
+    if (sp.branch) params.set("branch", sp.branch);
+    if (sp.outcome) params.set("outcome", sp.outcome);
     params.set("sort", campo);
     params.set("dir", dir === "asc" && sort === campo ? "desc" : "asc");
     return `/informes?${params.toString()}`;
@@ -96,7 +102,13 @@ export default async function InformesPage({
     <article className="print-sheet">
       <p className="small muted no-print">
         <Link href="/alertas">← Alertas</Link> · <Link href="/evolucion">Evolución</Link> ·{" "}
-        <a href={`/api/export/informe?desde=${desde}&hasta=${hasta}`}>descargar CSV</a>
+        <a
+          href={`/api/export/informe?desde=${desde}&hasta=${hasta}${
+            sp.branch ? `&branch=${encodeURIComponent(sp.branch)}` : ""
+          }${sp.outcome ? `&outcome=${encodeURIComponent(sp.outcome)}` : ""}`}
+        >
+          descargar CSV
+        </a>
       </p>
       <PrintButton text="Imprimir el informe" />
 
@@ -122,6 +134,28 @@ export default async function InformesPage({
         <label className="small muted" style={{ display: "grid", gap: 4 }}>
           Comparar hasta
           <input type="date" name="hasta2" defaultValue={hasta2} />
+        </label>
+        <label className="small muted" style={{ display: "grid", gap: 4 }}>
+          Rama
+          <select name="branch" defaultValue={sp.branch ?? ""}>
+            <option value="">Todas</option>
+            {Object.entries(BRANCH).map(([value, texto]) => (
+              <option key={value} value={value}>
+                {texto}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="small muted" style={{ display: "grid", gap: 4 }}>
+          Resultado
+          <select name="outcome" defaultValue={sp.outcome ?? ""}>
+            <option value="">Todos</option>
+            {Object.entries(OUTCOME).map(([value, texto]) => (
+              <option key={value} value={value}>
+                {texto}
+              </option>
+            ))}
+          </select>
         </label>
         <button type="submit" style={{ marginTop: 18 }}>
           Actualizar

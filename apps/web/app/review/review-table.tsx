@@ -14,7 +14,13 @@ export interface ReviewRow {
   reviewStatus: string;
 }
 
-export function ReviewTable({ rows }: { rows: ReviewRow[] }) {
+export function ReviewTable({
+  rows,
+  siguiente,
+}: {
+  rows: ReviewRow[];
+  siguiente?: string | null;
+}) {
   const router = useRouter();
   const [sel, setSel] = useState<string[]>([]);
   const [status, setStatus] = useState("REVIEWED");
@@ -141,6 +147,14 @@ export function ReviewTable({ rows }: { rows: ReviewRow[] }) {
           ))}
         </tbody>
       </table>
+
+      {siguiente && (
+        <p className="small" style={{ marginTop: 12 }}>
+          <Link href={`/cases/${siguiente}`}>
+            Siguiente pendiente: {siguiente.replace("case_", "")} →
+          </Link>
+        </p>
+      )}
     </div>
   );
 }

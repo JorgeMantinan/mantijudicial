@@ -44,3 +44,24 @@ Lotes de 3 ideas → código → `tsc` web + `test` + `next build` → `smoke.ps
 - Extras enlazados desde la portada: `/temas/[tema]`, `/resumen`,
   `/novedades`, `/informes` (A vs B), dossier y comparación por ficha.
 - Credenciales demo y trampas de Windows: en `AGENTS.md`.
+
+
+## Ampliaciones posteriores (mismo dÃ­a)
+
+- Login con descripciÃ³n de la plataforma; buscador permanente en la cabecera;
+  tema claro/oscuro con persistencia; chips de filtros en `/cases`; base de
+  accesibilidad (skip-link, foco visible).
+- CSV de prÃ¡cticamente todo: casos, informe (con filtros), temas, alertas y
+  `/eval` (99 mÃ©tricas).
+- `/temas/comparar` (dos temas lado a lado), `/resumen` imprimible,
+  "PDFs con problemas" en `/alertas`, actividad del caso en su ficha, sumario
+  del dossier y guÃ­a paso a paso del MFA en `/users`.
+- `/evolucion` con filtros de rama y resultado; `/review` con progreso por rama
+  y **aislamiento corregido** (ya filtra con `canViewCase`); `/informes` con
+  filtros de rama/resultado; `/eval` con coste en vivo, calidad, sistema y
+  tiempos de render.
+- `dataset.ts` partido en `dataset.ts` + `dataset-estado.ts` (mismos imports).
+- `scripts/smoke.ps1` ampliado: comprueba tambiÃ©n `/review` con carlos.
+
+**Sigue pendiente**: activar el MFA de la cuenta admin (tÃº lo decides),
+Supabase/Render cuando quieras pagarlos, y las ideas de la lista anterior.

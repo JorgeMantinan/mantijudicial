@@ -26,8 +26,14 @@ export async function GET(request: Request): Promise<Response> {
 
   const orgId = await defaultOrgId();
   const grants = await authorizationGrants();
-  const informe = await getInforme(desde, hasta, (caseId) =>
-    canViewCase(actor, caseId, orgId, grants),
+  const informe = await getInforme(
+    desde,
+    hasta,
+    (caseId) => canViewCase(actor, caseId, orgId, grants),
+    {
+      branch: url.searchParams.get("branch") ?? undefined,
+      outcome: url.searchParams.get("outcome") ?? undefined,
+    },
   );
 
   const filas: string[] = [

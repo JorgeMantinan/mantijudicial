@@ -44,13 +44,19 @@ export async function getInforme(
   desde: string,
   hasta: string,
   permitido: (caseId: string) => boolean = () => true,
+  filtros: { branch?: string; outcome?: string } = {},
 ): Promise<Informe> {
   const enRango = (fecha: string): boolean => fecha >= desde && fecha <= hasta;
+  const enFiltros = (entry: { branch: string; outcome: string }): boolean =>
+    (!filtros.branch || entry.branch === filtros.branch) &&
+    (!filtros.outcome || entry.outcome === filtros.outcome);
 
   const [items, temas] = await Promise.all([listCases(), getEvolucion()]);
   const casos: InformeCaso[] = [];
   for (const item of items) {
     if (!permitido(item.id)) continue;
+    if (filtros.branch && item.branch !== filtros.branch) continue;
+    if (filtros.outcome && item.outcome !== filtros.outcome) continue;
     const meta = await readFirstJson<{ resolution_date?: string }>(
       path.join(repoRoot(), "cases", item.id, "metadata"),
     );
@@ -95,7 +101,8 @@ export async function getInforme(
         (entry) =>
           entry.fecha.slice(0, 10) >= desde &&
           entry.fecha.slice(0, 10) <= hasta &&
-          permitido(entry.caseId),
+          permitido(entry.caseId) &&
+          enFiltros(entry),
       );
       const distribution: Record<string, number> = {};
       for (const entry of entries) {
@@ -149,7 +156,8 @@ export async function getInforme(
       (entry) =>
         entry.fecha.slice(0, 10) >= desde &&
         entry.fecha.slice(0, 10) <= hasta &&
-        permitido(entry.caseId),
+        permitido(entry.caseId) &&
+        enFiltros(entry),
     );
     if (entries.length === 0) continue;
     const celdas: Record<string, number> = {};
