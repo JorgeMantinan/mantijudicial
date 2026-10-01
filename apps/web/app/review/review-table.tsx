@@ -64,7 +64,7 @@ export function ReviewTable({
 
   return (
     <div>
-      <div className="filters">
+      <div className="filters no-print">
         <label className="small muted" style={{ display: "grid", gap: 4 }}>
           Marcar como
           <select value={status} onChange={(event) => setStatus(event.target.value)}>

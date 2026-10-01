@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Bar } from "@/components/bar";
+import { PrintButton } from "@/components/print-button";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import { getRevisionPorPersona, listCases } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
@@ -37,7 +38,12 @@ export default async function ReviewPage({
   const filtered = all.filter((item) => (status === "TODOS" ? true : item.reviewStatus === status));
 
   return (
-    <>
+    <article className="print-sheet">
+      <p className="small muted no-print">
+        <Link href="/">← Resumen</Link> · <Link href="/alertas">Alertas</Link>
+      </p>
+      <PrintButton text="Imprimir la revisión" />
+
       <h1>Revisión humana</h1>
       <p className="lead">
         El análisis lo produce la IA; aquí se registra que una persona lo ha verificado. Es lo que
@@ -144,7 +150,7 @@ export default async function ReviewPage({
         )}
       </div>
 
-      <form className="filters" action="/review" method="get">
+      <form className="filters no-print" action="/review" method="get">
         <select name="status" defaultValue={status}>
           <option value="UNREVIEWED">Sin revisar ({pendientes.length})</option>
           <option value="REVIEWED">Revisados ({porEstado.REVIEWED ?? 0})</option>
@@ -167,6 +173,6 @@ export default async function ReviewPage({
       />
 
       {filtered.length === 0 && <p className="muted">No hay casos con ese estado.</p>}
-    </>
+    </article>
   );
 }

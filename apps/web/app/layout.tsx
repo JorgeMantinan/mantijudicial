@@ -6,6 +6,7 @@ import { getReviewStats } from "@/lib/dataset";
 import { registrarRender } from "@/lib/timings";
 import { Shortcuts } from "@/components/shortcuts";
 import { BackToTop } from "@/components/back-to-top";
+import { TituloRuta } from "@/components/titulo-ruta";
 import { DensityToggle } from "@/components/density-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoutButton } from "./logout-button";
@@ -147,6 +148,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </main>
         <Shortcuts />
         <BackToTop />
+        <TituloRuta />
         <footer>
           <div className="wrap">
             Corpus de sentencias del Tribunal Supremo + texto consolidado del BOE. Los textos
