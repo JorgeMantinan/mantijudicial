@@ -569,3 +569,13 @@ main.wrap {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* ---- Densidad de tablas (conmutador en la cabecera) ---- */
+:root[data-densidad="compacta"] table {
+  font-size: 13px;
+}
+
+:root[data-densidad="compacta"] table th,
+:root[data-densidad="compacta"] table td {
+  padding: 3px 8px;
+}

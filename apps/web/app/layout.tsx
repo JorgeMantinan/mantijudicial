@@ -5,6 +5,7 @@ import { getActor } from "@/lib/auth";
 import { getReviewStats } from "@/lib/dataset";
 import { registrarRender } from "@/lib/timings";
 import { Shortcuts } from "@/components/shortcuts";
+import { DensityToggle } from "@/components/density-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoutButton } from "./logout-button";
 import "./globals.css";
@@ -66,7 +67,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "(function(){try{if(localStorage.getItem('mj-tema')==='light'){document.documentElement.setAttribute('data-theme','light');}}catch(e){}})();",
+              "(function(){try{if(localStorage.getItem('mj-tema')==='light'){document.documentElement.setAttribute('data-theme','light');}if(localStorage.getItem('mj-densidad')==='compacta'){document.documentElement.setAttribute('data-densidad','compacta');}}catch(e){}})();",
           }}
         />
         <a href="#contenido" className="skip-link no-print">
@@ -129,6 +130,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 style={{ width: 150, fontSize: 13, padding: "5px 8px" }}
               />
             </form>
+            <DensityToggle />
             <ThemeToggle />
             {authenticated ? (
               <LogoutButton />

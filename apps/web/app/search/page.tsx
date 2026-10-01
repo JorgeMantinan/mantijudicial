@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
-import { getBusquedas, runSearch } from "@/lib/dataset";
+import { getBusquedas, getEvolucion, runSearch } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { findByIdentifier } from "@/lib/identifier";
 import { BRANCH, OUTCOME, SEARCH_KIND, label } from "@/lib/labels";
@@ -56,6 +56,28 @@ export default async function SearchPage({
   let masPaginas = false;
   const exactos = query.length >= 4 ? await findByIdentifier(query) : [];
   const busquedas = await getBusquedas();
+  const sinResultados = query.length > 0 && hits.length === 0 && exactos.length === 0;
+  let sugerencias: Array<{ topic: string; casos: number }> = [];
+  if (sinResultados) {
+    const palabras = query
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((palabra) => palabra.length >= 4);
+    const puntuados = (await getEvolucion())
+      .map((tema) => ({
+        topic: tema.topic,
+        casos: tema.cases,
+        score:
+          palabras.filter((palabra) => tema.topic.toLowerCase().includes(palabra)).length * 10 +
+          Math.min(tema.cases / 100, 0.9),
+      }))
+      .sort((a, b) => b.score - a.score);
+    const afines = puntuados.filter((tema) => tema.score >= 1).slice(0, 5);
+    sugerencias = (afines.length > 0 ? afines : puntuados.slice(0, 5)).map(({ topic, casos }) => ({
+      topic,
+      casos,
+    }));
+  }
   if (query.length > 0) {
     const filters: Record<string, string> = {};
     if (params.branch) filters.branch = params.branch;
@@ -133,6 +155,36 @@ export default async function SearchPage({
           Página {pagina} · mostrando {offset + 1}–{offset + hits.length} de {docs} documentos
           indexados.
         </p>
+      )}
+
+      {sinResultados && (
+        <div className="section">
+          <h2>Sin resultados para «{query}»</h2>
+          <p className="small muted">
+            Prueba con menos palabras, sin acentos, o con un identificador (ECLI, ROJ o nº de
+            recurso).
+          </p>
+          {sugerencias.length > 0 && (
+            <>
+              <p className="small">Temas del corpus que podrían encajar:</p>
+              <ul className="small">
+                {sugerencias.map((sugerencia) => (
+                  <li key={sugerencia.topic}>
+                    <Link href={`/temas/${encodeURIComponent(sugerencia.topic)}`}>
+                      {sugerencia.topic}
+                    </Link>{" "}
+                    · {sugerencia.casos} casos
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          <p className="small">
+            <Link href={`/laws?q=${encodeURIComponent(query)}`}>
+              Buscar también en el texto de las leyes →
+            </Link>
+          </p>
+        </div>
       )}
 
       {exactos.length > 0 && (

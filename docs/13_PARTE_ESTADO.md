@@ -65,3 +65,17 @@ Lotes de 3 ideas → código → `tsc` web + `test` + `next build` → `smoke.ps
 
 **Sigue pendiente**: activar el MFA de la cuenta admin (tÃº lo decides),
 Supabase/Render cuando quieras pagarlos, y las ideas de la lista anterior.
+
+## Ãšltimos retoques (cierre de la sesiÃ³n)
+
+- Filtros de rama/resultado tambiÃ©n en `/temas/[topic]` (y su CSV los
+  respeta); chips de filtros en `/informes`; paginaciÃ³n en `/search`.
+- Dossier del cliente con la secciÃ³n de **vigencia de las leyes citadas**.
+- Densidad de tablas (conmutador "Compacto/CÃ³modo" en la cabecera) y
+  sugerencias en `/search` cuando no hay resultados (temas afines + enlace a
+  legislaciÃ³n).
+- Barrido de TODO/FIXME/console: sin deudas (coincidencias falsas).
+- `scripts/smoke.ps1` = 33 comprobaciones.
+
+**Estado final**: todo verde (`tsc` Ã— 2, 241 tests, `next build`, smoke) y
+`main` al dÃ­a en GitHub. Siguiente sesiÃ³n: leer este parte + `AGENTS.md`.
