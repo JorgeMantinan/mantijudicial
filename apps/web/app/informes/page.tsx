@@ -5,6 +5,7 @@ import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import { getInforme } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { BRANCH, OUTCOME, label } from "@/lib/labels";
+import { SortTh } from "@/lib/sort-th";
 import { OutcomeBadge } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
@@ -74,10 +75,21 @@ export default async function InformesPage({
     })),
   ];
 
-  const sort = ["fecha", "caso", "resultado"].includes(sp.sort ?? "")
+  const sort = ["fecha", "caso", "resultado", "m-temas", "m-matriz", "m-normas"].includes(
+    sp.sort ?? "",
+  )
     ? (sp.sort as string)
     : "fecha";
   const dir = sp.dir === "desc" ? "desc" : "asc";
+  const factor = dir === "desc" ? -1 : 1;
+  const baseInf = {
+    desde,
+    hasta,
+    desde2,
+    hasta2,
+    branch: sp.branch,
+    outcome: sp.outcome,
+  };
   const casosOrdenados = [...informe.casos].sort((a, b) => {
     let cmp = 0;
     if (sort === "caso") cmp = a.id.localeCompare(b.id);
@@ -118,6 +130,16 @@ export default async function InformesPage({
     const qs = p.toString();
     return `/informes${qs ? `?${qs}` : ""}`;
   };
+
+  const temasOrden = [...informe.temas].sort((a, b) =>
+    sort === "m-temas" ? (a.casos - b.casos) * factor : b.casos - a.casos,
+  );
+  const matrizOrden = [...informe.matriz].sort((a, b) =>
+    sort === "m-matriz" ? (a.total - b.total) * factor : b.total - a.total,
+  );
+  const normasOrden = [...informe.leyes].sort((a, b) =>
+    sort === "m-normas" ? (a.veces - b.veces) * factor : b.veces - a.veces,
+  );
 
   return (
     <article className="print-sheet">
@@ -307,12 +329,12 @@ export default async function InformesPage({
             <thead>
               <tr>
                 <th>Tema</th>
-                <th>Casos</th>
+                <SortTh path="/informes" sortKey="m-temas" current={sort} dir={dir} label="Casos" base={baseInf} />
                 <th>Distribución</th>
               </tr>
             </thead>
             <tbody>
-              {informe.temas.map((tema) => (
+              {temasOrden.map((tema) => (
                 <tr key={tema.topic}>
                   <td className="small">
                     <Link href={`/temas/${encodeURIComponent(tema.topic)}`}>{tema.topic}</Link>
@@ -348,11 +370,11 @@ export default async function InformesPage({
                     {periodo}
                   </th>
                 ))}
-                <th style={{ textAlign: "right" }}>Total</th>
+                <SortTh path="/informes" sortKey="m-matriz" current={sort} dir={dir} label="Total" base={baseInf} />
               </tr>
             </thead>
             <tbody>
-              {informe.matriz.map((fila) => (
+              {matrizOrden.map((fila) => (
                 <tr key={fila.topic}>
                   <td className="small">
                     <Link href={`/temas/${encodeURIComponent(fila.topic)}`}>{fila.topic}</Link>
@@ -382,11 +404,11 @@ export default async function InformesPage({
               <tr>
                 <th>Norma</th>
                 <th>BOE</th>
-                <th>Citas</th>
+                <SortTh path="/informes" sortKey="m-normas" current={sort} dir={dir} label="Citas" base={baseInf} />
               </tr>
             </thead>
             <tbody>
-              {informe.leyes.map((ley) => (
+              {normasOrden.map((ley) => (
                 <tr key={`${ley.norma}-${ley.boe_id ?? ""}`}>
                   <td className="small">{ley.norma}</td>
                   <td className="mono small">

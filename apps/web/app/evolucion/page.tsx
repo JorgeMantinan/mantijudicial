@@ -4,6 +4,7 @@ import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import { getEvolucion } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { BRANCH, OUTCOME, label } from "@/lib/labels";
+import { SortTh } from "@/lib/sort-th";
 import { OutcomeBadge } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +12,13 @@ export const dynamic = "force-dynamic";
 export default async function EvolucionPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tema?: string; branch?: string; outcome?: string }>;
+  searchParams: Promise<{
+    tema?: string;
+    branch?: string;
+    outcome?: string;
+    sort?: string;
+    dir?: string;
+  }>;
 }) {
   const actor = await requireActor();
   const orgId = await defaultOrgId();
@@ -45,6 +52,27 @@ export default async function EvolucionPage({
     .filter((tema) => tema.cases > 0);
   const activo =
     (sp.tema ? temas.find((item) => item.topic === sp.tema) : undefined) ?? temas[0] ?? null;
+
+  const sortKey = sp.sort ?? "";
+  const dir = sp.dir === "desc" ? "desc" : "asc";
+  const factor = dir === "desc" ? -1 : 1;
+  const cmpTexto = (a: string, b: string) => a.localeCompare(b, "es") * factor;
+  const cmpNumero = (a: number, b: number) => (a - b) * factor;
+  const base = { branch: sp.branch, outcome: sp.outcome, tema: sp.tema };
+  const temasOrden = [...temas].sort((a, b) => {
+    if (sortKey === "t-tema") return cmpTexto(a.topic, b.topic);
+    if (sortKey === "t-casos") return cmpNumero(a.cases, b.cases);
+    if (sortKey === "t-periodo") return cmpTexto(a.first, b.first);
+    return b.cases - a.cases;
+  });
+  const entradas = activo
+    ? [...activo.entries].sort((a, b) => {
+        if (sortKey === "e-caso") return cmpTexto(a.caseId, b.caseId);
+        if (sortKey === "e-res") return cmpTexto(a.outcome, b.outcome);
+        if (sortKey === "e-fecha") return cmpTexto(a.fecha, b.fecha);
+        return a.fecha.localeCompare(b.fecha);
+      })
+    : [];
 
   return (
     <article className="print-sheet">
@@ -95,13 +123,13 @@ export default async function EvolucionPage({
             <table>
               <thead>
                 <tr>
-                  <th>Tema</th>
-                  <th>Casos</th>
-                  <th>Periodo</th>
+                  <SortTh path="/evolucion" sortKey="t-tema" current={sortKey} dir={dir} label="Tema" base={base} />
+                  <SortTh path="/evolucion" sortKey="t-casos" current={sortKey} dir={dir} label="Casos" base={base} />
+                  <SortTh path="/evolucion" sortKey="t-periodo" current={sortKey} dir={dir} label="Periodo" base={base} />
                 </tr>
               </thead>
               <tbody>
-                {temas.map((tema) => (
+                {temasOrden.map((tema) => (
                   <tr
                     key={tema.topic}
                     style={
@@ -145,14 +173,14 @@ export default async function EvolucionPage({
                 <table>
                   <thead>
                     <tr>
-                      <th style={{ width: 110 }}>Fecha</th>
-                      <th>Caso</th>
-                      <th style={{ width: 150 }}>Resultado</th>
+                      <SortTh path="/evolucion" sortKey="e-fecha" current={sortKey} dir={dir} label="Fecha" base={base} />
+                      <SortTh path="/evolucion" sortKey="e-caso" current={sortKey} dir={dir} label="Caso" base={base} />
+                      <SortTh path="/evolucion" sortKey="e-res" current={sortKey} dir={dir} label="Resultado" base={base} />
                       <th>Frase del tribunal</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {activo.entries.map((entry) => (
+                    {entradas.map((entry) => (
                       <tr key={entry.caseId}>
                         <td className="mono small">{entry.fecha || "—"}</td>
                         <td className="small">
