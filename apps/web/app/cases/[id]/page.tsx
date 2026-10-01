@@ -347,7 +347,7 @@ export default async function CaseDetailPage({
                 restantes.
               </p>
               <ul className="small">
-                {recomendaciones.frases.slice(0, 5).map((grupo) => (
+                {recomendaciones.frases.slice(0, 3).map((grupo) => (
                   <li key={grupo.ejemplo} style={{ marginBottom: 4 }}>
                     <Link href={`/patrones/frase?e=${encodeURIComponent(grupo.ejemplo)}`}>
                       {grupo.ejemplo.length > 140 ? `${grupo.ejemplo.slice(0, 140)}…` : grupo.ejemplo}
@@ -367,13 +367,13 @@ export default async function CaseDetailPage({
                   </li>
                 ))}
               </ul>
-              {recomendaciones.frases.length > 5 && (
+              {recomendaciones.frases.length > 3 && (
                 <details>
                   <summary style={{ cursor: "pointer", fontSize: 13 }}>
-                    Ver más ({recomendaciones.frases.length - 5} frases recomendadas)
+                    Ver más ({recomendaciones.frases.length - 3} frases recomendadas)
                   </summary>
                   <ul className="small">
-                    {recomendaciones.frases.slice(5).map((grupo) => (
+                    {recomendaciones.frases.slice(3).map((grupo) => (
                       <li key={grupo.ejemplo} style={{ marginBottom: 4 }}>
                         <Link href={`/patrones/frase?e=${encodeURIComponent(grupo.ejemplo)}`}>
                           {grupo.ejemplo.length > 140
@@ -405,7 +405,7 @@ export default async function CaseDetailPage({
               <h3>Argumentos que les funcionaron</h3>
               <p className="small muted">Ordenados por importancia y aceptados en esos casos.</p>
               <ul className="small">
-                {recomendaciones.argumentos.slice(0, 5).map((argumento, index) => (
+                {recomendaciones.argumentos.slice(0, 4).map((argumento, index) => (
                   <li key={`${argumento.caseId}-${index}`} style={{ marginBottom: 4 }}>
                     <span className="badge ok">{label(ARG_TYPE, argumento.type)}</span>{" "}
                     {argumento.description}{" "}
@@ -415,13 +415,13 @@ export default async function CaseDetailPage({
                   </li>
                 ))}
               </ul>
-              {recomendaciones.argumentos.length > 5 && (
+              {recomendaciones.argumentos.length > 4 && (
                 <details>
                   <summary style={{ cursor: "pointer", fontSize: 13 }}>
-                    Ver más ({recomendaciones.argumentos.length - 5} argumentos)
+                    Ver más ({recomendaciones.argumentos.length - 4} argumentos)
                   </summary>
                   <ul className="small">
-                    {recomendaciones.argumentos.slice(5).map((argumento, index) => (
+                    {recomendaciones.argumentos.slice(4).map((argumento, index) => (
                       <li key={`${argumento.caseId}-x-${index}`} style={{ marginBottom: 4 }}>
                         <span className="badge ok">{label(ARG_TYPE, argumento.type)}</span>{" "}
                         {argumento.description}{" "}
