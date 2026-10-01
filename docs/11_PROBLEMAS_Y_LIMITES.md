@@ -302,7 +302,7 @@ revisadas manualmente) y tests de extracción.
 > ambigüedad y consultamos.
 
 
-## Estado de los lÃ­mites (2026-09-30)
+## Estado de los límites (2026-09-30)
 
 - **Sin despliegue**: Render preparado (`render.yaml`, `scripts/render-bootstrap.sh`
   y rama `data` con el corpus) sin contratar; Vercel descartado (proyecto
@@ -313,8 +313,10 @@ revisadas manualmente) y tests de extracción.
 - **IA**: proveedor `opencode` en local; coste visible en `/eval` ("Coste en
   vivo"). Para servidor ya existe el proveedor HTTP compatible con OpenAI
   (`AI_API_KEY` + `AI_BASE_URL` + `AI_MODEL` en `render.yaml`).
-- **Embeddings / bÃºsqueda semÃ¡ntica**: pendiente de proveedor.
-- **Copias de seguridad**: `scripts/backup.ps1` (retenciÃ³n) y
+- **Embeddings / búsqueda semántica**: pendiente de proveedor.
+- **Copias de seguridad**: `scripts/backup.ps1` (retención) y
   `scripts/restore.ps1` (verificado: 80 casos, identidad OK), fuera de git.
-- **VerificaciÃ³n**: `scripts/smoke.ps1` (31 comprobaciones de rutas, CSV y
+- **Verificación**: `scripts/smoke.ps1` (33 comprobaciones de rutas, CSV y
   aislamiento) + `pnpm typecheck` + `pnpm test` + `next build`.
+- **`case_000056`**: descartado ("corrupto": el modelo no devuelve JSON válido);
+  queda sin enriquecer y **no se reintenta** sin permiso nuevo.

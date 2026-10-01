@@ -527,26 +527,33 @@ Añadir una señal visual inequívoca para:
 Los datos demo no deben confundirse con expedientes reales.
 
 
-## Funcionalidad aÃ±adida (2026-09-30)
+## Funcionalidad añadida (2026-09-30)
 
-Vista de conjunto de lo implementado en la interfaz (ademÃ¡s del diseÃ±o original):
+Vista de conjunto de lo implementado en la interfaz (además del diseño original):
 
-- **NavegaciÃ³n**: grupos Principal | AnÃ¡lisis | Herramientas, tema claro/oscuro
-  con persistencia y atajos globales (`/` bÃºsqueda, `a` alertas, `i` informes,
-  `r` revisiÃ³n, `N` siguiente pendiente, `?` ayuda).
-- **Casos**: lista con filtros + CSV, ingesta mÃºltiple con anti-duplicados
-  (SHA-256), archivar/restaurar, secciones plegables, bloque "quÃ© falta por
-  concretar", actividad del caso, notas, compartir, comparar con cualquier caso,
-  impresiÃ³n (ficha, dossier para el cliente, informe comparativo) y export JSON.
-- **AnÃ¡lisis**: bÃºsqueda con identificadores exactos (ECLI/ROJ/nÂº recurso),
-  bÃºsquedas guardadas con resaltado, ficha de tema imprimible con desglose de
-  argumentos, evoluciÃ³n, patrones con criterio dividido, legislaciÃ³n con Ã­ndice
-  filtrable al vuelo, plazos y alertas (vigencia, calidad, revisiÃ³n).
-- **Informes**: periodo con comparaciÃ³n A/B y delta, matriz tema Ã— trimestre,
-  barras de proporciÃ³n y CSV de casos/informes/temas/alertas.
-- **RevisiÃ³n**: selecciÃ³n mÃºltiple, atajo N, carga por persona y auditorÃ­a
-  filtrable por acciÃ³n y persona.
-- **Ayuda**: `/ayuda`, `/novedades`, `/resumen` imprimible y `/eval` con coste
-  de IA en vivo, calidad del corpus y panel de sistema.
-- **ImpresiÃ³n**: cabeceras de tabla repetidas, sin partir filas ni listas y
-  secciones plegadas que en papel salen enteras.
+- **Navegación**: píldoras con la pestaña activa, buscador en la cabecera, tema
+  claro/oscuro y densidad de tablas con persistencia; atajos globales (`/`
+  búsqueda, `a` alertas, `i` informes, `r` revisión, `N` siguiente pendiente,
+  `?` ayuda).
+- **Casos**: lista con filtros, chips y CSV, columna de revisión ordenable,
+  ingesta múltiple con anti-duplicados (SHA-256), archivar/restaurar, secciones
+  plegables, bloque "qué falta por concretar", actividad del caso, notas,
+  compartir, comparar con cualquier caso, copiar enlace, impresión (ficha,
+  dossier para el cliente, informe comparativo) y export JSON.
+- **Análisis**: búsqueda con identificadores exactos (ECLI/ROJ/nº recurso),
+  paginación, búsquedas guardadas con resaltado, sugerencias sin resultados,
+  ficha de tema imprimible con desglose de argumentos y filtros, evolución con
+  filtros y orden, patrones con criterio dividido y **tablas de frases por
+  origen** (hechos/fundamentos/alegaciones), legislación con índice filtrable y
+  orden por número BOE, plazos y alertas (vigencia con resumen del artículo,
+  calidad, revisión).
+- **Informes**: periodo con comparación A/B y delta, matriz tema × trimestre,
+  filtros de rama/resultado, barras de proporción y CSV de
+  casos/informes/temas/alertas.
+- **Revisión**: selección múltiple, tablas ordenables, atajo N, progreso por
+  rama, carga por persona y auditoría filtrable por acción y persona.
+- **Ayuda**: `/ayuda`, `/novedades`, `/resumen` imprimible, 404 en castellano
+  y `/eval` (renombrado "Calidad" en el menú) con coste en vivo, calidad del
+  corpus, sistema y tiempos de render.
+- **Impresión**: cabeceras de tabla repetidas, sin partir filas ni listas,
+  secciones plegadas que en papel salen enteras y sumario del dossier.

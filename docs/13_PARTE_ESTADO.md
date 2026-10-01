@@ -53,58 +53,57 @@ Lotes de 3 ideas → código → `tsc` web + `test` + `next build` → `smoke.ps
 - Credenciales demo y trampas de Windows: en `AGENTS.md`.
 
 
-## Ampliaciones posteriores (mismo dÃ­a)
+## Ampliaciones posteriores (mismo día)
 
-- Login con descripciÃ³n de la plataforma; buscador permanente en la cabecera;
+- Login con descripción de la plataforma; buscador permanente en la cabecera;
   tema claro/oscuro con persistencia; chips de filtros en `/cases`; base de
-  accesibilidad (skip-link, foco visible).
-- CSV de prÃ¡cticamente todo: casos, informe (con filtros), temas, alertas y
-  `/eval` (99 mÃ©tricas).
+  accesibilidad (skip-link, foco visible, títulos de pestaña por ruta).
+- CSV de prácticamente todo: casos, informe (con filtros), temas, alertas y
+  `/eval` (99 métricas).
 - `/temas/comparar` (dos temas lado a lado), `/resumen` imprimible,
-  "PDFs con problemas" en `/alertas`, actividad del caso en su ficha, sumario
-  del dossier y guÃ­a paso a paso del MFA en `/users`.
-- `/evolucion` con filtros de rama y resultado; `/review` con progreso por rama
-  y **aislamiento corregido** (ya filtra con `canViewCase`); `/informes` con
-  filtros de rama/resultado; `/eval` con coste en vivo, calidad, sistema y
-  tiempos de render.
+  "PDFs con problemas" en `/alertas` (con explicación de cómo reanalizarlos),
+  actividad del caso en su ficha, sumario del dossier y guía paso a paso del
+  MFA en `/users`.
+- `/evolucion` con filtros de rama/resultado y orden en sus dos tablas;
+  `/review` con progreso por rama, tablas ordenables y **aislamiento corregido**
+  (filtra con `canViewCase`); `/informes` con filtros de rama/resultado y
+  orden en temas/matriz/normas; menú rediseñado en dos filas con píldoras.
 - `dataset.ts` partido en `dataset.ts` + `dataset-estado.ts` (mismos imports).
-- `scripts/smoke.ps1` ampliado: comprueba tambiÃ©n `/review` con carlos.
+- 404 en castellano, botones "copiar" (artículo, enlace de caso, conclusión),
+  páginas imprimibles completas (ficha, dossier, comparación, alertas,
+  informes, resumen, temas, evolución, revisión, patrones, calidad, norma).
 
-**Sigue pendiente**: activar el MFA de la cuenta admin (tÃº lo decides),
-Supabase/Render cuando quieras pagarlos, y las ideas de la lista anterior.
+## Patrones de frases (sección de /patterns)
 
-## Ãšltimos retoques (cierre de la sesiÃ³n)
-
-- Filtros de rama/resultado tambiÃ©n en `/temas/[topic]` (y su CSV los
-  respeta); chips de filtros en `/informes`; paginaciÃ³n en `/search`.
-- Dossier del cliente con la secciÃ³n de **vigencia de las leyes citadas**.
-- Densidad de tablas (conmutador "Compacto/CÃ³modo" en la cabecera) y
-  sugerencias en `/search` cuando no hay resultados (temas afines + enlace a
-  legislaciÃ³n).
-- Barrido de TODO/FIXME/console: sin deudas (coincidencias falsas).
-- `scripts/smoke.ps1` = 33 comprobaciones.
-
-**Estado final**: todo verde (`tsc` Ã— 2, 241 tests, `next build`, smoke) y
-`main` al dÃ­a en GitHub. Siguiente sesiÃ³n: leer este parte + `AGENTS.md`.
+- Fuente: hechos (`facts`), fundamentos (`holdings`) y **alegaciones de las
+  partes** (`arguments`), separados en **tres tablas** (Frases de: Hechos /
+  Fundamentos / Alegaciones).
+- Filtros: mínimo 5 tokens significativos; vocabulario de cajón fuera por
+  prefijo (`desestim*`, `cost*`, `deposit*`, `formul*`, `oposicion*`,
+  `confirm*`, `revoc*`, `casacion*`, `condena*`, `apelacion*`); solape de
+  tokens ≥ 0,5; mínimo 3 casos; **homogeneidad ≥ 70 %** con badge "% igual"
+  (ordenados por homogeneidad).
 
 ## Uso de IA autorizado (2026-09-30)
 
 - **Autorizado y ejecutado**: enriquecer los 4 casos que faltaban a 0,012 $
-  el caso. Resultado: **79/80 enriquecidos**.
-  - `case_000012` OK ($0,0070) Â· `case_000041` OK ($0,0084) Â·
+  el caso. Resultado: **79/80 enriquecidos** (PDFs stale = 0).
+  - `case_000012` OK ($0,0070) · `case_000041` OK ($0,0084) ·
     `case_000057` OK ($0,0174, hubo 1 reintento).
-  - `case_000056`: **pendiente**; el modelo devuelve JSON invÃ¡lido de forma
-    repetida (enum `outcome_scope`/`claim_outcomes`, `arguments` ausente).
-    Coste ya consumido en intentos fallidos: â‰ˆ $0,03. NO reintentar sin su
-    permiso explÃ­cito (cada intento â‰ˆ $0,007).
-- Gasto total de esta tanda: â‰ˆ **$0,06** (presupuesto teÃ³rico $0,048).
+  - `case_000056`: **dejado tal cual por decisión suya (2026-09-30)** — el
+    modelo devuelve JSON inválido de forma repetida y se considera "corrupto".
+    **NO reintentar nunca** sin permiso nuevo. Ya se gastaron ≈ $0,03 en
+    intentos fallidos.
+- Gasto total de esta tanda: ≈ **$0,06** (presupuesto teórico $0,048).
 
-## A final de mes (instrucciÃ³n suya, 2026-09-30)
+## A final de mes (instrucción suya, 2026-09-30)
 
-Cuando **Ã©l lo pida expresamente**, gastar los tokens restantes del mes en lo
-mÃ¡s Ãºtil, por este orden (y siempre avisando antes del coste estimado):
-1. Acabar `case_000056` (â‰ˆ $0,007â€“0,02).
-2. Comparaciones (`compare`) de los casos mÃ¡s citados/descargados â‰ˆ $0,003 c/u.
-3. VÃ­as de actuaciÃ³n para los casos sin `vias.json` â‰ˆ $0,003 c/u.
-4. Nada de re-enriquecer lo ya OK salvo que cambie el PDF.
-**Hasta su "ahora sÃ­": no gastar nada.**
+Cuando **él lo pida expresamente**, gastar los tokens restantes del mes en lo
+más útil, por este orden (y siempre avisando antes del coste estimado):
+
+1. Comparaciones (`compare`) de los casos más citados/descargados ≈ $0,003 c/u.
+2. Vías de actuación para los casos sin `vias.json` ≈ $0,003 c/u.
+3. Nada de re-enriquecer lo ya OK salvo que cambie el PDF.
+4. `case_000056` queda fuera (descartado como corrupto).
+
+**Hasta su "ahora sí": no gastar nada.**
