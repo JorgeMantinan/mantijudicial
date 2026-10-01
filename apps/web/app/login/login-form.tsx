@@ -45,6 +45,7 @@ export function LoginForm() {
         Correo
         <input
           type="email"
+          autoFocus
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           autoComplete="username"

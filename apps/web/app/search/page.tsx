@@ -113,7 +113,12 @@ export default async function SearchPage({
       </p>
 
       <form className="filters" action="/search" method="get">
-        <input name="q" defaultValue={query} placeholder="Texto, ECLI, ROJ (STS 3706/2026) o nº de recurso" />
+        <input
+          name="q"
+          defaultValue={query}
+          autoFocus={query.length === 0}
+          placeholder="Texto, ECLI, ROJ (STS 3706/2026) o nº de recurso"
+        />
         <select name="kind" defaultValue={params.kind ?? ""}>
           {KINDS.map((kind) => (
             <option key={kind.value} value={kind.value}>
