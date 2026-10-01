@@ -1637,3 +1637,87 @@ export async function getDuplicados(): Promise<Duplicado[]> {
   }
   return out.slice(0, 10);
 }
+
+export interface Recomendaciones {
+  frases: GrupoFrasesView[];
+  argumentos: Array<{ caseId: string; type: string; description: string }>;
+  leyes: Array<{
+    norma: string;
+    boe_id: string;
+    block_id: string | null;
+    article: number;
+    casos: number;
+  }>;
+}
+
+/**
+ * Qué ha funcionado en los casos parecidos: frases homogéneas que aparecen en
+ * ellos, argumentos aceptados y leyes verificadas citadas. Gratis (solo JSON).
+ */
+export async function getRecomendaciones(
+  caseId: string,
+  similares: string[],
+): Promise<Recomendaciones> {
+  const conjunto = new Set([caseId, ...similares]);
+  const frases = filtrarFrasesDelTema(await getGruposFrases(), conjunto);
+
+  const argumentos: Recomendaciones["argumentos"] = [];
+  const leyesMap = new Map<string, Recomendaciones["leyes"][number]>();
+
+  for (const id of similares.slice(0, 6)) {
+    const [args, refs] = await Promise.all([
+      section<{
+        arguments?: Array<{
+          type?: string;
+          outcome?: string;
+          description?: string;
+          importance?: number;
+        }>;
+      }>(id, "arguments.json"),
+      section<{
+        refs?: Array<{
+          status?: string;
+          boe_id?: string | null;
+          norma?: string;
+          articles?: Array<{ number?: number; block_id?: string | null }>;
+        }>;
+      }>(id, "law_refs.json"),
+    ]);
+
+    const aceptados = (args?.arguments ?? [])
+      .filter((argumento) => (argumento.outcome ?? "").toUpperCase() === "ACCEPTED")
+      .sort((a, b) => (b.importance ?? 0) - (a.importance ?? 0));
+    for (const argumento of aceptados) {
+      if (argumentos.length >= 8) break;
+      argumentos.push({
+        caseId: id,
+        type: (argumento.type ?? "").toUpperCase(),
+        description: (argumento.description ?? "").replace(/\s+/g, " ").slice(0, 240),
+      });
+    }
+
+    for (const ref of refs?.refs ?? []) {
+      if (ref.status !== "VERIFIED" || !ref.boe_id) continue;
+      for (const articulo of ref.articles ?? []) {
+        const key = `${ref.boe_id}|${articulo.block_id ?? ""}|${articulo.number ?? 0}`;
+        const fila =
+          leyesMap.get(key) ??
+          ({
+            norma: ref.norma ?? "",
+            boe_id: ref.boe_id,
+            block_id: articulo.block_id ?? null,
+            article: articulo.number ?? 0,
+            casos: 0,
+          } satisfies Recomendaciones["leyes"][number]);
+        fila.casos += 1;
+        leyesMap.set(key, fila);
+      }
+    }
+  }
+
+  return {
+    frases,
+    argumentos,
+    leyes: [...leyesMap.values()].sort((a, b) => b.casos - a.casos).slice(0, 6),
+  };
+}

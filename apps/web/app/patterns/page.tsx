@@ -1,6 +1,6 @@
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import { PrintButton } from "@/components/print-button";
-import { computePatterns, getContradicciones, getExitoArgumentos, getGruposFrases, listCases } from "@/lib/dataset";
+import { computePatterns, getContradicciones, getExitoArgumentos, getGruposFrases, getLawUsage, listCases } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { ARG_OUTCOME, ARG_TYPE, BRANCH, INSTANCE, OUTCOME, SIDE, label } from "@/lib/labels";
 import { OutcomeBadge } from "@/lib/ui";
@@ -37,6 +37,8 @@ export default async function PatternsPage() {
   const grants = await authorizationGrants();
   const cases = (await listCases()).filter((item) => canViewCase(actor, item.id, orgId, grants));
   const computed = await computePatterns(cases.map((item) => item.id));
+  const usage = await getLawUsage(cases.map((item) => item.id));
+  const casosPorNorma = new Map(usage.byNorm.map((row) => [row.boe_id, row.cases]));
   const exito = await getExitoArgumentos();
   const gruposFrases = await getGruposFrases();
   const contradictorio = (await getContradicciones())
@@ -291,10 +293,7 @@ export default async function PatternsPage() {
                     {item.ejemplos.slice(0, 3).map((ejemplo) => (
                       <div key={ejemplo.caseId}>
                         <span className="mono">{ejemplo.caseId.replace("case_", "")}</span>{" "}
-                        <OutcomeBadge outcome={ejemplo.outcome} />{" "}
-                        {ejemplo.headline.length > 70
-                          ? `${ejemplo.headline.slice(0, 70)}…`
-                          : ejemplo.headline}
+                        <OutcomeBadge outcome={ejemplo.outcome} /> {ejemplo.headline}
                       </div>
                     ))}
                   </td>
@@ -304,70 +303,6 @@ export default async function PatternsPage() {
           </table>
         </>
       )}
-
-      <h2>Resultado por rama del derecho</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Rama</th>
-            <th>Casos</th>
-            <th>Distribución</th>
-            <th>% estimaciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {branch.map((group) => (
-            <tr key={group.key}>
-              <td title={group.key}>{label(BRANCH, group.key)}</td>
-              <td>{group.cases}</td>
-              <td className="small">{dist(group.distribution.counts)}</td>
-              <td>{group.share_estimated === null ? "—" : `${(group.share_estimated * 100).toFixed(0)}%`}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <h2>Resultado según quién recurre en casación</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Recurrente</th>
-            <th>Casos</th>
-            <th>Distribución</th>
-            <th>% estimaciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {side.map((group) => (
-            <tr key={group.key}>
-              <td title={group.key}>{label(SIDE, group.key)}</td>
-              <td>{group.cases}</td>
-              <td className="small">{dist(group.distribution.counts)}</td>
-              <td>{group.share_estimated === null ? "—" : `${(group.share_estimated * 100).toFixed(0)}%`}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <h2>Temas del tribunal (ratio decidendi)</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Tema</th>
-            <th>Casos</th>
-            <th>Distribución</th>
-          </tr>
-        </thead>
-        <tbody>
-          {topics.map((group) => (
-            <tr key={group.key}>
-              <td>{group.key}</td>
-              <td>{group.cases}</td>
-              <td className="small">{dist(group.distribution.counts)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
 
       <h2>Doctrina y precedentes citados</h2>
       <table>
@@ -396,67 +331,53 @@ export default async function PatternsPage() {
         )}
       </table>
 
-      <h2>Argumentos por tipo</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Tipo</th>
-            <th>Casos</th>
-            <th>Acepción de argumentos</th>
-          </tr>
-        </thead>
-        <tbody>
-          {args.map((row) => (
-            <tr key={row.key}>
-              <td title={row.key}>{label(ARG_TYPE, row.key)}</td>
-              <td>{row.cases}</td>
-              <td className="small">{dist(row.outcomes, ARG_OUTCOME)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
       <h2>Normas verificadas citadas</h2>
+      <p className="small muted">
+        Con enlace al texto consolidado de la norma y a los casos de tu corpus que la citan.
+      </p>
       <table>
         <thead>
           <tr>
             <th>Norma</th>
             <th>Siglas</th>
-            <th>Casos</th>
+            <th>Casos que la citan</th>
             <th>Resultados</th>
           </tr>
         </thead>
         <tbody>
-          {verifiedLaws.map((row) => (
-            <tr key={row.boe_id}>
-              <td className="mono small">{row.boe_id}</td>
-              <td className="small">{row.siglas.join(", ")}</td>
-              <td>{row.cases}</td>
-              <td className="small">{dist(row.outcomes)}</td>
-            </tr>
-          ))}
+          {verifiedLaws.map((row) => {
+            const listado = casosPorNorma.get(row.boe_id) ?? [];
+            return (
+              <tr key={row.boe_id}>
+                <td>
+                  <Link href={`/laws/${row.boe_id}`} className="mono small">
+                    {row.boe_id}
+                  </Link>
+                </td>
+                <td className="small">{row.siglas.join(", ")}</td>
+                <td className="small">
+                  {listado.length === 0 ? (
+                    <span className="muted">{row.cases}</span>
+                  ) : (
+                    <>
+                      {listado.slice(0, 4).map((caseId) => (
+                        <Link key={caseId} href={`/cases/${caseId}`} style={{ marginRight: 6 }}>
+                          {caseId.replace("case_", "")}
+                        </Link>
+                      ))}
+                      {listado.length > 4 && (
+                        <span className="muted">+{listado.length - 4}</span>
+                      )}
+                    </>
+                  )}
+                </td>
+                <td className="small">{dist(row.outcomes)}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
 
-      <h2>Cuestiones planteadas</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Cuestión</th>
-            <th>Casos</th>
-            <th>Distribución</th>
-          </tr>
-        </thead>
-        <tbody>
-          {issues.map((group) => (
-            <tr key={group.key}>
-              <td>{group.key}</td>
-              <td>{group.cases}</td>
-              <td className="small">{dist(group.distribution.counts)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </article>
   );
 }

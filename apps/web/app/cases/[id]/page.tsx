@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { canCreateCase, canShareResource } from "@pipeline/authorization";
 import { canViewCase, caseResource, defaultOrgId, loadIdentity, requireActor } from "@/lib/auth";
-import { getAuditoria, getCase, getClientes, getComparisons, getDoctrinaCitada, getEscrito, getGoldenInfo, getReviewStats, getSentenciasCitadas, getSimilarCases, getVigenciaChecks, getVias, listLaws } from "@/lib/dataset";
+import { getAuditoria, getCase, getClientes, getComparisons, getDoctrinaCitada, getEscrito, getGoldenInfo, getRecomendaciones, getReviewStats, getSentenciasCitadas, getSimilarCases, getVigenciaChecks, getVias, listLaws } from "@/lib/dataset";
 import { authorizationGrants, loadGrantStore } from "@/lib/grants";
 import {
   ARG_OUTCOME,
@@ -160,6 +160,10 @@ export default async function CaseDetailPage({
       getClientes(),
     ]);
 
+  const recomendaciones = await getRecomendaciones(
+    id,
+    similar.map((item) => item.id),
+  );
   const nextPendiente = reviewStats.pending.find((item) => item.id !== id)?.id ?? null;
 
   const users = identity.listUsers().map((user) => ({
@@ -323,6 +327,84 @@ export default async function CaseDetailPage({
         )}
         {outcome.reasoning_summary && <blockquote>{outcome.reasoning_summary}</blockquote>}
       </div>
+
+      {(recomendaciones.frases.length > 0 ||
+        recomendaciones.argumentos.length > 0 ||
+        recomendaciones.leyes.length > 0) && (
+        <div className="section">
+          <h2>Cómo se ha ganado en casos parecidos</h2>
+          <p className="small muted">
+            A partir de los {similar.length} casos más parecidos al tuyo: frases que acompañan a
+            ganar, argumentos que les funcionaron y leyes que citaron. Es material de partida para
+            orientar el escrito — <strong>asociación, no predicción</strong>.
+          </p>
+
+          {recomendaciones.frases.length > 0 && (
+            <>
+              <h3>Frases recomendadas (con su historial)</h3>
+              <ul className="small">
+                {recomendaciones.frases.map((grupo) => (
+                  <li key={grupo.ejemplo} style={{ marginBottom: 4 }}>
+                    <Link href={`/patrones/frase?e=${encodeURIComponent(grupo.ejemplo)}`}>
+                      {grupo.ejemplo.length > 140 ? `${grupo.ejemplo.slice(0, 140)}…` : grupo.ejemplo}
+                    </Link>{" "}
+                    <span className={`badge ${grupo.homogenea >= 90 ? "ok" : "warn"}`}>
+                      {grupo.homogenea}% igual
+                    </span>{" "}
+                    {Object.entries(grupo.distribucion).map(([outcome, cantidad]) => (
+                      <span
+                        key={outcome}
+                        className={`badge ${outcome === "ESTIMED" ? "ok" : outcome === "DISMISSED" ? "ko" : "warn"}`}
+                        style={{ marginRight: 4 }}
+                      >
+                        {label(OUTCOME, outcome)} {cantidad}
+                      </span>
+                    ))}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          {recomendaciones.argumentos.length > 0 && (
+            <>
+              <h3>Argumentos que les funcionaron</h3>
+              <ul className="small">
+                {recomendaciones.argumentos.map((argumento, index) => (
+                  <li key={`${argumento.caseId}-${index}`} style={{ marginBottom: 4 }}>
+                    <span className="badge ok">{label(ARG_TYPE, argumento.type)}</span>{" "}
+                    {argumento.description}{" "}
+                    <Link href={`/cases/${argumento.caseId}`}>
+                      ({argumento.caseId.replace("case_", "")})
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          {recomendaciones.leyes.length > 0 && (
+            <>
+              <h3>Leyes citadas en los casos parecidos</h3>
+              <ul className="small">
+                {recomendaciones.leyes.map((ley) => (
+                  <li key={`${ley.boe_id}-${ley.block_id}-${ley.article}`}>
+                    {ley.norma} art. {ley.article}{" "}
+                    <Link
+                      href={`/laws/${ley.boe_id}${ley.block_id ? `?block=${ley.block_id}` : ""}`}
+                    >
+                      ver texto
+                    </Link>{" "}
+                    <span className="muted">
+                      ({ley.casos} caso{ley.casos === 1 ? "" : "s"})
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      )}
 
       {hayFaltas && (
         <div className="section">
@@ -684,17 +766,6 @@ export default async function CaseDetailPage({
             </div>
           </div>
         ))}
-      </div>
-
-      <div className="section">
-        <h2>Cuestiones planteadas</h2>
-        <ul>
-          {(detail.issues as Issue[]).map((issue) => (
-            <li key={issue.issue_id}>
-              <strong>{issue.topic}</strong>: {issue.description}
-            </li>
-          ))}
-        </ul>
       </div>
 
       <div className="section">

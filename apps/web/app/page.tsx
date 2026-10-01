@@ -180,32 +180,6 @@ export default async function Home() {
         </tbody>
       </table>
 
-      <h2>Ramas del derecho</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Rama</th>
-            <th>Casos</th>
-            <th style={{ width: 180 }}>Proporción</th>
-          </tr>
-        </thead>
-        <tbody>
-          {branches.map((row) => (
-            <tr key={row.name}>
-              <td title={row.name}>
-                <Link href={`/cases?branch=${encodeURIComponent(row.name)}`}>
-                  {label(BRANCH, row.name)}
-                </Link>
-              </td>
-              <td>{row.count}</td>
-              <td>
-                <Bar value={row.count} max={branches[0]?.count ?? 1} tone="accent" />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
       <h2>Normas más citadas en tus casos</h2>
       <table>
         <thead>

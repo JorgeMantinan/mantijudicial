@@ -84,8 +84,10 @@ export default async function EvolucionPage({
 
       <h1>Evolución jurisprudencial</h1>
       <p className="lead">
-        Cómo ha ido evolucionando cada tema (<em>ratio decidendi</em>) a lo largo del corpus, con
-        su fecha, su resultado y la frase del tribunal. Solo temas con 3 casos o más.
+        Cada <strong>tema</strong> es una idea que el Tribunal repite en varias sentencias (p. ej.
+        «costas procesales»). Para cada tema verás cuántos casos tiene, cómo acabaron
+        (estimado/desestimado), la fecha de cada sentencia y la <strong>frase literal</strong> con
+        la que el tribunal justificó el fallo. Solo aparecen temas presentes en 3 casos o más.
       </p>
 
       <form className="filters no-print" action="/evolucion" method="get">

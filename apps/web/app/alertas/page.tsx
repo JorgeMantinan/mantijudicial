@@ -357,7 +357,7 @@ export default async function AlertasPage({
                   «{grupo.ejemplo.length > 110 ? `${grupo.ejemplo.slice(0, 110)}…` : grupo.ejemplo}»{" "}
                   <span className="badge ok">{grupo.homogenea}% igual</span>{" "}
                   <span className="badge">{grupo.total} casos</span>{" "}
-                  {grupo.casos.slice(0, 3).map((caso) => (
+                  {grupo.casos.map((caso) => (
                     <Link
                       key={caso.caseId}
                       href={`/cases/${caso.caseId}`}
