@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Bar } from "@/components/bar";
 import { PrintButton } from "@/components/print-button";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
-import { getInforme, getVigenciaAlerts } from "@/lib/dataset";
+import { filtrarFrasesDelTema, getGruposFrases, getInforme, getVigenciaAlerts } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { BRANCH, OUTCOME, label } from "@/lib/labels";
 import { SortTh } from "@/lib/sort-th";
@@ -71,6 +71,31 @@ export default async function InformesPage({
     }))
     .filter((alerta) => alerta.casos.length > 0)
     .slice(0, 8);
+
+  const frasesPeriodo = filtrarFrasesDelTema(
+    await getGruposFrases(),
+    new Set(informe.casos.map((caso) => caso.id)),
+  );
+  const fechaPorId = new Map(informe.casos.map((caso) => [caso.id, caso.fecha]));
+  const porMes = !informe.periodos[0]?.includes("-T");
+  const etiquetaFecha = (fecha: string): string =>
+    porMes
+      ? fecha.slice(0, 7)
+      : `${fecha.slice(0, 4)}-T${Math.ceil(Number(fecha.slice(5, 7)) / 3)}`;
+  const matrizFrases = frasesPeriodo.slice(0, 6).map((grupo) => {
+    const celdas: Record<string, { n: number; e: number; d: number }> = {};
+    for (const caso of grupo.casos) {
+      const fecha = fechaPorId.get(caso.caseId);
+      if (!fecha) continue;
+      const clave = etiquetaFecha(fecha);
+      const celda = celdas[clave] ?? { n: 0, e: 0, d: 0 };
+      celda.n += 1;
+      if (caso.outcome === "ESTIMED") celda.e += 1;
+      else if (caso.outcome === "DISMISSED") celda.d += 1;
+      celdas[clave] = celda;
+    }
+    return { frase: grupo.ejemplo, total: grupo.total, homogenea: grupo.homogenea, celdas };
+  });
 
   const unionOutcomes = [
     ...new Set([...Object.keys(informe.porResultado), ...Object.keys(informeB.porResultado)]),
@@ -440,6 +465,54 @@ export default async function InformesPage({
           </table>
         )}
       </div>
+
+      {matrizFrases.length > 0 && informe.periodos.length > 0 && (
+        <div className="section">
+          <h2>Frases del periodo, mes a mes</h2>
+          <p className="small muted">
+            Frases homogéneas que aparecen en las sentencias del rango, repartidas por periodo con
+            el formato <span className="mono">n (estimados/desestimados)</span>. Sirve para ver si
+            la frase se mantiene o cambia de signo con el tiempo.
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>Frase</th>
+                {informe.periodos.map((periodo) => (
+                  <th key={periodo} style={{ textAlign: "right" }}>
+                    {periodo}
+                  </th>
+                ))}
+                <th style={{ textAlign: "right" }}>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {matrizFrases.map((fila) => (
+                <tr key={fila.frase}>
+                  <td className="small">«{fila.frase.slice(0, 90)}{fila.frase.length > 90 ? "…" : ""}»</td>
+                  {informe.periodos.map((periodo) => {
+                    const celda = fila.celdas[periodo];
+                    return (
+                      <td key={periodo} className="small" style={{ textAlign: "right" }}>
+                        {celda ? (
+                          <span title={`${celda.e} estimados / ${celda.d} desestimados`}>
+                            {celda.n} ({celda.e}/{celda.d})
+                          </span>
+                        ) : (
+                          <span className="muted">·</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                  <td className="small" style={{ textAlign: "right" }}>
+                    <strong>{fila.total}</strong>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="section">
         <h2>Normas más citadas</h2>

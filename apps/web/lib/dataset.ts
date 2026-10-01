@@ -1244,6 +1244,7 @@ export interface GrupoFrasesView {
   homogenea: number;
   distribucion: Record<string, number>;
   instancias: Array<{ instancia: string; demandante: number; demandado: number; parcial: number }>;
+  ramas: Record<string, number>;
   casos: Array<{ caseId: string; outcome: string; headline: string }>;
 }
 
@@ -1258,6 +1259,7 @@ export async function getGruposFrases(): Promise<GrupoFrasesView[]> {
 
   const items = await listCases();
   const titulos = new Map(items.map((item) => [item.id, item.headline]));
+  const ramas = new Map(items.map((item) => [item.id, item.branch]));
 
   const hechos: FraseCaso[] = [];
   const fundamentos: FraseCaso[] = [];
@@ -1346,6 +1348,11 @@ export async function getGruposFrases(): Promise<GrupoFrasesView[]> {
             instancia,
             ...fila,
           })),
+          ramas: grupo.casos.reduce<Record<string, number>>((acc, caso) => {
+            const rama = ramas.get(caso.caseId) ?? "UNKNOWN";
+            acc[rama] = (acc[rama] ?? 0) + 1;
+            return acc;
+          }, {}),
           casos: grupo.casos.map((caso) => ({
             ...caso,
             headline: titulos.get(caso.caseId) ?? caso.caseId,

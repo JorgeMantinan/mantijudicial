@@ -135,6 +135,7 @@ export default async function PatternsPage() {
                       <th>Se repite el resultado</th>
                       <th>Cómo acabaron</th>
                       <th>Por instancia</th>
+                      <th>Ramas</th>
                       <th>Fichas</th>
                     </tr>
                   </thead>
@@ -173,6 +174,13 @@ export default async function PatternsPage() {
                               </div>
                             ))
                           )}
+                        </td>
+                        <td className="small">
+                          {Object.entries(grupo.ramas)
+                            .sort((a, b) => b[1] - a[1])
+                            .slice(0, 3)
+                            .map(([rama, cantidad]) => `${label(BRANCH, rama)} ${cantidad}`)
+                            .join(" · ")}
                         </td>
                         <td className="small">
                           {grupo.casos.slice(0, 4).map((caso) => (

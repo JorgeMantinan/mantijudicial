@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PrintButton } from "@/components/print-button";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
-import { getCalidadCorpus, getContradicciones, getReviewStats, getVigenciaAlerts } from "@/lib/dataset";
+import { filtrarFrasesDelTema, getCalidadCorpus, getContradicciones, getGruposFrases, getReviewStats, getVigenciaAlerts, listCases } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { jobs } from "@/lib/jobs";
 import { SortTh } from "@/lib/sort-th";
@@ -76,13 +76,21 @@ export default async function AlertasPage({
     .slice()
     .reverse();
 
+  const visibles = new Set(
+    (await listCases()).filter((item) => puedeVer(item.id)).map((item) => item.id),
+  );
+  const emergentes = filtrarFrasesDelTema(await getGruposFrases(), visibles).filter(
+    (grupo) => grupo.homogenea >= 90 && grupo.total <= 4,
+  );
+
   const total =
     contradictorio.length +
     vigencia.length +
     review.pending.length +
     fallos.length +
     stale.length +
-    escaneados.length;
+    escaneados.length +
+    emergentes.length;
 
   return (
     <article className="print-sheet">
@@ -251,6 +259,30 @@ export default async function AlertasPage({
           </>
         )}
       </div>
+
+      {emergentes.length > 0 && (
+        <div className="section">
+          <h2>Patrones emergentes (por vigilar)</h2>
+          <p className="small muted">
+            Frases con ≥90% de los casos acabando igual pero con pocos casos (3-4): pueden ser un
+            patrón real o una coincidencia. Míralos cuando entre un caso nuevo del mismo tipo.
+          </p>
+          <ul className="small">
+            {emergentes.map((grupo) => (
+              <li key={grupo.ejemplo} style={{ marginBottom: 6 }}>
+                «{grupo.ejemplo.length > 110 ? `${grupo.ejemplo.slice(0, 110)}…` : grupo.ejemplo}»{" "}
+                <span className="badge ok">{grupo.homogenea}% igual</span>{" "}
+                <span className="badge">{grupo.total} casos</span>{" "}
+                {grupo.casos.slice(0, 3).map((caso) => (
+                  <Link key={caso.caseId} href={`/cases/${caso.caseId}`} style={{ marginRight: 6 }}>
+                    {caso.caseId.replace("case_", "")}
+                  </Link>
+                ))}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {(stale.length > 0 || escaneados.length > 0) && (
         <div className="section">
