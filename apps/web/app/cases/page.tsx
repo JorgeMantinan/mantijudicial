@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { canCreateCase } from "@pipeline/authorization";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
-import { getClientes, getVistas, listCases } from "@/lib/dataset";
+import { diasSinTocar, getClientes, getVistas, listCases } from "@/lib/dataset";
 import { VistasGuardadas } from "./vistas-guardadas";
 import { authorizationGrants } from "@/lib/grants";
 import { BRANCH, OUTCOME, REVIEW, SIDE, label } from "@/lib/labels";
@@ -33,15 +33,6 @@ function sortValue(item: Awaited<ReturnType<typeof listCases>>[number], key: Sor
     case "dias":
       return diasSinTocar(item);
   }
-}
-
-/** Días desde la última revisión (o desde el análisis si no se ha revisado). */
-function diasSinTocar(item: Awaited<ReturnType<typeof listCases>>[number]): number {
-  const ultima = (item.reviewedAt || item.generatedAt || "").slice(0, 10);
-  if (!ultima) return 9999;
-  const tiempo = Date.parse(ultima);
-  if (Number.isNaN(tiempo)) return 9999;
-  return Math.max(0, Math.floor((Date.now() - tiempo) / 86_400_000));
 }
 
 export default async function CasesPage({

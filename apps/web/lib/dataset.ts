@@ -1596,6 +1596,15 @@ export async function registrarAlertasDelDia(
   return siguiente;
 }
 
+/** Días desde la última revisión (o desde el análisis si no se ha revisado). */
+export function diasSinTocar(item: Pick<CaseListItem, "reviewedAt" | "generatedAt">): number {
+  const ultima = (item.reviewedAt || item.generatedAt || "").slice(0, 10);
+  if (!ultima) return 9999;
+  const tiempo = Date.parse(ultima);
+  if (Number.isNaN(tiempo)) return 9999;
+  return Math.max(0, Math.floor((Date.now() - tiempo) / 86_400_000));
+}
+
 export interface Duplicado {
   campo: "ROJ" | "ECLI";
   valor: string;

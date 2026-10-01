@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PrintButton } from "@/components/print-button";
 import { canViewCase, defaultOrgId, loadIdentity, requireActor } from "@/lib/auth";
-import { getContradicciones, getReviewStats, getVigenciaAlerts, listCases } from "@/lib/dataset";
+import { getContradicciones, getHistorialAlertas, getReviewStats, getVigenciaAlerts, listCases } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +32,12 @@ export default async function ResumenPage() {
     month: "long",
     year: "numeric",
   });
+
+  const hace7 = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
+  const analizados7 = todos.filter((item) => (item.generatedAt ?? "").slice(0, 10) >= hace7).length;
+  const revisiones7 = todos.filter((item) => (item.reviewedAt ?? "").slice(0, 10) >= hace7).length;
+  const semana = (await getHistorialAlertas()).filter((dia) => dia.fecha >= hace7);
+  const maxAlertasSemana = semana.reduce((max, dia) => Math.max(max, dia.total), 0);
 
   return (
     <article className="print-sheet">
@@ -66,6 +72,29 @@ export default async function ResumenPage() {
           <div className="value">{leyes.length + temas.length}</div>
           <div className="label">alertas activas</div>
         </div>
+      </div>
+
+      <div className="section">
+        <h2>Esta semana (7 días)</h2>
+        <ul className="small">
+          <li>
+            Casos analizados: <strong>{analizados7}</strong>
+          </li>
+          <li>
+            Revisiones humanas registradas: <strong>{revisiones7}</strong>
+          </li>
+          <li>
+            Máximo de alertas registrado en la semana:{" "}
+            <strong>{maxAlertasSemana > 0 ? maxAlertasSemana : "sin registro"}</strong>
+          </li>
+        </ul>
+        <p className="small muted">
+          El histórico completo de alertas está en{" "}
+          <span className="no-print">
+            <Link href="/alertas">/alertas</Link>
+          </span>
+          .
+        </p>
       </div>
 
       <div className="section">

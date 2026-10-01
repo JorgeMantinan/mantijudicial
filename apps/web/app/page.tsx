@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Bar } from "@/components/bar";
 import { requireActor, canViewCase, defaultOrgId } from "@/lib/auth";
-import { computePatterns, getAuditoria, getLawUsage, getReviewStats, getVigenciaAlerts, listCases, listLaws } from "@/lib/dataset";
+import { computePatterns, diasSinTocar, getAuditoria, getLawUsage, getReviewStats, getVigenciaAlerts, listCases, listLaws } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { AUDIT, BRANCH, OUTCOME, label } from "@/lib/labels";
 
@@ -39,6 +39,9 @@ export default async function Home() {
   const outcomes = groupCount(cases.map((item) => item.outcome));
   const branches = groupCount(cases.map((item) => item.branch));
   const analyzed = patterns?.cases_analyzed ?? 0;
+  const frios = cases.filter(
+    (item) => item.reviewStatus === "UNREVIEWED" && diasSinTocar(item) > 30,
+  ).length;
 
   const hoyStr = new Date().toISOString().slice(0, 10);
   const actividadHoy = (await getAuditoria(300)).filter(
@@ -73,6 +76,12 @@ export default async function Home() {
         <div className="card">
           <div className="value">{analyzed}</div>
           <div className="label">casos con patrones</div>
+        </div>
+        <div className="card">
+          <div className="value">
+            <Link href="/cases?sort=dias&dir=desc">{frios}</Link>
+          </div>
+          <div className="label">sin tocar más de 30 días</div>
         </div>
       </div>
 

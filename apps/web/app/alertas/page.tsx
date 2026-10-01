@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PrintButton } from "@/components/print-button";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
-import { filtrarFrasesDelTema, getBusquedas, getCalidadCorpus, getContradicciones, getDuplicados, getGruposFrases, getHistorialAlertas, getPatronesVistos, getReviewStats, getVigenciaAlerts, listCases, registrarAlertasDelDia, runSearch } from "@/lib/dataset";
+import { filtrarFrasesDelTema, getBusquedas, getCalidadCorpus, getContradicciones, getDuplicados, getGruposFrases, getHistorialAlertas, getPatronesVistos, getReviewStats, getVigenciaAlerts, diasSinTocar, listCases, registrarAlertasDelDia, runSearch } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { MarcarVistoButton, RestaurarPatronesButton } from "@/components/patron-visto";
 import { ResolvedorDuplicado } from "@/components/resolvedor-duplicado";
@@ -122,6 +122,13 @@ export default async function AlertasPage({
   const duplicados = (await getDuplicados())
     .map((dup) => ({ ...dup, casos: dup.casos.filter(puedeVer) }))
     .filter((dup) => dup.casos.length > 1);
+
+  const frios = (await listCases())
+    .filter(
+      (item) =>
+        puedeVer(item.id) && item.reviewStatus === "UNREVIEWED" && diasSinTocar(item) > 30,
+    )
+    .sort((a, b) => diasSinTocar(b) - diasSinTocar(a));
 
   const total =
     contradictorio.length +
@@ -399,6 +406,30 @@ export default async function AlertasPage({
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {frios.length > 0 && (
+        <div className="section">
+          <h2>Casos fríos (más de 30 días sin tocar)</h2>
+          <p className="small muted">
+            Sin revisar y sin actividad desde hace más de un mes. No suma al total (se solapa con
+            «pendientes de revisión»); van ordenados por antigüedad.
+          </p>
+          <ul className="small">
+            {frios.slice(0, 10).map((item) => (
+              <li key={item.id} style={{ marginBottom: 4 }}>
+                <Link href={`/cases/${item.id}`}>
+                  {item.headline.length > 80 ? `${item.headline.slice(0, 80)}…` : item.headline}
+                </Link>{" "}
+                <span className="badge warn">{diasSinTocar(item)} d</span>
+              </li>
+            ))}
+            {frios.length > 10 && <li className="muted">… y {frios.length - 10} más</li>}
+          </ul>
+          <p className="small">
+            <Link href="/cases?sort=dias&dir=desc">Ver todos ordenados por «sin tocar» →</Link>
+          </p>
         </div>
       )}
 
