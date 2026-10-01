@@ -1235,6 +1235,7 @@ export * from "./dataset-estado";
 export interface GrupoFrasesView {
   ejemplo: string;
   total: number;
+  homogenea: number;
   distribucion: Record<string, number>;
   casos: Array<{ caseId: string; outcome: string; headline: string }>;
 }
@@ -1274,11 +1275,12 @@ export async function getGruposFrases(): Promise<GrupoFrasesView[]> {
     }
   }
 
-  const value = agruparFrases(frases, 3)
+  const value = agruparFrases(frases, 3, 0.5, 6, 0.7)
     .slice(0, 12)
     .map((grupo) => ({
       ejemplo: grupo.ejemplo,
       total: grupo.total,
+      homogenea: Math.round(grupo.homogenea * 100),
       distribucion: grupo.distribucion,
       casos: grupo.casos.map((caso) => ({
         ...caso,

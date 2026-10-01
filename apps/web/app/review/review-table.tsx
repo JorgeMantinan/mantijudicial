@@ -22,6 +22,52 @@ export function ReviewTable({ rows }: { rows: ReviewRow[] }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState("caso");
+  const [dirSort, setDirSort] = useState<"asc" | "desc">("asc");
+
+  function ordenar(key: string) {
+    if (key === sortKey) setDirSort((valor) => (valor === "asc" ? "desc" : "asc"));
+    else {
+      setSortKey(key);
+      setDirSort("asc");
+    }
+  }
+
+  const campo = (fila: ReviewRow): string =>
+    sortKey === "asunto"
+      ? fila.headline
+      : sortKey === "rama"
+        ? fila.branch
+        : sortKey === "resultado"
+          ? fila.outcome
+          : sortKey === "revision"
+            ? fila.reviewStatus
+            : fila.id;
+  const factor = dirSort === "desc" ? -1 : 1;
+  const ordenadas = [...rows].sort((a, b) => campo(a).localeCompare(campo(b), "es") * factor);
+
+  function ThOrden({ k, children }: { k: string; children: React.ReactNode }) {
+    return (
+      <th>
+        <button
+          type="button"
+          onClick={() => ordenar(k)}
+          aria-label={`Ordenar por ${k}`}
+          style={{
+            background: "none",
+            border: "none",
+            color: "inherit",
+            cursor: "pointer",
+            font: "inherit",
+            padding: 0,
+          }}
+        >
+          {children}
+          {sortKey === k ? (dirSort === "asc" ? " ▲" : " ▼") : " ⇅"}
+        </button>
+      </th>
+    );
+  }
 
   const todos = rows.length > 0 && sel.length === rows.length;
 
@@ -101,16 +147,16 @@ export function ReviewTable({ rows }: { rows: ReviewRow[] }) {
                 aria-label="Seleccionar todos"
               />
             </th>
-            <th>Caso</th>
-            <th>Asunto</th>
-            <th>Rama</th>
-            <th>Resultado</th>
-            <th>Revisión</th>
+            <ThOrden k="caso">Caso</ThOrden>
+            <ThOrden k="asunto">Asunto</ThOrden>
+            <ThOrden k="rama">Rama</ThOrden>
+            <ThOrden k="resultado">Resultado</ThOrden>
+            <ThOrden k="revision">Revisión</ThOrden>
             <th />
           </tr>
         </thead>
         <tbody>
-          {rows.map((item) => (
+          {ordenadas.map((item) => (
             <tr key={item.id}>
               <td>
                 <input

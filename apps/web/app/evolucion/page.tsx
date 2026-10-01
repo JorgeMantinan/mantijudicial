@@ -165,9 +165,11 @@ export default async function EvolucionPage({
                       .join(" · ")}
                   </span>
                 </h2>
-                <p className="small">
+                <p className="small no-print">
                   <Link href={`/temas/${encodeURIComponent(activo.topic)}`}>
-                    Ficha completa del tema (argumentos y leyes) →
+                    <button type="button" style={{ fontSize: 13 }}>
+                      Ficha del tema (argumentos y leyes) →
+                    </button>
                   </Link>
                 </p>
                 <table>

@@ -9,7 +9,27 @@ export interface GrupoFrases {
   casos: Array<{ caseId: string; outcome: string }>;
   distribucion: Record<string, number>;
   total: number;
+  /** Proporción de casos del grupo que acaban igual (0..1). */
+  homogenea: number;
 }
+
+/** Frases de cajón (casi en todos los casos): no sirven para asociar nada. */
+const VOCABULARIO_OUTCOME = new Set([
+  "desestimo",
+  "desestima",
+  "estimo",
+  "estima",
+  "confirmo",
+  "confirma",
+  "revoco",
+  "revoca",
+  "formulo",
+  "oposicion",
+  "apercib",
+  "condena",
+  "absuelve",
+  "casacion",
+]);
 
 const VACIAS = new Set([
   "el","la","los","las","un","una","unos","unas","de","del","al","a","en","con","por","para","que",
@@ -50,6 +70,7 @@ export function agruparFrases(
   minimoCasos = 3,
   umbral = 0.5,
   maximoPorGrupo = 6,
+  homogeneidadMinima = 0,
 ): GrupoFrases[] {
   interface Grupo {
     rep: Set<string>;
@@ -60,7 +81,8 @@ export function agruparFrases(
 
   for (const frase of frases) {
     const tokens = new Set(normalizar(frase.texto));
-    if (tokens.size < 3) continue;
+    if (tokens.size < 5) continue;
+    if ([...tokens].some((token) => VOCABULARIO_OUTCOME.has(token))) continue;
     let grupo = null as Grupo | null;
     for (const candidato of grupos) {
       if (similitud(tokens, candidato.rep) >= umbral) {
@@ -88,12 +110,17 @@ export function agruparFrases(
       distribucion[outcome] = (distribucion[outcome] ?? 0) + 1;
       casos.push({ caseId, outcome });
     }
+    const homogenea = Math.max(...Object.values(distribucion)) / grupo.casos.size;
+    if (homogenea < homogeneidadMinima) continue;
     salida.push({
       ejemplo: grupo.ejemplo,
       casos,
       distribucion,
       total: grupo.casos.size,
+      homogenea,
     });
   }
-  return salida.sort((a, b) => b.total - a.total);
+  return salida.sort(
+    (a, b) => b.homogenea - a.homogenea || b.total - a.total,
+  );
 }

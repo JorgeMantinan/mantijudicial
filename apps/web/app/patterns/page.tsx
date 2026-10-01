@@ -104,8 +104,10 @@ export default async function PatternsPage() {
         <h2>Frases que se repiten (y cómo se resolvió)</h2>
         <p className="small muted">
           Agrupamos frases parecidas de los hechos y de los fundamentos de distintos casos y vemos
-          cómo acabó cada uno. Sirve para ver qué relatos acompañan a sentencias estimadas o
-          desestimadas: es una <strong>asociación</strong>, no una predicción.
+          cómo acabó cada uno. Solo salen grupos <strong>homogéneos</strong> (≥70% de los casos con
+          el mismo resultado) y sin frases de cajón como «desestimó el recurso», que están en casi
+          todos los juicios. Sirve para ver qué relatos acompañan a estimar o desestimar: es una{" "}
+          <strong>asociación</strong>, no una predicción.
         </p>
         {gruposFrases.length === 0 ? (
           <p className="small muted">
@@ -118,6 +120,7 @@ export default async function PatternsPage() {
               <tr>
                 <th>Frase (ejemplo)</th>
                 <th>Casos</th>
+                <th>Se repite el resultado</th>
                 <th>Cómo acabaron</th>
                 <th>Fichas</th>
               </tr>
@@ -128,6 +131,11 @@ export default async function PatternsPage() {
                   <td className="small">«{grupo.ejemplo}»</td>
                   <td>
                     <span className="badge">{grupo.total}</span>
+                  </td>
+                  <td>
+                    <span className={`badge ${grupo.homogenea >= 90 ? "ok" : "warn"}`}>
+                      {grupo.homogenea}% igual
+                    </span>
                   </td>
                   <td className="small">
                     {Object.entries(grupo.distribucion).map(([outcome, cantidad]) => (
@@ -197,7 +205,10 @@ export default async function PatternsPage() {
                     {item.ejemplos.slice(0, 3).map((ejemplo) => (
                       <div key={ejemplo.caseId}>
                         <span className="mono">{ejemplo.caseId.replace("case_", "")}</span>{" "}
-                        <OutcomeBadge outcome={ejemplo.outcome} /> {ejemplo.headline.slice(0, 70)}
+                        <OutcomeBadge outcome={ejemplo.outcome} />{" "}
+                        {ejemplo.headline.length > 70
+                          ? `${ejemplo.headline.slice(0, 70)}…`
+                          : ejemplo.headline}
                       </div>
                     ))}
                   </td>

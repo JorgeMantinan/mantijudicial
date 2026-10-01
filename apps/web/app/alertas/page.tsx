@@ -46,7 +46,15 @@ export default async function AlertasPage({
     .filter((tema) => tema.ejemplos.length > 0);
 
   const vigenciaOrden = [...vigencia].sort((a, b) => {
-    if (sortKey === "vig-norma") return cmpTexto(`${a.norma} ${a.titulo}`, `${b.norma} ${b.titulo}`);
+    if (sortKey === "vig-norma") {
+      const clave = (item: { boe_id: string; article: number }) => {
+        const match = /(\d{4})-(\d+)/.exec(item.boe_id);
+        const anio = match ? match[1] : "0000";
+        const numero = match ? match[2].padStart(6, "0") : "000000";
+        return `${anio}${numero}-${String(item.article).padStart(6, "0")}`;
+      };
+      return cmpTexto(clave(a), clave(b));
+    }
     if (sortKey === "vig-casos") return cmpNumero(a.casos.length, b.casos.length);
     return b.casos.length - a.casos.length;
   });
@@ -138,7 +146,9 @@ export default async function AlertasPage({
                   <td className="small">
                     {alerta.casos.slice(0, 3).map((caso, index) => (
                       <div key={caso.caseId}>
-                        <Link href={`/cases/${caso.caseId}`}>{caso.headline.slice(0, 60)}</Link>
+                        <Link href={`/cases/${caso.caseId}`}>
+                          {caso.headline.length > 60 ? `${caso.headline.slice(0, 60)}…` : caso.headline}
+                        </Link>
                         {caso.fecha_sentencia ? ` · ${caso.fecha_sentencia}` : ""}
                       </div>
                     ))}
@@ -204,7 +214,11 @@ export default async function AlertasPage({
                   <td className="small">
                     {tema.ejemplos.slice(0, 2).map((ejemplo) => (
                       <div key={ejemplo.caseId}>
-                        <Link href={`/cases/${ejemplo.caseId}`}>{ejemplo.headline.slice(0, 55)}</Link>
+                        <Link href={`/cases/${ejemplo.caseId}`}>
+                          {ejemplo.headline.length > 55
+                            ? `${ejemplo.headline.slice(0, 55)}…`
+                            : ejemplo.headline}
+                        </Link>
                       </div>
                     ))}
                   </td>

@@ -53,7 +53,8 @@ export default async function LawsPage({
       <h1>Legislación</h1>
       <p className="lead">
         Texto consolidado descargado de la API de datos abiertos del BOE ({laws.length} normas).
-        Pulsa una cabecera para ordenar.
+        Pulsa una cabecera para ordenar: «Norma (BOE)» ordena por año y número del BOE (p. ej.
+        BOE-A-1882-6036 → BOE-A-2012-9058).
       </p>
 
       <form className="filters" action="/laws" method="get">
