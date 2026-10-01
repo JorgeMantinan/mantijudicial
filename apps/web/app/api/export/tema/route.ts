@@ -22,7 +22,14 @@ export async function GET(request: Request): Promise<Response> {
 
   const orgId = await defaultOrgId();
   const grants = await authorizationGrants();
-  const ficha = await getTema(topic, (caseId) => canViewCase(actor, caseId, orgId, grants));
+  const ficha = await getTema(
+    topic,
+    (caseId) => canViewCase(actor, caseId, orgId, grants),
+    {
+      branch: url.searchParams.get("branch") ?? undefined,
+      outcome: url.searchParams.get("outcome") ?? undefined,
+    },
+  );
   if (!ficha) return NextResponse.json({ error: "Tema no encontrado" }, { status: 404 });
 
   const filas: string[] = [["fecha", "caso", "asunto", "resultado", "frase", "doctrina"].join(";")];

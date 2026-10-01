@@ -620,11 +620,17 @@ export interface TemaFicha {
 export async function getTema(
   topic: string,
   permitido: (caseId: string) => boolean = () => true,
+  filtros: { branch?: string; outcome?: string } = {},
 ): Promise<TemaFicha | null> {
   const temas = await getEvolucion();
   const base = temas.find((item) => item.topic === topic);
   if (!base) return null;
-  const entries = base.entries.filter((entry) => permitido(entry.caseId));
+  const entries = base.entries.filter(
+    (entry) =>
+      permitido(entry.caseId) &&
+      (!filtros.branch || entry.branch === filtros.branch) &&
+      (!filtros.outcome || entry.outcome === filtros.outcome),
+  );
   if (entries.length === 0) return null;
   const distribution: Record<string, number> = {};
   for (const entry of entries) {

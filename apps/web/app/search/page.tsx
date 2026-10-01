@@ -38,10 +38,13 @@ const KINDS = [
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; kind?: string; branch?: string; outcome?: string }>;
+  searchParams: Promise<{ q?: string; kind?: string; branch?: string; outcome?: string; page?: string }>;
 }) {
   const params = await searchParams;
   const query = (params.q ?? "").trim();
+  const pagina = Math.max(1, Number(params.page) || 1);
+  const porPagina = 25;
+  const offset = (pagina - 1) * porPagina;
   const actor = await requireActor();
   const orgId = await defaultOrgId();
   const grants = await authorizationGrants();
@@ -50,6 +53,7 @@ export default async function SearchPage({
 
   let hits: Awaited<ReturnType<typeof runSearch>>["hits"] = [];
   let docs = 0;
+  let masPaginas = false;
   const exactos = query.length >= 4 ? await findByIdentifier(query) : [];
   const busquedas = await getBusquedas();
   if (query.length > 0) {
@@ -58,13 +62,25 @@ export default async function SearchPage({
     if (params.outcome) filters.outcome = params.outcome;
     const result = await runSearch(query, {
       kinds: params.kind ? [params.kind] : undefined,
-      limit: 25,
+      limit: Math.min(offset + porPagina, 100),
       filters: Object.keys(filters).length > 0 ? filters : undefined,
       allow: (doc) => doc.kind === "article" || canSee(doc.id),
     });
-    hits = result.hits;
+    const ventana = result.hits.slice(offset, offset + porPagina);
+    hits = ventana;
     docs = result.docs;
+    masPaginas = result.hits.length > offset + porPagina;
   }
+
+  const hrefPagina = (n: number): string => {
+    const p = new URLSearchParams();
+    p.set("q", query);
+    if (params.kind) p.set("kind", params.kind);
+    if (params.branch) p.set("branch", params.branch);
+    if (params.outcome) p.set("outcome", params.outcome);
+    if (n > 1) p.set("page", String(n));
+    return `/search?${p.toString()}`;
+  };
 
   return (
     <>
@@ -114,7 +130,8 @@ export default async function SearchPage({
 
       {query.length > 0 && (
         <p className="small muted">
-          {hits.length} resultados de {docs} documentos indexados.
+          Página {pagina} · mostrando {offset + 1}–{offset + hits.length} de {docs} documentos
+          indexados.
         </p>
       )}
 
@@ -172,6 +189,13 @@ export default async function SearchPage({
           </li>
         ))}
       </ol>
+
+      {query.length > 0 && (pagina > 1 || masPaginas) && (
+        <p className="small no-print" style={{ display: "flex", gap: 14 }}>
+          {pagina > 1 && <Link href={hrefPagina(pagina - 1)}>← Página anterior</Link>}
+          {masPaginas && <Link href={hrefPagina(pagina + 1)}>Página siguiente →</Link>}
+        </p>
+      )}
     </>
   );
 }

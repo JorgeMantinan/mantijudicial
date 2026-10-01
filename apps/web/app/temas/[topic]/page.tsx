@@ -14,15 +14,33 @@ export default async function TemaPage({
   searchParams,
 }: {
   params: Promise<{ topic: string }>;
-  searchParams: Promise<{ sort?: string; dir?: string }>;
+  searchParams: Promise<{ sort?: string; dir?: string; branch?: string; outcome?: string }>;
 }) {
   const { topic } = await params;
   const sp = await searchParams;
   const actor = await requireActor();
   const orgId = await defaultOrgId();
   const grants = await authorizationGrants();
-  const ficha = await getTema(topic, (caseId) => canViewCase(actor, caseId, orgId, grants));
-  if (!ficha) redirect("/evolucion");
+  const ficha = await getTema(topic, (caseId) => canViewCase(actor, caseId, orgId, grants), {
+    branch: sp.branch,
+    outcome: sp.outcome,
+  });
+  if (!ficha) {
+    if (sp.branch || sp.outcome) {
+      return (
+        <>
+          <p className="small muted">
+            <Link href={`/temas/${encodeURIComponent(topic)}`}>← Sin filtros</Link>
+          </p>
+          <h1>Tema: {topic}</h1>
+          <p className="muted">
+            Ningún caso de este tema coincide con ese filtro de rama o resultado.
+          </p>
+        </>
+      );
+    }
+    redirect("/evolucion");
+  }
 
   const sort = ["fecha", "caso", "resultado"].includes(sp.sort ?? "") ? (sp.sort as string) : "fecha";
   const dir = sp.dir === "desc" ? "desc" : "asc";
@@ -34,6 +52,14 @@ export default async function TemaPage({
     return dir === "asc" ? cmp : -cmp;
   });
   const { tema, argumentos, leyes } = ficha;
+  const conOrden = (campo: string): string => {
+    const p = new URLSearchParams();
+    p.set("sort", campo);
+    p.set("dir", dir === "asc" && sort === campo ? "desc" : "asc");
+    if (sp.branch) p.set("branch", sp.branch);
+    if (sp.outcome) p.set("outcome", sp.outcome);
+    return `/temas/${encodeURIComponent(tema.topic)}?${p.toString()}`;
+  };
 
   return (
     <article className="print-sheet">
@@ -41,8 +67,39 @@ export default async function TemaPage({
         <Link href="/evolucion">← Evolución</Link> · <Link href="/patterns">Patrones</Link> ·{" "}
         <Link href="/alertas">Alertas</Link> ·{" "}
         <Link href={`/temas/comparar?a=${encodeURIComponent(tema.topic)}`}>comparar con otro tema</Link> ·{" "}
-        <a href={`/api/export/tema?tema=${encodeURIComponent(tema.topic)}`}>descargar CSV</a>
+        <a
+          href={`/api/export/tema?tema=${encodeURIComponent(tema.topic)}${
+            sp.branch ? `&branch=${encodeURIComponent(sp.branch)}` : ""
+          }${sp.outcome ? `&outcome=${encodeURIComponent(sp.outcome)}` : ""}`}
+        >
+          descargar CSV
+        </a>
       </p>
+
+      <form className="filters no-print" action={`/temas/${encodeURIComponent(topic)}`} method="get">
+        <select name="branch" defaultValue={sp.branch ?? ""} aria-label="Filtrar por rama">
+          <option value="">Todas las ramas</option>
+          {Object.entries(BRANCH).map(([value, texto]) => (
+            <option key={value} value={value}>
+              {texto}
+            </option>
+          ))}
+        </select>
+        <select name="outcome" defaultValue={sp.outcome ?? ""} aria-label="Filtrar por resultado">
+          <option value="">Cualquier resultado</option>
+          {Object.entries(OUTCOME).map(([value, texto]) => (
+            <option key={value} value={value}>
+              {texto}
+            </option>
+          ))}
+        </select>
+        <button type="submit">Filtrar</button>
+        {(sp.branch || sp.outcome) && (
+          <Link className="small" href={`/temas/${encodeURIComponent(topic)}`}>
+            limpiar
+          </Link>
+        )}
+      </form>
       <PrintButton text="Imprimir la ficha del tema" />
 
       <h1>Tema: {tema.topic}</h1>
@@ -63,19 +120,13 @@ export default async function TemaPage({
           <thead>
             <tr>
               <th style={{ width: 110 }}>
-                <Link href={`/temas/${encodeURIComponent(tema.topic)}?sort=fecha&dir=${dir === "asc" && sort === "fecha" ? "desc" : "asc"}`}>
-                  Fecha
-                </Link>
+                <Link href={conOrden("fecha")}>Fecha</Link>
               </th>
               <th>
-                <Link href={`/temas/${encodeURIComponent(tema.topic)}?sort=caso&dir=${dir === "asc" && sort === "caso" ? "desc" : "asc"}`}>
-                  Caso
-                </Link>
+                <Link href={conOrden("caso")}>Caso</Link>
               </th>
               <th style={{ width: 150 }}>
-                <Link href={`/temas/${encodeURIComponent(tema.topic)}?sort=resultado&dir=${dir === "asc" && sort === "resultado" ? "desc" : "asc"}`}>
-                  Resultado
-                </Link>
+                <Link href={conOrden("resultado")}>Resultado</Link>
               </th>
               <th>Frase del tribunal</th>
             </tr>

@@ -42,7 +42,7 @@ try {
     "/informes"                                     = "Informe del periodo"
     "/plazos"                                       = "Plazos procesales"
     "/evolucion"                                    = "Evoluci"
-    "/search?q=clausula"                            = "resultados de"
+    "/search?q=clausula"                            = "documentos indexados"
     "/laws"                                         = "BOE"
     "/laws/BOE-A-2000-323"                          = "bloques"
     "/patterns"                                     = "criterio dividido"
