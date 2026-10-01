@@ -86,3 +86,25 @@ Supabase/Render cuando quieras pagarlos, y las ideas de la lista anterior.
 
 **Estado final**: todo verde (`tsc` Ã— 2, 241 tests, `next build`, smoke) y
 `main` al dÃ­a en GitHub. Siguiente sesiÃ³n: leer este parte + `AGENTS.md`.
+
+## Uso de IA autorizado (2026-09-30)
+
+- **Autorizado y ejecutado**: enriquecer los 4 casos que faltaban a 0,012 $
+  el caso. Resultado: **79/80 enriquecidos**.
+  - `case_000012` OK ($0,0070) Â· `case_000041` OK ($0,0084) Â·
+    `case_000057` OK ($0,0174, hubo 1 reintento).
+  - `case_000056`: **pendiente**; el modelo devuelve JSON invÃ¡lido de forma
+    repetida (enum `outcome_scope`/`claim_outcomes`, `arguments` ausente).
+    Coste ya consumido en intentos fallidos: â‰ˆ $0,03. NO reintentar sin su
+    permiso explÃ­cito (cada intento â‰ˆ $0,007).
+- Gasto total de esta tanda: â‰ˆ **$0,06** (presupuesto teÃ³rico $0,048).
+
+## A final de mes (instrucciÃ³n suya, 2026-09-30)
+
+Cuando **Ã©l lo pida expresamente**, gastar los tokens restantes del mes en lo
+mÃ¡s Ãºtil, por este orden (y siempre avisando antes del coste estimado):
+1. Acabar `case_000056` (â‰ˆ $0,007â€“0,02).
+2. Comparaciones (`compare`) de los casos mÃ¡s citados/descargados â‰ˆ $0,003 c/u.
+3. VÃ­as de actuaciÃ³n para los casos sin `vias.json` â‰ˆ $0,003 c/u.
+4. Nada de re-enriquecer lo ya OK salvo que cambie el PDF.
+**Hasta su "ahora sÃ­": no gastar nada.**
