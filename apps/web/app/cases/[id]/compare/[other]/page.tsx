@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import type { CompareReport } from "@pipeline/compare";
 import { PrintButton } from "@/components/print-button";
+import { CopyButton } from "@/components/copy-button";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import { getCase, getComparisons } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
@@ -72,6 +73,11 @@ export default async function CompareReportPage({
             </span>
           </p>
           {report.conclusion && <blockquote>{report.conclusion}</blockquote>}
+          {report.conclusion && (
+            <p className="no-print" style={{ marginTop: 4 }}>
+              <CopyButton texto={report.conclusion} etiqueta="Copiar conclusión" />
+            </p>
+          )}
 
           {(report.similitudes?.length ?? 0) > 0 && (
             <>

@@ -1,5 +1,6 @@
 import { requireActor } from "@/lib/auth";
 import Link from "next/link";
+import { PrintButton } from "@/components/print-button";
 import { getCalidadCorpus, getCostesIA, getEvalReport, getSistemaInfo } from "@/lib/dataset";
 import { ultimasMediciones } from "@/lib/timings";
 import { LAW_STATUS, QUOTE, label } from "@/lib/labels";
@@ -53,7 +54,12 @@ export default async function EvalPage() {
   const costPerCase = asDict(ia.cost_per_case);
 
   return (
-    <>
+    <article className="print-sheet">
+      <p className="small muted no-print">
+        <Link href="/">← Resumen</Link> · <Link href="/informes">Informes</Link>
+      </p>
+      <PrintButton text="Imprimir la evaluación" />
+
       <h1>Evaluación del corpus</h1>
       <p className="lead">
         Informe generado el <span className="mono">{String(report.generated_at ?? "")}</span> por{" "}
@@ -426,6 +432,6 @@ export default async function EvalPage() {
         confirmar una entrada: <span className="mono">pnpm eval:show case_0000XX</span> y después{" "}
         <span className="mono">pnpm run eval -- --confirm=case_0000XX</span>.
       </div>
-    </>
+    </article>
   );
 }

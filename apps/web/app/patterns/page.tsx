@@ -1,4 +1,5 @@
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
+import { PrintButton } from "@/components/print-button";
 import { computePatterns, getContradicciones, listCases } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { ARG_OUTCOME, ARG_TYPE, BRANCH, OUTCOME, SIDE, label } from "@/lib/labels";
@@ -71,7 +72,13 @@ export default async function PatternsPage() {
   const verifiedLaws = laws(patterns.by_verified_law);
 
   return (
-    <>
+    <article className="print-sheet">
+      <p className="small muted no-print">
+        <Link href="/">← Resumen</Link> · <Link href="/alertas">Alertas</Link> ·{" "}
+        <Link href="/temas/comparar">Comparar temas</Link>
+      </p>
+      <PrintButton text="Imprimir los patrones" />
+
       <h1>Patrones del corpus</h1>
       <p className="lead">
         {Number(patterns.cases_analyzed ?? 0)} casos analizados · soporte mínimo{" "}
@@ -292,6 +299,6 @@ export default async function PatternsPage() {
           ))}
         </tbody>
       </table>
-    </>
+    </article>
   );
 }
