@@ -11,7 +11,7 @@ import { IngestForm } from "./ingest-form";
 
 export const dynamic = "force-dynamic";
 
-const SORTS = ["case", "title", "branch", "outcome", "side", "ia", "review"] as const;
+const SORTS = ["case", "title", "branch", "outcome", "side", "ia", "review", "dias"] as const;
 type SortKey = (typeof SORTS)[number];
 
 function sortValue(item: Awaited<ReturnType<typeof listCases>>[number], key: SortKey): string | number {
@@ -30,7 +30,18 @@ function sortValue(item: Awaited<ReturnType<typeof listCases>>[number], key: Sor
       return item.enriched ? 1 : 0;
     case "review":
       return item.reviewStatus;
+    case "dias":
+      return diasSinTocar(item);
   }
+}
+
+/** Días desde la última revisión (o desde el análisis si no se ha revisado). */
+function diasSinTocar(item: Awaited<ReturnType<typeof listCases>>[number]): number {
+  const ultima = (item.reviewedAt || item.generatedAt || "").slice(0, 10);
+  if (!ultima) return 9999;
+  const tiempo = Date.parse(ultima);
+  if (Number.isNaN(tiempo)) return 9999;
+  return Math.max(0, Math.floor((Date.now() - tiempo) / 86_400_000));
 }
 
 export default async function CasesPage({
@@ -213,6 +224,14 @@ export default async function CasesPage({
               label="Revisión"
               base={base}
             />
+            <SortTh
+              path="/cases"
+              sortKey="dias"
+              current={sort}
+              dir={dir}
+              label="Sin tocar"
+              base={base}
+            />
           </tr>
         </thead>
         <tbody>
@@ -243,6 +262,18 @@ export default async function CasesPage({
                 )}
               </td>
               <td className="small">{label(REVIEW, item.reviewStatus)}</td>
+              <td className="small">
+                <span
+                  className={
+                    item.reviewStatus === "UNREVIEWED" && diasSinTocar(item) > 30
+                      ? "badge warn"
+                      : "muted"
+                  }
+                  title="Días desde la última revisión (o desde el análisis)"
+                >
+                  {diasSinTocar(item)} d
+                </span>
+              </td>
             </tr>
           ))}
         </tbody>

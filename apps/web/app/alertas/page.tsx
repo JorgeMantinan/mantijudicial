@@ -4,6 +4,7 @@ import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import { filtrarFrasesDelTema, getBusquedas, getCalidadCorpus, getContradicciones, getDuplicados, getGruposFrases, getHistorialAlertas, getPatronesVistos, getReviewStats, getVigenciaAlerts, listCases, registrarAlertasDelDia, runSearch } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { MarcarVistoButton, RestaurarPatronesButton } from "@/components/patron-visto";
+import { ResolvedorDuplicado } from "@/components/resolvedor-duplicado";
 import { jobs } from "@/lib/jobs";
 import { SortTh } from "@/lib/sort-th";
 
@@ -377,11 +378,12 @@ export default async function AlertasPage({
           <h2>Posibles duplicados</h2>
           <p className="small muted">
             El mismo ROJ o ECLI en más de un caso: casi con seguridad es el mismo PDF subido dos
-            veces. Compara las fichas y deja solo uno («Archivar» oculta el otro sin borrarlo).
+            veces. Elige cuál te quedas y archiva el resto (archivar solo lo oculta; no borra
+            nada).
           </p>
           <ul className="small">
             {duplicados.map((dup) => (
-              <li key={`${dup.campo}-${dup.valor}`}>
+              <li key={`${dup.campo}-${dup.valor}`} style={{ marginBottom: 8 }}>
                 <strong>
                   {dup.campo} {dup.valor}
                 </strong>{" "}
@@ -391,6 +393,9 @@ export default async function AlertasPage({
                     {caseId.replace("case_", "")}
                   </Link>
                 ))}
+                <div>
+                  <ResolvedorDuplicado casos={dup.casos} />
+                </div>
               </li>
             ))}
           </ul>

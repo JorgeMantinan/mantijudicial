@@ -72,10 +72,18 @@ export default async function InformesPage({
     .filter((alerta) => alerta.casos.length > 0)
     .slice(0, 8);
 
+  const gruposGlobal = await getGruposFrases();
   const frasesPeriodo = filtrarFrasesDelTema(
-    await getGruposFrases(),
+    gruposGlobal,
     new Set(informe.casos.map((caso) => caso.id)),
   );
+  const frasesB = filtrarFrasesDelTema(
+    gruposGlobal,
+    new Set(informeB.casos.map((caso) => caso.id)),
+  );
+  const ejemplosA = new Set(frasesPeriodo.map((grupo) => grupo.ejemplo));
+  const ejemplosB = new Set(frasesB.map((grupo) => grupo.ejemplo));
+  const comunesFrases = [...ejemplosA].filter((ejemplo) => ejemplosB.has(ejemplo)).length;
   const fechaPorId = new Map(informe.casos.map((caso) => [caso.id, caso.fecha]));
   const porMes = !informe.periodos[0]?.includes("-T");
   const etiquetaFecha = (fecha: string): string =>
@@ -115,6 +123,13 @@ export default async function InformesPage({
       a: informe.porResultado[key] ?? 0,
       b: informeB.porResultado[key] ?? 0,
     })),
+    { nombre: "Frases homogéneas", a: frasesPeriodo.length, b: frasesB.length },
+    { nombre: "Frases comunes (mismo texto)", a: comunesFrases, b: comunesFrases },
+    {
+      nombre: "Frases solo de este periodo",
+      a: ejemplosA.size - comunesFrases,
+      b: ejemplosB.size - comunesFrases,
+    },
   ];
 
   const sort = ["fecha", "caso", "resultado", "m-temas", "m-matriz", "m-normas"].includes(

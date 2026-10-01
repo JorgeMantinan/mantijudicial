@@ -57,6 +57,8 @@ export interface CaseListItem {
   archived: boolean;
   /** Fecha en que se analizó el caso (extraction.generated_at). */
   generatedAt: string;
+  /** Última revisión humana (review.reviewed_at). */
+  reviewedAt: string;
 }
 
 async function isStale(caseId: string, generatedAt: string | undefined): Promise<boolean> {
@@ -173,6 +175,8 @@ async function listarTodos(): Promise<CaseListItem[]> {
       stale: await isStale(name, generatedAt),
       archived: await isArchived(name),
       generatedAt: generatedAt ?? "",
+      reviewedAt:
+        (review as { review?: { reviewed_at?: string } } | null)?.review?.reviewed_at ?? "",
     });
   }
   todosCache = { value: items, at: Date.now() };
@@ -211,6 +215,7 @@ export async function getCase(caseId: string): Promise<CaseDetail | null> {
     reviewStatus: (review?.review as { status?: string } | undefined)?.status ?? "UNREVIEWED",
     archived: await isArchived(caseId),
     generatedAt: (review?.extraction as { generated_at?: string } | undefined)?.generated_at ?? "",
+    reviewedAt: (review?.review as { reviewed_at?: string } | undefined)?.reviewed_at ?? "",
     stale: await isStale(
       caseId,
       (review?.extraction as { generated_at?: string } | undefined)?.generated_at,
