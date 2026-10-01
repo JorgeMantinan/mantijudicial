@@ -3,14 +3,14 @@ import { canCreateCase } from "@pipeline/authorization";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import { listCases } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
-import { BRANCH, OUTCOME, SIDE, label } from "@/lib/labels";
+import { BRANCH, OUTCOME, REVIEW, SIDE, label } from "@/lib/labels";
 import { OutcomeBadge } from "@/lib/ui";
 import { SortTh } from "@/lib/sort-th";
 import { IngestForm } from "./ingest-form";
 
 export const dynamic = "force-dynamic";
 
-const SORTS = ["case", "title", "branch", "outcome", "side", "ia"] as const;
+const SORTS = ["case", "title", "branch", "outcome", "side", "ia", "review"] as const;
 type SortKey = (typeof SORTS)[number];
 
 function sortValue(item: Awaited<ReturnType<typeof listCases>>[number], key: SortKey): string | number {
@@ -27,6 +27,8 @@ function sortValue(item: Awaited<ReturnType<typeof listCases>>[number], key: Sor
       return label(SIDE, item.recurringSide);
     case "ia":
       return item.enriched ? 1 : 0;
+    case "review":
+      return item.reviewStatus;
   }
 }
 
@@ -178,6 +180,14 @@ export default async function CasesPage({
             <SortTh path="/cases" sortKey="outcome" current={sort} dir={dir} label="Resultado" base={base} />
             <SortTh path="/cases" sortKey="side" current={sort} dir={dir} label="Recurrente" base={base} />
             <SortTh path="/cases" sortKey="ia" current={sort} dir={dir} label="IA" base={base} />
+            <SortTh
+              path="/cases"
+              sortKey="review"
+              current={sort}
+              dir={dir}
+              label="Revisión"
+              base={base}
+            />
           </tr>
         </thead>
         <tbody>
@@ -207,6 +217,7 @@ export default async function CasesPage({
                   </span>
                 )}
               </td>
+              <td className="small">{label(REVIEW, item.reviewStatus)}</td>
             </tr>
           ))}
         </tbody>

@@ -5,7 +5,7 @@ import { SortTh } from "@/lib/sort-th";
 
 export const dynamic = "force-dynamic";
 
-const SORTS = ["titulo", "bloques", "chars", "fecha"] as const;
+const SORTS = ["boe", "bloques", "fecha"] as const;
 type SortKey = (typeof SORTS)[number];
 
 export default async function LawsPage({
@@ -20,13 +20,17 @@ export default async function LawsPage({
 
   const sort = (SORTS as readonly string[]).includes(params.sort ?? "")
     ? (params.sort as SortKey)
-    : "titulo";
+    : "boe";
   const dir = params.dir === "desc" ? "desc" : "asc";
+  /** Clave numérica: año (4 dígitos) + número de documento (hasta 1e6). */
+  const claveBoe = (id: string): number => {
+    const match = /(\d{4})-(\d+)/.exec(id);
+    return match ? Number(match[1]) * 1_000_000 + Number(match[2]) : 0;
+  };
   const sorted = [...laws].sort((a, b) => {
     let cmp = 0;
-    if (sort === "titulo") cmp = a.titulo.localeCompare(b.titulo, "es");
+    if (sort === "boe") cmp = claveBoe(a.boe_id) - claveBoe(b.boe_id);
     else if (sort === "bloques") cmp = a.blocks - b.blocks;
-    else if (sort === "chars") cmp = a.chars - b.chars;
     else cmp = String(a.retrieved_at).localeCompare(String(b.retrieved_at));
     return dir === "asc" ? cmp : -cmp;
   });
@@ -96,9 +100,8 @@ export default async function LawsPage({
       <table>
         <thead>
           <tr>
-            <SortTh path="/laws" sortKey="titulo" current={sort} dir={dir} label="Norma" />
+            <SortTh path="/laws" sortKey="boe" current={sort} dir={dir} label="Norma (BOE)" />
             <SortTh path="/laws" sortKey="bloques" current={sort} dir={dir} label="Bloques" />
-            <SortTh path="/laws" sortKey="chars" current={sort} dir={dir} label="Caracteres" />
             <SortTh path="/laws" sortKey="fecha" current={sort} dir={dir} label="Descargado" />
           </tr>
         </thead>
@@ -110,7 +113,6 @@ export default async function LawsPage({
                 <div className="mono small muted">{law.boe_id}</div>
               </td>
               <td>{law.blocks}</td>
-              <td>{law.chars.toLocaleString("es-ES")}</td>
               <td className="small">{law.retrieved_at.slice(0, 10)}</td>
             </tr>
           ))}

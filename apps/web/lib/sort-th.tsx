@@ -25,7 +25,7 @@ export function SortTh({
   }
   params.set("sort", sortKey);
   params.set("dir", nextDir);
-  const arrow = current === sortKey ? (dir === "asc" ? " ▲" : " ▼") : "";
+  const arrow = current === sortKey ? (dir === "asc" ? " ▲" : " ▼") : " ⇅";
   return (
     <th>
       <Link href={`${path}?${params.toString()}`}>
