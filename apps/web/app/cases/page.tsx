@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { canCreateCase } from "@pipeline/authorization";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
-import { getClientes, listCases } from "@/lib/dataset";
+import { getClientes, getVistas, listCases } from "@/lib/dataset";
+import { VistasGuardadas } from "./vistas-guardadas";
 import { authorizationGrants } from "@/lib/grants";
 import { BRANCH, OUTCOME, REVIEW, SIDE, label } from "@/lib/labels";
 import { OutcomeBadge } from "@/lib/ui";
@@ -58,6 +59,7 @@ export default async function CasesPage({
     })
   ).filter((item) => canViewCase(actor, item.id, orgId, grants));
   const clientesMap = await getClientes();
+  const vistas = await getVistas();
   const visibles = cases.filter((item) => {
     if (params.archivados !== "1" && item.archived) return false;
     if (params.cliente && clientesMap[item.id] !== params.cliente) return false;
@@ -186,6 +188,13 @@ export default async function CasesPage({
           ))}
         </p>
       )}
+
+      <VistasGuardadas
+        vistas={vistas}
+        actuales={Object.fromEntries(
+          Object.entries(base).filter((entry): entry is [string, string] => Boolean(entry[1])),
+        )}
+      />
 
       <table>
         <thead>

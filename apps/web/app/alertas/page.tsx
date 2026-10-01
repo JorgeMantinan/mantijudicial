@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PrintButton } from "@/components/print-button";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
-import { filtrarFrasesDelTema, getBusquedas, getCalidadCorpus, getContradicciones, getGruposFrases, getPatronesVistos, getReviewStats, getVigenciaAlerts, listCases, runSearch } from "@/lib/dataset";
+import { filtrarFrasesDelTema, getBusquedas, getCalidadCorpus, getContradicciones, getGruposFrases, getHistorialAlertas, getPatronesVistos, getReviewStats, getVigenciaAlerts, listCases, registrarAlertasDelDia, runSearch } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { MarcarVistoButton, RestaurarPatronesButton } from "@/components/patron-visto";
 import { jobs } from "@/lib/jobs";
@@ -128,6 +128,16 @@ export default async function AlertasPage({
     escaneados.length +
     visiblesEmergentes.length +
     nuevosMatch;
+
+  await registrarAlertasDelDia({
+    fecha: new Date().toISOString().slice(0, 10),
+    total,
+    vigencia: vigencia.length,
+    dividido: contradictorio.length,
+    calidad: stale.length + escaneados.length,
+    emergentes: visiblesEmergentes.length,
+  });
+  const historial = (await getHistorialAlertas()).slice(-14);
 
   return (
     <article className="print-sheet">
@@ -417,6 +427,44 @@ export default async function AlertasPage({
           </table>
         )}
       </div>
+
+      {historial.length > 0 && (
+        <div className="section">
+          <h2>Histórico de alertas</h2>
+          <p className="small muted">
+            Un registro por día desde que empezaste a consultar esta página (se conservan 180 días):
+            sirve para ver si la pila crece o baja. Si hoy no entras, no se registra.
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>Día</th>
+                <th>Total</th>
+                <th>Leyes cambiadas</th>
+                <th>Criterio dividido</th>
+                <th>Calidad</th>
+                <th>Emergentes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {historial.map((dia) => (
+                <tr key={dia.fecha}>
+                  <td className="mono small">{dia.fecha.slice(5)}</td>
+                  <td>
+                    <span className={`badge ${dia.total > 40 ? "ko" : dia.total > 20 ? "warn" : "ok"}`}>
+                      {dia.total}
+                    </span>
+                  </td>
+                  <td className="small">{dia.vigencia}</td>
+                  <td className="small">{dia.dividido}</td>
+                  <td className="small">{dia.calidad}</td>
+                  <td className="small">{dia.emergentes}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </article>
   );
 }

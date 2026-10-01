@@ -21,6 +21,7 @@ export const metadata: Metadata = {
 const NAV: Array<{ href: string; label: string }> = [
   { href: "/", label: "Resumen" },
   { href: "/cases", label: "Casos" },
+  { href: "/clientes", label: "Clientes" },
   { href: "/review", label: "Revisión" },
   { href: "/alertas", label: "Alertas" },
   { href: "/evolucion", label: "Evolución" },

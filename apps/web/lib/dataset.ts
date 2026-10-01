@@ -1531,3 +1531,62 @@ export async function setCliente(caseId: string, cliente: string): Promise<void>
   await fs.mkdir(path.dirname(clientesPath()), { recursive: true });
   await fs.writeFile(clientesPath(), `${JSON.stringify(data, null, 2)}\n`, "utf8");
 }
+
+export interface VistaGuardada {
+  nombre: string;
+  qs: Record<string, string>;
+}
+
+function vistasPath(): string {
+  return path.join(repoRoot(), "data", "vistas_guardadas.json");
+}
+
+export async function getVistas(): Promise<VistaGuardada[]> {
+  const list = await readJson<VistaGuardada[]>(vistasPath());
+  return Array.isArray(list) ? list : [];
+}
+
+export async function saveVista(vista: VistaGuardada): Promise<VistaGuardada[]> {
+  const actuales = await getVistas();
+  const siguiente = [vista, ...actuales.filter((item) => item.nombre !== vista.nombre)].slice(0, 20);
+  await fs.mkdir(path.dirname(vistasPath()), { recursive: true });
+  await fs.writeFile(vistasPath(), `${JSON.stringify(siguiente, null, 2)}\n`, "utf8");
+  return siguiente;
+}
+
+export async function deleteVista(nombre: string): Promise<VistaGuardada[]> {
+  const siguiente = (await getVistas()).filter((item) => item.nombre !== nombre);
+  await fs.writeFile(vistasPath(), `${JSON.stringify(siguiente, null, 2)}\n`, "utf8");
+  return siguiente;
+}
+
+export interface EntradaHistorialAlertas {
+  fecha: string;
+  total: number;
+  vigencia: number;
+  dividido: number;
+  calidad: number;
+  emergentes: number;
+}
+
+function historialAlertasPath(): string {
+  return path.join(repoRoot(), "data", "alertas_historial.json");
+}
+
+export async function getHistorialAlertas(): Promise<EntradaHistorialAlertas[]> {
+  const list = await readJson<EntradaHistorialAlertas[]>(historialAlertasPath());
+  return Array.isArray(list) ? list : [];
+}
+
+/** Guarda el snapshot del día (solo uno por día; conserva 180). */
+export async function registrarAlertasDelDia(
+  entrada: EntradaHistorialAlertas,
+): Promise<EntradaHistorialAlertas[]> {
+  const historial = await getHistorialAlertas();
+  const ultimo = historial[historial.length - 1];
+  if (ultimo?.fecha === entrada.fecha) return historial;
+  const siguiente = [...historial, entrada].slice(-180);
+  await fs.mkdir(path.dirname(historialAlertasPath()), { recursive: true });
+  await fs.writeFile(historialAlertasPath(), `${JSON.stringify(siguiente, null, 2)}\n`, "utf8");
+  return siguiente;
+}
