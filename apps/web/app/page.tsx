@@ -104,6 +104,10 @@ export default async function Home() {
           <li>
             <Link href="/resumen">Resumen imprimible</Link> — lo del día en una hoja A4
           </li>
+          <li>
+            <Link href="/clientes">Clientes</Link> — casos agrupados por cliente o encargo (se
+            asigna en cada ficha)
+          </li>
         </ul>
       </div>
 

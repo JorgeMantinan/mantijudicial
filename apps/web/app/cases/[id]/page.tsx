@@ -302,7 +302,8 @@ export default async function CaseDetailPage({
         <h2>Cliente / encargo</h2>
         <p className="small muted">
           Para filtrar en la lista de casos y agrupar los asuntos de un mismo cliente. Solo lo ve
-          el despacho (no sale en los dossiers).
+          el despacho (no sale en los dossiers).{" "}
+          <Link href="/clientes">Ver panel de clientes →</Link>
         </p>
         <ClientePanel caseId={id} cliente={clientes[id] ?? ""} />
       </div>

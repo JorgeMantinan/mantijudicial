@@ -107,3 +107,23 @@ más útil, por este orden (y siempre avisando antes del coste estimado):
 4. `case_000056` queda fuera (descartado como corrupto).
 
 **Hasta su "ahora sí": no gastar nada.**
+
+## Tandas de cierre (posteriores, sin IA de pago)
+
+- **Patrones de frases**: 5 orígenes (hechos, fundamentos, alegaciones,
+  pretensiones, cronología), columnas de instancia y ramas, umbral de
+  homogeneidad ≥70%, vocabulario de cajón fuera por prefijo, ficha drill-down
+  (`/patrones/frase`), CSV y "ya lo he visto" en alertas.
+- **Clientes/encargos**: alta en la ficha, filtro y chips en `/cases`, columna
+  en el CSV, panel `/clientes` (ordenable) con ficha de cliente
+  (`/clientes/[nombre]`), CSV del panel y enlace desde portada/ayuda.
+- **Informes**: frases del periodo (matriz con n estimados/desestimados por
+  periodo), incorporadas al corpus por fecha de análisis, alertas del periodo.
+- **Alertas**: histórico diario (`data/alertas_historial.json`, 180 días) y
+  "casos nuevos que encajan con tus búsquedas guardadas".
+- **Vistas guardadas** en `/cases` (`data/vistas_guardadas.json`).
+- Navegación con píldoras y pestaña activa; 404 en castellano; todo lo
+  imprimible con botón; `AGENTS.md` al día.
+
+Verificación de esta etapa: `pnpm typecheck` (pipeline) + `tsc` de `apps/web` +
+245 tests + `next build` + `scripts/smoke.ps1` (33 comprobaciones).

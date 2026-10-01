@@ -79,6 +79,29 @@ export default async function AyudaPage() {
       </div>
 
       <div className="section">
+        <h2>Organizar tu trabajo</h2>
+        <ul className="small">
+          <li>
+            <Link href="/clientes">Clientes y encargos</Link>: asigna el cliente en la ficha del
+            caso («Cliente / encargo») y agrúpalos allí, con sus frases, alertas y casos.
+          </li>
+          <li>
+            <strong>Vistas guardadas</strong>: en <Link href="/cases">Casos</Link>, combina
+            filtros y pulsa «Guardar vista»; los chips abren esa combinación con un clic.
+          </li>
+          <li>
+            <strong>Búsquedas guardadas</strong>: en <Link href="/search">Búsqueda</Link>, guarda
+            una consulta y <Link href="/alertas">Alertas</Link> te avisa si un caso nuevo la
+            cumple.
+          </li>
+          <li>
+            <strong>Histórico de alertas</strong>: cada día que entras en Alertas se registra el
+            recuento (180 días) para ver la tendencia.
+          </li>
+        </ul>
+      </div>
+
+      <div className="section">
         <h2>Qué significan los estados</h2>
         <h3>Revisión humana</h3>
         <ul className="small">
