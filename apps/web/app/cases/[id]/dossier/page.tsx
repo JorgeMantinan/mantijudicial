@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { PrintButton } from "@/components/print-button";
 import { Sumario } from "@/components/sumario";
 import { canViewCase, defaultOrgId, loadIdentity, requireActor } from "@/lib/auth";
-import { getCase, getVias, getVigenciaChecks, listLaws } from "@/lib/dataset";
+import { getCase, getEscrito, getVias, getVigenciaChecks, listLaws } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import {
   ARG_OUTCOME,
@@ -24,8 +24,16 @@ function fechaEs(yyyymmdd: string | null | undefined): string {
 
 export const dynamic = "force-dynamic";
 
-export default async function DossierPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function DossierPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ interno?: string }>;
+}) {
   const { id } = await params;
+  const sp = await searchParams;
+  const interno = sp.interno === "1";
   if (!/^case_\d{6}$/.test(id)) notFound();
   const actor = await requireActor();
   const orgId = await defaultOrgId();
@@ -35,11 +43,12 @@ export default async function DossierPage({ params }: { params: Promise<{ id: st
   const detail = await getCase(id);
   if (!detail) notFound();
 
-  const [vias, laws, identity, vigencias] = await Promise.all([
+  const [vias, laws, identity, vigencias, escrito] = await Promise.all([
     getVias(id),
     listLaws(),
     loadIdentity(),
     getVigenciaChecks(id),
+    getEscrito(id),
   ]);
   const despacho = identity.listFirms().find((firm) => firm.id === orgId)?.name ?? "";
   const lawTitles = new Map(laws.map((law) => [law.boe_id, law.titulo]));
@@ -65,6 +74,12 @@ export default async function DossierPage({ params }: { params: Promise<{ id: st
     article_raw?: string;
     status?: string;
   }>;
+  const rechazados = argumentos.filter(
+    (argumento) =>
+      !["ACEPTADO", "ACCEPTED", "PARTIALLY_ACCEPTED", "PARCIAL"].includes(
+        (argumento.outcome ?? "").toUpperCase(),
+      ),
+  );
   const hoy = new Date().toLocaleDateString("es-ES", { day: "2-digit", month: "long", year: "numeric" });
 
   return (
@@ -73,6 +88,18 @@ export default async function DossierPage({ params }: { params: Promise<{ id: st
         <Link href={`/cases/${id}`}>← Volver a la ficha interna</Link>
       </p>
       <PrintButton />
+      <p className="small no-print">
+        {interno ? (
+          <>
+            <span className="badge warn">Versión interna</span> — no enviar al cliente.{" "}
+            <Link href={`/cases/${id}/dossier`}>Ver versión para el cliente</Link>
+          </>
+        ) : (
+          <Link href={`/cases/${id}/dossier?interno=1`}>
+            Ver versión interna (huecos, comprobaciones y argumentos no aceptados) →
+          </Link>
+        )}
+      </p>
       <Sumario />
 
       <p className="small" style={{ letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>
@@ -177,6 +204,53 @@ export default async function DossierPage({ params }: { params: Promise<{ id: st
             ))}
           </ol>
         </>
+      )}
+
+      {interno && (
+        <div className="section">
+          <h2>Uso interno: qué falta y qué arriesga</h2>
+          <p className="small muted">
+            Esta sección solo está en la versión interna del dossier (no se enseña al cliente).
+          </p>
+
+          <h3>Comprobaciones del borrador de escrito</h3>
+          {(escrito?.report.comprobar_antes?.length ?? 0) > 0 ? (
+            <ul className="small">
+              {escrito!.report.comprobar_antes!.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="small muted">Sin borrador generado todavía para este caso.</p>
+          )}
+
+          <h3>Huecos del expediente (según las vías)</h3>
+          {vias && vias.report.huecos.length > 0 ? (
+            <ul className="small">
+              {vias.report.huecos.map((hueco) => (
+                <li key={hueco.descripcion}>
+                  <strong>{hueco.descripcion}</strong> — {hueco.como_cubrirlo}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="small muted">Sin análisis de vías generado.</p>
+          )}
+
+          <h3>Argumentos no aceptados</h3>
+          {rechazados.length > 0 ? (
+            <ul className="small">
+              {rechazados.map((argumento, index) => (
+                <li key={`${argumento.type ?? ""}-${index}`}>
+                  <span className="badge ko">{argumento.outcome ?? "sin dato"}</span>{" "}
+                  {argumento.description}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="small muted">Ninguno marcado como no aceptado.</p>
+          )}
+        </div>
       )}
 
       <h2>Leyes de referencia</h2>

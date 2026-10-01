@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PrintButton } from "@/components/print-button";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
-import { filtrarFrasesDelTema, getBusquedas, getCalidadCorpus, getContradicciones, getGruposFrases, getHistorialAlertas, getPatronesVistos, getReviewStats, getVigenciaAlerts, listCases, registrarAlertasDelDia, runSearch } from "@/lib/dataset";
+import { filtrarFrasesDelTema, getBusquedas, getCalidadCorpus, getContradicciones, getDuplicados, getGruposFrases, getHistorialAlertas, getPatronesVistos, getReviewStats, getVigenciaAlerts, listCases, registrarAlertasDelDia, runSearch } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { MarcarVistoButton, RestaurarPatronesButton } from "@/components/patron-visto";
 import { jobs } from "@/lib/jobs";
@@ -118,6 +118,9 @@ export default async function AlertasPage({
     }
   }
   const nuevosMatch = busquedasMatch.reduce((total, item) => total + item.casos.length, 0);
+  const duplicados = (await getDuplicados())
+    .map((dup) => ({ ...dup, casos: dup.casos.filter(puedeVer) }))
+    .filter((dup) => dup.casos.length > 1);
 
   const total =
     contradictorio.length +
@@ -127,7 +130,8 @@ export default async function AlertasPage({
     stale.length +
     escaneados.length +
     visiblesEmergentes.length +
-    nuevosMatch;
+    nuevosMatch +
+    duplicados.length;
 
   await registrarAlertasDelDia({
     fecha: new Date().toISOString().slice(0, 10),
@@ -365,6 +369,31 @@ export default async function AlertasPage({
               <RestaurarPatronesButton />
             </p>
           )}
+        </div>
+      )}
+
+      {duplicados.length > 0 && (
+        <div className="section">
+          <h2>Posibles duplicados</h2>
+          <p className="small muted">
+            El mismo ROJ o ECLI en más de un caso: casi con seguridad es el mismo PDF subido dos
+            veces. Compara las fichas y deja solo uno («Archivar» oculta el otro sin borrarlo).
+          </p>
+          <ul className="small">
+            {duplicados.map((dup) => (
+              <li key={`${dup.campo}-${dup.valor}`}>
+                <strong>
+                  {dup.campo} {dup.valor}
+                </strong>{" "}
+                →{" "}
+                {dup.casos.map((caseId) => (
+                  <Link key={caseId} href={`/cases/${caseId}`} style={{ marginRight: 6 }}>
+                    {caseId.replace("case_", "")}
+                  </Link>
+                ))}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

@@ -1590,3 +1590,36 @@ export async function registrarAlertasDelDia(
   await fs.writeFile(historialAlertasPath(), `${JSON.stringify(siguiente, null, 2)}\n`, "utf8");
   return siguiente;
 }
+
+export interface Duplicado {
+  campo: "ROJ" | "ECLI";
+  valor: string;
+  casos: string[];
+}
+
+/** Mismo ROJ o ECLI en más de un caso: posible PDF repetido en el corpus. */
+export async function getDuplicados(): Promise<Duplicado[]> {
+  const manifest = await readJson<{
+    entries?: Array<{ caseDir: string; pdf: { roj: string | null; ecli: string | null } }>;
+  }>(path.join(repoRoot(), "cases", "manifest.json"));
+
+  const porRojo = new Map<string, string[]>();
+  const porEcli = new Map<string, string[]>();
+  for (const entry of manifest?.entries ?? []) {
+    if (entry.pdf.roj) porRojo.set(entry.pdf.roj, [...(porRojo.get(entry.pdf.roj) ?? []), entry.caseDir]);
+    if (entry.pdf.ecli && entry.pdf.ecli !== "UNKNOWN") {
+      porEcli.set(entry.pdf.ecli, [...(porEcli.get(entry.pdf.ecli) ?? []), entry.caseDir]);
+    }
+  }
+
+  const out: Duplicado[] = [];
+  for (const [valor, casos] of porRojo) {
+    if (casos.length > 1) out.push({ campo: "ROJ", valor, casos });
+  }
+  for (const [valor, casos] of porEcli) {
+    if (casos.length > 1 && !out.some((item) => item.campo === "ROJ" && item.valor.includes(valor))) {
+      out.push({ campo: "ECLI", valor, casos });
+    }
+  }
+  return out.slice(0, 10);
+}

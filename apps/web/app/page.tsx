@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { Bar } from "@/components/bar";
 import { requireActor, canViewCase, defaultOrgId } from "@/lib/auth";
-import { computePatterns, getLawUsage, getReviewStats, getVigenciaAlerts, listCases, listLaws } from "@/lib/dataset";
+import { computePatterns, getAuditoria, getLawUsage, getReviewStats, getVigenciaAlerts, listCases, listLaws } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
-import { BRANCH, OUTCOME, label } from "@/lib/labels";
+import { AUDIT, BRANCH, OUTCOME, label } from "@/lib/labels";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +39,15 @@ export default async function Home() {
   const outcomes = groupCount(cases.map((item) => item.outcome));
   const branches = groupCount(cases.map((item) => item.branch));
   const analyzed = patterns?.cases_analyzed ?? 0;
+
+  const hoyStr = new Date().toISOString().slice(0, 10);
+  const actividadHoy = (await getAuditoria(300)).filter(
+    (entrada) => (entrada.at ?? "").slice(0, 10) === hoyStr,
+  );
+  const porAccion = new Map<string, number>();
+  for (const entrada of actividadHoy) {
+    porAccion.set(entrada.action, (porAccion.get(entrada.action) ?? 0) + 1);
+  }
 
   return (
     <>
@@ -110,6 +119,25 @@ export default async function Home() {
           </li>
         </ul>
       </div>
+
+      {actividadHoy.length > 0 && (
+        <div className="section">
+          <h2>Hoy en la plataforma</h2>
+          <p className="small muted">Actividad registrada hoy (auditoría del día).</p>
+          <ul className="small">
+            {[...porAccion.entries()]
+              .sort((a, b) => b[1] - a[1])
+              .map(([accion, cantidad]) => (
+                <li key={accion}>
+                  {label(AUDIT, accion)} · {cantidad}
+                </li>
+              ))}
+          </ul>
+          <p className="small">
+            <Link href="/users">Ver la auditoría completa →</Link>
+          </p>
+        </div>
+      )}
 
       <h2>Resultados (casación)</h2>
       <table>
