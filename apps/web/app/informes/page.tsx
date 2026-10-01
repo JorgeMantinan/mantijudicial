@@ -98,6 +98,27 @@ export default async function InformesPage({
     return `/informes?${params.toString()}`;
   };
 
+  const chips = [
+    sp.branch ? { texto: `Rama: ${label(BRANCH, sp.branch)}`, clave: "branch" } : null,
+    sp.outcome ? { texto: `Resultado: ${label(OUTCOME, sp.outcome)}`, clave: "outcome" } : null,
+  ].filter((chip): chip is { texto: string; clave: string } => chip !== null);
+  const sinParam = (clave: string): string => {
+    const p = new URLSearchParams();
+    const actuales: Record<string, string | undefined> = {
+      desde,
+      hasta,
+      desde2,
+      hasta2,
+      branch: sp.branch,
+      outcome: sp.outcome,
+      sort: sp.sort,
+      dir: sp.dir,
+    };
+    for (const [k, v] of Object.entries(actuales)) if (v && k !== clave) p.set(k, v);
+    const qs = p.toString();
+    return `/informes${qs ? `?${qs}` : ""}`;
+  };
+
   return (
     <article className="print-sheet">
       <p className="small muted no-print">
@@ -161,6 +182,28 @@ export default async function InformesPage({
           Actualizar
         </button>
       </form>
+
+      {chips.length > 0 && (
+        <p className="small" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: -4 }}>
+          {chips.map((chip) => (
+            <span
+              key={chip.clave}
+              className="badge"
+              style={{ display: "inline-flex", gap: 6, alignItems: "center" }}
+            >
+              {chip.texto}
+              <a
+                href={sinParam(chip.clave)}
+                aria-label={`Quitar filtro: ${chip.texto}`}
+                title="Quitar este filtro"
+                style={{ color: "var(--muted)" }}
+              >
+                ✕
+              </a>
+            </span>
+          ))}
+        </p>
+      )}
 
       <div className="grid" style={{ marginTop: 16 }}>
         <div className="card">

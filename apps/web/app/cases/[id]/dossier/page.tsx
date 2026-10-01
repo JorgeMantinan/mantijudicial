@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { PrintButton } from "@/components/print-button";
 import { Sumario } from "@/components/sumario";
 import { canViewCase, defaultOrgId, loadIdentity, requireActor } from "@/lib/auth";
-import { getCase, getVias, listLaws } from "@/lib/dataset";
+import { getCase, getVias, getVigenciaChecks, listLaws } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import {
   ARG_OUTCOME,
@@ -16,6 +16,11 @@ import {
   SIDE,
   label,
 } from "@/lib/labels";
+
+function fechaEs(yyyymmdd: string | null | undefined): string {
+  if (!/^\d{8}$/.test(yyyymmdd ?? "")) return yyyymmdd || "—";
+  return `${yyyymmdd!.slice(6, 8)}/${yyyymmdd!.slice(4, 6)}/${yyyymmdd!.slice(0, 4)}`;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +35,12 @@ export default async function DossierPage({ params }: { params: Promise<{ id: st
   const detail = await getCase(id);
   if (!detail) notFound();
 
-  const [vias, laws, identity] = await Promise.all([getVias(id), listLaws(), loadIdentity()]);
+  const [vias, laws, identity, vigencias] = await Promise.all([
+    getVias(id),
+    listLaws(),
+    loadIdentity(),
+    getVigenciaChecks(id),
+  ]);
   const despacho = identity.listFirms().find((firm) => firm.id === orgId)?.name ?? "";
   const lawTitles = new Map(laws.map((law) => [law.boe_id, law.titulo]));
   const outcome = (detail.outcomeDetail?.outcome ?? {}) as {
@@ -180,6 +190,47 @@ export default async function DossierPage({ params }: { params: Promise<{ id: st
             </li>
           ))}
       </ul>
+
+      {vigencias.length > 0 && (
+        <>
+          <h2>Vigencia de las leyes citadas</h2>
+          <p className="small muted">
+            Si la versión vigente de un artículo es posterior a la sentencia, el texto puede haber
+            cambiado desde entonces.
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>Artículo</th>
+                <th>Norma</th>
+                <th>En la sentencia</th>
+                <th>Versión actual</th>
+              </tr>
+            </thead>
+            <tbody>
+              {vigencias.map((item) => (
+                <tr key={`${item.boe_id}-${item.block_id}`}>
+                  <td className="mono small">
+                    art. {item.article}
+                    {item.titulo ? ` (${item.titulo})` : ""}
+                  </td>
+                  <td className="small">{item.norma}</td>
+                  <td className="mono small">{fechaEs(item.version_en_sentencia)}</td>
+                  <td className="small">
+                    {item.cambio_posterior ? (
+                      <span className="badge warn">
+                        cambió después ({fechaEs(item.version_actual)})
+                      </span>
+                    ) : (
+                      <span className="badge ok">sin cambios</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
 
       <p className="small muted">
         Documento informativo preparado por {despacho || "el despacho"} con la plataforma MantiJudicial a partir de
