@@ -67,7 +67,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "(function(){try{if(localStorage.getItem('mj-tema')==='light'){document.documentElement.setAttribute('data-theme','light');}if(localStorage.getItem('mj-densidad')==='compacta'){document.documentElement.setAttribute('data-densidad','compacta');}}catch(e){}})();",
+              "(function(){try{var t=localStorage.getItem('mj-tema');var claro=window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches;if(t==='light'||(!t&&claro)){document.documentElement.setAttribute('data-theme','light');}if(localStorage.getItem('mj-densidad')==='compacta'){document.documentElement.setAttribute('data-densidad','compacta');}}catch(e){}})();",
           }}
         />
         <a href="#contenido" className="skip-link no-print">
@@ -151,6 +151,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             consolidados tienen carácter meramente informativo: para decisiones jurídicas debe
             consultarse la publicación oficial. La IA asiste al abogado; no sustituye su revisión.
             Acceso denegado por defecto: sin sesión no hay acceso a casos ni agregados.
+            <br />
+            <span className="small">
+              <Link href="/ayuda">Ayuda</Link> · <Link href="/novedades">Novedades</Link> ·{" "}
+              <Link href="/eval">Estado y coste</Link>
+            </span>
           </div>
         </footer>
       </body>

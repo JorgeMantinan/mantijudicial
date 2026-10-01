@@ -17,6 +17,12 @@ export function ThemeToggle() {
     if (guardado === "light" || guardado === "dark") {
       setTema(guardado);
       aplicar(guardado);
+    } else {
+      // Sin elección guardada: seguimos lo que aplicó el script de arranque
+      // (preferencia del sistema).
+      setTema(
+        document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark",
+      );
     }
   }, []);
 
