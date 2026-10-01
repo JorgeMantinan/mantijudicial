@@ -511,6 +511,8 @@ export interface VigenciaAlert {
   article: number;
   titulo: string;
   version_actual: string;
+  /** Primeras palabras del texto del artículo, para saber de qué trata. */
+  resumen: string;
   casos: VigenciaAlertCaso[];
 }
 
@@ -570,6 +572,7 @@ export async function getVigenciaAlerts(): Promise<VigenciaAlert[]> {
             article: article.number,
             titulo: block.titulo,
             version_actual: block.fecha_vigencia,
+            resumen: block.texto.replace(/\s+/g, " ").slice(0, 150),
             casos: [],
           } satisfies VigenciaAlert);
         if (entry.casos.some((caso) => caso.caseId === item.id)) continue;

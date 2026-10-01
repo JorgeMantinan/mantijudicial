@@ -129,6 +129,7 @@ export default async function AlertasPage({
                       {alerta.norma} {alerta.titulo}
                     </strong>
                     <div className="mono small muted">{alerta.boe_id}</div>
+                    <div className="muted">{alerta.resumen}…</div>
                   </td>
                   <td className="small">{alerta.casos[0]?.version_en_sentencia ?? "—"}</td>
                   <td className="small">
@@ -241,7 +242,10 @@ export default async function AlertasPage({
         <div className="section">
           <h2>PDFs con problemas</h2>
           <p className="small muted">
-            El PDF cambió desde el análisis o no se le pudo extraer texto: toca reanalizarlos.
+            <strong>Qué son</strong>: el PDF cambió desde el último análisis, o es un escaneo sin
+            texto extraíble. <strong>Cómo se arregla</strong>: abre el caso y pulsa «Reanalizar»
+            en su ficha —lo lanza la aplicación y consume IA, así que lo decide el abogado—. Si es
+            un escaneo, antes hace falta un PDF con texto seleccionable.
           </p>
           <ul className="small">
             {stale.map((id) => (

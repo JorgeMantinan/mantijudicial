@@ -263,7 +263,7 @@ export default async function CaseDetailPage({
       </div>
 
       <div className="section">
-        <h2>Validación del caso (golden dataset)</h2>
+        <h2>Validación del caso</h2>
         {golden ? (
           <GoldenPanel
             caseId={id}

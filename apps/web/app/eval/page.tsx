@@ -32,7 +32,7 @@ export default async function EvalPage() {
           <a href="/api/export/eval">descargar CSV con todas las métricas</a>
         </p>
         <p className="muted">
-          Todavía no hay informe. Ejecuta <span className="mono">pnpm run eval</span>.
+          Todavía no hay informe de evaluación: se genera al analizar el corpus.
         </p>
       </>
     );
@@ -62,8 +62,8 @@ export default async function EvalPage() {
 
       <h1>Evaluación del corpus</h1>
       <p className="lead">
-        Informe generado el <span className="mono">{String(report.generated_at ?? "")}</span> por{" "}
-        <span className="mono">pnpm run eval</span>. Se regenera solo en cada ejecución.
+        Informe generado el <span className="mono">{String(report.generated_at ?? "")}</span>. Se
+        actualiza cada vez que se analiza o reanaliza el corpus.
       </p>
 
       <div className="grid">
@@ -370,7 +370,7 @@ export default async function EvalPage() {
         </tbody>
       </table>
 
-      <h2>Golden dataset</h2>
+      <h2>Campos validados</h2>
       <p className="small muted">
         {String(golden.entries ?? 0)} entradas ·{" "}
         <strong>{String(golden.confirmed_entries ?? 0)} confirmadas por una persona</strong> ·{" "}
@@ -428,9 +428,9 @@ export default async function EvalPage() {
       )}
 
       <div className="notice">
-        Las entradas automáticas derivan del propio PDF y no sustituyen la revisión humana. Para
-        confirmar una entrada: <span className="mono">pnpm eval:show case_0000XX</span> y después{" "}
-        <span className="mono">pnpm run eval -- --confirm=case_0000XX</span>.
+        Las entradas automáticas derivan del propio PDF y no sustituyen la revisión humana: un
+        revisor debe confirmar cada entrada antes de darla por buena. Para confirmarlas, el
+        administrador lo hace desde el proyecto.
       </div>
     </article>
   );

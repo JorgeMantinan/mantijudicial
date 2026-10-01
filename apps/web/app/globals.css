@@ -67,9 +67,51 @@ header.top {
 header.top .wrap {
   display: flex;
   align-items: center;
-  gap: 24px;
-  padding-top: 14px;
-  padding-bottom: 14px;
+  gap: 16px;
+  padding-top: 10px;
+  padding-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.acciones-cabecera {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.nav-principal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  padding-bottom: 10px;
+}
+
+.nav-principal a {
+  color: var(--muted);
+  font-size: 13.5px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-principal a:hover {
+  background: var(--panel-2);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.nav-principal a.activo {
+  background: var(--accent);
+  color: #fff;
+}
+
+.nav-principal a.activo .badge {
+  background: rgba(255, 255, 255, 0.28);
+  color: #fff;
 }
 
 .brand {
@@ -587,4 +629,11 @@ article[id],
 h2[id],
 div[id] {
   scroll-margin-top: 76px;
+}
+
+/* ---- Modo claro: avisos y textos legibles ---- */
+:root[data-theme="light"] .notice {
+  color: #6b4a00;
+  background: #fff6dd;
+  border-color: #e3c36a;
 }

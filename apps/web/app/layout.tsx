@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { getActor } from "@/lib/auth";
 import { getReviewStats } from "@/lib/dataset";
 import { registrarRender } from "@/lib/timings";
+import { NavLinks } from "@/components/nav-links";
 import { Shortcuts } from "@/components/shortcuts";
 import { BackToTop } from "@/components/back-to-top";
 import { TituloRuta } from "@/components/titulo-ruta";
@@ -17,33 +18,19 @@ export const metadata: Metadata = {
   description: "Análisis de jurisprudencia, legislación BOE y patrones de resultado",
 };
 
-const NAV: Array<{ titulo?: string; links: Array<{ href: string; label: string }> }> = [
-  {
-    links: [
-      { href: "/", label: "Resumen" },
-      { href: "/cases", label: "Casos" },
-      { href: "/review", label: "Revisión" },
-      { href: "/alertas", label: "Alertas" },
-    ],
-  },
-  {
-    titulo: "Análisis",
-    links: [
-      { href: "/evolucion", label: "Evolución" },
-      { href: "/search", label: "Búsqueda" },
-      { href: "/laws", label: "Legislación" },
-      { href: "/patterns", label: "Patrones" },
-      { href: "/informes", label: "Informes" },
-    ],
-  },
-  {
-    titulo: "Herramientas",
-    links: [
-      { href: "/plazos", label: "Plazos" },
-      { href: "/eval", label: "Evaluación" },
-      { href: "/ayuda", label: "Ayuda" },
-    ],
-  },
+const NAV: Array<{ href: string; label: string }> = [
+  { href: "/", label: "Resumen" },
+  { href: "/cases", label: "Casos" },
+  { href: "/review", label: "Revisión" },
+  { href: "/alertas", label: "Alertas" },
+  { href: "/evolucion", label: "Evolución" },
+  { href: "/search", label: "Búsqueda" },
+  { href: "/laws", label: "Legislación" },
+  { href: "/patterns", label: "Patrones" },
+  { href: "/informes", label: "Informes" },
+  { href: "/plazos", label: "Plazos" },
+  { href: "/eval", label: "Calidad" },
+  { href: "/ayuda", label: "Ayuda" },
 ];
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -52,15 +39,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const store = await cookies();
   const authenticated = Boolean(store.get("mj_session")?.value);
   const actor = authenticated ? await getActor() : null;
-  const grupos =
-    actor?.role === "ORG_ADMIN"
-      ? NAV.map((grupo, index) =>
-          index === NAV.length - 1
-            ? { ...grupo, links: [...grupo.links, { href: "/users", label: "Usuarios" }] }
-            : grupo,
-        )
-      : NAV;
   const pending = authenticated ? (await getReviewStats()).pending.length : 0;
+  const items = NAV.map((item) =>
+    item.href === "/review" && pending > 0 ? { ...item, badge: pending } : item,
+  );
+  if (actor?.role === "ORG_ADMIN") items.push({ href: "/users", label: "Usuarios" });
   registrarRender(performance.now() - inicio);
 
   return (
@@ -80,67 +63,33 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <div className="brand">
               Manti<span>Judicial</span>
             </div>
-            <nav
-              style={{
-                display: "flex",
-                gap: 18,
-                flex: 1,
-                alignItems: "center",
-                flexWrap: "wrap",
-                rowGap: 6,
-              }}
-            >
-              {grupos.map((grupo, index) => (
-                <span
-                  key={grupo.titulo ?? "principal"}
-                  style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}
-                >
-                  {index > 0 && (
-                    <span aria-hidden style={{ width: 1, height: 16, background: "var(--line)" }} />
-                  )}
-                  {grupo.titulo && (
-                    <span
-                      className="small muted"
-                      style={{ textTransform: "uppercase", letterSpacing: "0.06em", fontSize: 11 }}
-                    >
-                      {grupo.titulo}
-                    </span>
-                  )}
-                  {grupo.links.map((item) => (
-                    <Link key={item.href} href={item.href}>
-                      {item.label}
-                      {item.href === "/review" && pending > 0 && (
-                        <span className="badge warn" style={{ marginLeft: 6 }}>
-                          {pending}
-                        </span>
-                      )}
-                    </Link>
-                  ))}
-                </span>
-              ))}
-            </nav>
-            <form
-              action="/search"
-              method="get"
-              style={{ display: "flex", gap: 6, alignItems: "center" }}
-              role="search"
-            >
-              <input
-                name="q"
-                placeholder="Buscar…"
-                aria-label="Buscar en casos, frases y artículos"
-                style={{ width: 150, fontSize: 13, padding: "5px 8px" }}
-              />
-            </form>
-            <DensityToggle />
-            <ThemeToggle />
-            {authenticated ? (
-              <LogoutButton />
-            ) : (
-              <Link href="/login" className="small">
-                Entrar
-              </Link>
-            )}
+            <div className="acciones-cabecera">
+              <form
+                action="/search"
+                method="get"
+                style={{ display: "flex", gap: 6, alignItems: "center" }}
+                role="search"
+              >
+                <input
+                  name="q"
+                  placeholder="Buscar…"
+                  aria-label="Buscar en casos, frases y artículos"
+                  style={{ width: 150, fontSize: 13, padding: "5px 8px" }}
+                />
+              </form>
+              <DensityToggle />
+              <ThemeToggle />
+              {authenticated ? (
+                <LogoutButton />
+              ) : (
+                <Link href="/login" className="small">
+                  Entrar
+                </Link>
+              )}
+            </div>
+          </div>
+          <div className="wrap">
+            <NavLinks items={items} />
           </div>
         </header>
         <main className="wrap" id="contenido">

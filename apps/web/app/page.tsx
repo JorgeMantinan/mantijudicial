@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Bar } from "@/components/bar";
 import { requireActor, canViewCase, defaultOrgId } from "@/lib/auth";
-import { computePatterns, getEvalReport, getLawUsage, getReviewStats, getVigenciaAlerts, listCases, listLaws } from "@/lib/dataset";
+import { computePatterns, getLawUsage, getReviewStats, getVigenciaAlerts, listCases, listLaws } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { BRANCH, OUTCOME, label } from "@/lib/labels";
 
@@ -23,11 +23,10 @@ export default async function Home() {
   const cases = all.filter((item) => canViewCase(actor, item.id, orgId, grants));
   const caseIds = cases.map((item) => item.id);
 
-  const [usage, patterns, laws, evalReport, reviewStats, vigencia] = await Promise.all([
+  const [usage, patterns, laws, reviewStats, vigencia] = await Promise.all([
     getLawUsage(caseIds),
     computePatterns(caseIds),
     listLaws(),
-    getEvalReport(),
     getReviewStats(),
     getVigenciaAlerts(),
   ]);
@@ -36,16 +35,6 @@ export default async function Home() {
   const leyesCambiadas = vigencia.filter((alerta) =>
     alerta.casos.some((caso) => canViewCase(actor, caso.caseId, orgId, grants)),
   ).length;
-
-  const cross = evalReport?.cross_check_outcome as
-    | { agreement?: number; total?: number; agreement_rate?: number }
-    | undefined;
-  const cit = evalReport?.citations as
-    | { verified?: number; total?: number; verified_rate?: number; pdf_cross_check?: { matched?: number; checkable?: number } }
-    | undefined;
-  const gold = evalReport?.golden as
-    | { entries?: number; passed?: number; fields?: number; confirmed_entries?: number }
-    | undefined;
 
   const outcomes = groupCount(cases.map((item) => item.outcome));
   const branches = groupCount(cases.map((item) => item.branch));
@@ -225,49 +214,6 @@ export default async function Home() {
         predicciones. La revisión de un abogado es imprescindible.
       </div>
 
-      <h2>Evaluación (pnpm eval)</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Métrica</th>
-            <th>Valor</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Salida (casación) frente a la parte dispositiva del PDF</td>
-            <td>
-              {cross?.agreement ?? 0}/{cross?.total ?? 0}
-              {cross?.agreement_rate !== undefined
-                ? ` (${(cross.agreement_rate * 100).toFixed(1)}%)`
-                : ""}
-            </td>
-          </tr>
-          <tr>
-            <td>Citas de leyes verificadas contra el BOE</td>
-            <td>
-              {cit?.verified ?? 0}/{cit?.total ?? 0}
-              {cit?.verified_rate !== undefined ? ` (${(cit.verified_rate * 100).toFixed(1)}%)` : ""}
-            </td>
-          </tr>
-          <tr>
-            <td>Siglas citadas presentes en el propio PDF</td>
-            <td>
-              {cit?.pdf_cross_check?.matched ?? 0}/{cit?.pdf_cross_check?.checkable ?? 0}
-            </td>
-          </tr>
-          <tr>
-            <td>Golden dataset (campos correctos)</td>
-            <td>
-              {gold?.passed ?? 0}/{gold?.fields ?? 0} · {gold?.entries ?? 0} entradas (
-              {gold?.confirmed_entries ?? 0} confirmadas)
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <p className="small muted">
-        <Link href="/eval">Ver el informe completo (corpus, coste de IA, citas y golden dataset) →</Link>
-      </p>
     </>
   );
 }
