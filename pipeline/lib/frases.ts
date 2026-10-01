@@ -13,23 +13,20 @@ export interface GrupoFrases {
   homogenea: number;
 }
 
-/** Frases de cajón (casi en todos los casos): no sirven para asociar nada. */
-const VOCABULARIO_OUTCOME = new Set([
-  "desestimo",
-  "desestima",
-  "estimo",
-  "estima",
-  "confirmo",
-  "confirma",
-  "revoco",
-  "revoca",
-  "formulo",
+/** Frases de cajón (casi en todos los casos): no sirven para asociar nada.
+ * Se comprueba por prefijo para pillar también "desestimarse", "costas"… */
+const STEMS_OUTCOME = [
+  "desestim",
+  "cost",
+  "deposit",
+  "formul",
   "oposicion",
-  "apercib",
-  "condena",
-  "absuelve",
+  "confirm",
+  "revoc",
   "casacion",
-]);
+  "condena",
+  "apelacion",
+];
 
 const VACIAS = new Set([
   "el","la","los","las","un","una","unos","unas","de","del","al","a","en","con","por","para","que",
@@ -82,7 +79,7 @@ export function agruparFrases(
   for (const frase of frases) {
     const tokens = new Set(normalizar(frase.texto));
     if (tokens.size < 5) continue;
-    if ([...tokens].some((token) => VOCABULARIO_OUTCOME.has(token))) continue;
+    if ([...tokens].some((token) => STEMS_OUTCOME.some((stem) => token.startsWith(stem)))) continue;
     let grupo = null as Grupo | null;
     for (const candidato of grupos) {
       if (similitud(tokens, candidato.rep) >= umbral) {
