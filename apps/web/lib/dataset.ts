@@ -1233,6 +1233,7 @@ async function loadArticleDocs(): Promise<SearchDoc[]> {
 export * from "./dataset-estado";
 
 export interface GrupoFrasesView {
+  origen: "Hechos" | "Fundamentos" | "Alegaciones";
   ejemplo: string;
   total: number;
   homogenea: number;
@@ -1251,7 +1252,21 @@ export async function getGruposFrases(): Promise<GrupoFrasesView[]> {
 
   const items = await listCases();
   const titulos = new Map(items.map((item) => [item.id, item.headline]));
-  const frases: FraseCaso[] = [];
+
+  const hechos: FraseCaso[] = [];
+  const fundamentos: FraseCaso[] = [];
+  const alegaciones: FraseCaso[] = [];
+
+  const cortar = (texto: string, destino: FraseCaso[], caseId: string, outcome: string, max: number) => {
+    let dentro = 0;
+    for (const sentencia of texto.split(/(?<=[.?!])\s+/)) {
+      if (dentro >= max) break;
+      const limpia = sentencia.replace(/\s+/g, " ").trim();
+      if (limpia.length < 25 || limpia.length > 240) continue;
+      destino.push({ caseId, outcome, texto: limpia });
+      dentro += 1;
+    }
+  };
 
   for (const item of items) {
     const [facts, reasoning, argumentos] = await Promise.all([
@@ -1259,38 +1274,40 @@ export async function getGruposFrases(): Promise<GrupoFrasesView[]> {
       section<{ holdings?: Array<{ statement?: string }> }>(item.id, "reasoning.json"),
       section<{ arguments?: Array<{ description?: string }> }>(item.id, "arguments.json"),
     ]);
-    const candidatas = [
-      ...(facts?.facts ?? []).map((fact) => fact.description ?? ""),
-      ...(reasoning?.holdings ?? []).map((holding) => holding.statement ?? ""),
-      // Lo que alegaron las partes: es donde se ve "este tipo de alegación
-      // suele ganar/perder".
-      ...(argumentos?.arguments ?? []).map((argumento) => argumento.description ?? ""),
-    ];
-    let cortadas = 0;
-    for (const texto of candidatas) {
-      if (cortadas >= 18) break;
-      for (const sentencia of texto.split(/(?<=[.?!])\s+/)) {
-        const limpia = sentencia.replace(/\s+/g, " ").trim();
-        if (limpia.length < 25 || limpia.length > 240) continue;
-        frases.push({ caseId: item.id, outcome: item.outcome, texto: limpia });
-        cortadas += 1;
-        if (cortadas >= 18) break;
-      }
+    for (const fact of facts?.facts ?? []) {
+      if (fact.description) cortar(fact.description, hechos, item.id, item.outcome, 8);
+    }
+    for (const holding of reasoning?.holdings ?? []) {
+      if (holding.statement) cortar(holding.statement, fundamentos, item.id, item.outcome, 6);
+    }
+    for (const argumento of argumentos?.arguments ?? []) {
+      if (argumento.description) cortar(argumento.description, alegaciones, item.id, item.outcome, 8);
     }
   }
 
-  const value = agruparFrases(frases, 3, 0.5, 6, 0.7)
-    .slice(0, 12)
-    .map((grupo) => ({
-      ejemplo: grupo.ejemplo,
-      total: grupo.total,
-      homogenea: Math.round(grupo.homogenea * 100),
-      distribucion: grupo.distribucion,
-      casos: grupo.casos.map((caso) => ({
-        ...caso,
-        headline: titulos.get(caso.caseId) ?? caso.caseId,
-      })),
-    }));
+  const agrupar = (
+    pool: FraseCaso[],
+    origen: GrupoFrasesView["origen"],
+  ): GrupoFrasesView[] =>
+    agruparFrases(pool, 3, 0.5, 6, 0.7)
+      .slice(0, 6)
+      .map((grupo) => ({
+        origen,
+        ejemplo: grupo.ejemplo,
+        total: grupo.total,
+        homogenea: Math.round(grupo.homogenea * 100),
+        distribucion: grupo.distribucion,
+        casos: grupo.casos.map((caso) => ({
+          ...caso,
+          headline: titulos.get(caso.caseId) ?? caso.caseId,
+        })),
+      }));
+
+  const value = [
+    ...agrupar(hechos, "Hechos"),
+    ...agrupar(fundamentos, "Fundamentos"),
+    ...agrupar(alegaciones, "Alegaciones"),
+  ];
   frasesCache = { value, at: Date.now() };
   return value;
 }

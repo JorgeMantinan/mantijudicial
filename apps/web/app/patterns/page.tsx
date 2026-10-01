@@ -116,56 +116,67 @@ export default async function PatternsPage() {
             más largos).
           </p>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Frase (ejemplo)</th>
-                <th>Casos</th>
-                <th>Se repite el resultado</th>
-                <th>Cómo acabaron</th>
-                <th>Fichas</th>
-              </tr>
-            </thead>
-            <tbody>
-              {gruposFrases.map((grupo) => (
-                <tr key={grupo.ejemplo}>
-                  <td className="small">«{grupo.ejemplo}»</td>
-                  <td>
-                    <span className="badge">{grupo.total}</span>
-                  </td>
-                  <td>
-                    <span className={`badge ${grupo.homogenea >= 90 ? "ok" : "warn"}`}>
-                      {grupo.homogenea}% igual
-                    </span>
-                  </td>
-                  <td className="small">
-                    {Object.entries(grupo.distribucion).map(([outcome, cantidad]) => (
-                      <span
-                        key={outcome}
-                        className={`badge ${outcome === "ESTIMED" ? "ok" : outcome === "DISMISSED" ? "ko" : "warn"}`}
-                        style={{ marginRight: 4 }}
-                      >
-                        {label(OUTCOME, outcome)} {cantidad}
-                      </span>
+          (["Hechos", "Fundamentos", "Alegaciones"] as const).map((origen) => {
+            const delOrigen = gruposFrases.filter((grupo) => grupo.origen === origen);
+            if (delOrigen.length === 0) return null;
+            return (
+              <div key={origen} style={{ marginTop: 14 }}>
+                <h3>Frases de: {origen}</h3>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Frase (ejemplo)</th>
+                      <th>Casos</th>
+                      <th>Se repite el resultado</th>
+                      <th>Cómo acabaron</th>
+                      <th>Fichas</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {delOrigen.map((grupo) => (
+                      <tr key={`${origen}-${grupo.ejemplo}`}>
+                        <td className="small">«{grupo.ejemplo}»</td>
+                        <td>
+                          <span className="badge">{grupo.total}</span>
+                        </td>
+                        <td>
+                          <span className={`badge ${grupo.homogenea >= 90 ? "ok" : "warn"}`}>
+                            {grupo.homogenea}% igual
+                          </span>
+                        </td>
+                        <td className="small">
+                          {Object.entries(grupo.distribucion).map(([outcome, cantidad]) => (
+                            <span
+                              key={outcome}
+                              className={`badge ${outcome === "ESTIMED" ? "ok" : outcome === "DISMISSED" ? "ko" : "warn"}`}
+                              style={{ marginRight: 4 }}
+                            >
+                              {label(OUTCOME, outcome)} {cantidad}
+                            </span>
+                          ))}
+                        </td>
+                        <td className="small">
+                          {grupo.casos.slice(0, 4).map((caso) => (
+                            <Link
+                              key={caso.caseId}
+                              href={`/cases/${caso.caseId}`}
+                              style={{ marginRight: 8 }}
+                              title={caso.headline}
+                            >
+                              {caso.caseId.replace("case_", "")}
+                            </Link>
+                          ))}
+                          {grupo.casos.length > 4 && (
+                            <span className="muted">+{grupo.casos.length - 4}</span>
+                          )}
+                        </td>
+                      </tr>
                     ))}
-                  </td>
-                  <td className="small">
-                    {grupo.casos.slice(0, 4).map((caso) => (
-                      <Link
-                        key={caso.caseId}
-                        href={`/cases/${caso.caseId}`}
-                        style={{ marginRight: 8 }}
-                        title={caso.headline}
-                      >
-                        {caso.caseId.replace("case_", "")}
-                      </Link>
-                    ))}
-                    {grupo.casos.length > 4 && <span className="muted">+{grupo.casos.length - 4}</span>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </tbody>
+                </table>
+              </div>
+            );
+          })
         )}
       </div>
 
