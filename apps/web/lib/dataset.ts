@@ -1254,23 +1254,27 @@ export async function getGruposFrases(): Promise<GrupoFrasesView[]> {
   const frases: FraseCaso[] = [];
 
   for (const item of items) {
-    const [facts, reasoning] = await Promise.all([
+    const [facts, reasoning, argumentos] = await Promise.all([
       section<{ facts?: Array<{ description?: string }> }>(item.id, "facts.json"),
       section<{ holdings?: Array<{ statement?: string }> }>(item.id, "reasoning.json"),
+      section<{ arguments?: Array<{ description?: string }> }>(item.id, "arguments.json"),
     ]);
     const candidatas = [
       ...(facts?.facts ?? []).map((fact) => fact.description ?? ""),
       ...(reasoning?.holdings ?? []).map((holding) => holding.statement ?? ""),
+      // Lo que alegaron las partes: es donde se ve "este tipo de alegación
+      // suele ganar/perder".
+      ...(argumentos?.arguments ?? []).map((argumento) => argumento.description ?? ""),
     ];
     let cortadas = 0;
     for (const texto of candidatas) {
-      if (cortadas >= 14) break;
+      if (cortadas >= 18) break;
       for (const sentencia of texto.split(/(?<=[.?!])\s+/)) {
         const limpia = sentencia.replace(/\s+/g, " ").trim();
         if (limpia.length < 25 || limpia.length > 240) continue;
         frases.push({ caseId: item.id, outcome: item.outcome, texto: limpia });
         cortadas += 1;
-        if (cortadas >= 14) break;
+        if (cortadas >= 18) break;
       }
     }
   }

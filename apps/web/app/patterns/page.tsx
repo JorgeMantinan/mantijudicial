@@ -103,11 +103,12 @@ export default async function PatternsPage() {
       <div className="section">
         <h2>Frases que se repiten (y cómo se resolvió)</h2>
         <p className="small muted">
-          Agrupamos frases parecidas de los hechos y de los fundamentos de distintos casos y vemos
+          Agrupamos frases parecidas de los <strong>hechos</strong>, de los{" "}
+          <strong>fundamentos</strong> y de las <strong>alegaciones de las partes</strong> y vemos
           cómo acabó cada uno. Solo salen grupos <strong>homogéneos</strong> (≥70% de los casos con
           el mismo resultado) y sin frases de cajón como «desestimó el recurso», que están en casi
-          todos los juicios. Sirve para ver qué relatos acompañan a estimar o desestimar: es una{" "}
-          <strong>asociación</strong>, no una predicción.
+          todos los juicios. Sirve para ver qué relatos o qué tipo de alegación acompañan a estimar
+          o desestimar: es una <strong>asociación</strong>, no una predicción.
         </p>
         {gruposFrases.length === 0 ? (
           <p className="small muted">
