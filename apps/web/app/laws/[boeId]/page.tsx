@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { requireActor } from "@/lib/auth";
 import { getLaw, type LawBlock } from "@/lib/dataset";
 import { BLOCK_TIPO, label } from "@/lib/labels";
+import { CopyButton } from "@/components/copy-button";
+import { PrintButton } from "@/components/print-button";
 import { BlockIndex } from "./block-index";
 
 export const dynamic = "force-dynamic";
@@ -75,10 +77,11 @@ export default async function LawDetailPage({
   const rows = withPaths(toc);
 
   return (
-    <>
-      <p className="small muted">
+    <article className="print-sheet">
+      <p className="small muted no-print">
         <Link href="/laws">← Volver a legislación</Link>
       </p>
+      <PrintButton text="Imprimir esta página de la norma" />
       <h1 style={{ marginTop: 4 }}>{norm.titulo}</h1>
       <p className="lead">
         <span className="mono">{norm.boe_id}</span> · {norm.rango} · {norm.ambito} ·{" "}
@@ -95,6 +98,12 @@ export default async function LawDetailPage({
             {selected.titulo || selected.id}{" "}
             <span className="muted small">({label(BLOCK_TIPO, selected.tipo)})</span>
           </h2>
+          <p className="small no-print">
+            <CopyButton
+              texto={(chosenVersion ?? selected).texto}
+              etiqueta="Copiar el texto del artículo"
+            />
+          </p>
           <p className="small muted mono">
             {selected.id} ·{" "}
             {chosenVersion
@@ -149,6 +158,6 @@ export default async function LawDetailPage({
           />
         </>
       )}
-    </>
+    </article>
   );
 }

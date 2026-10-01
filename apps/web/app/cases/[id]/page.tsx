@@ -30,6 +30,7 @@ import {
 import { OutcomeBadge } from "@/lib/ui";
 import { ReviewForm } from "./review-form";
 import { ArchiveButton } from "./archive-button";
+import { CopyButton } from "@/components/copy-button";
 import { GoldenPanel } from "./golden-panel";
 import { NotesPanel } from "./notes-panel";
 import { ReanalyzeButton } from "./reanalyze-button";
@@ -238,6 +239,8 @@ export default async function CaseDetailPage({
           <Link href={`/cases/${id}/print`}>imprimir ficha</Link>
           {" · "}
           <Link href={`/cases/${id}/dossier`}>dossier para el cliente</Link>
+          {" · "}
+          <CopyButton path={`/cases/${id}`} etiqueta="Copiar enlace" />
           {" · "}
           <ArchiveButton caseId={id} archived={detail.archived} canArchive={canCreate} />
         </span>
