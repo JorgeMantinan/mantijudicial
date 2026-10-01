@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PrintButton } from "@/components/print-button";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import { getEvolucion } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
@@ -46,14 +47,20 @@ export default async function EvolucionPage({
     (sp.tema ? temas.find((item) => item.topic === sp.tema) : undefined) ?? temas[0] ?? null;
 
   return (
-    <>
+    <article className="print-sheet">
+      <p className="small muted no-print">
+        <Link href="/">← Resumen</Link> · <Link href="/alertas">Alertas</Link> ·{" "}
+        <Link href="/informes">Informes</Link>
+      </p>
+      <PrintButton text="Imprimir la evolución" />
+
       <h1>Evolución jurisprudencial</h1>
       <p className="lead">
         Cómo ha ido evolucionando cada tema (<em>ratio decidendi</em>) a lo largo del corpus, con
         su fecha, su resultado y la frase del tribunal. Solo temas con 3 casos o más.
       </p>
 
-      <form className="filters" action="/evolucion" method="get">
+      <form className="filters no-print" action="/evolucion" method="get">
         {sp.tema && <input type="hidden" name="tema" value={sp.tema} />}
         <select name="branch" defaultValue={branchFiltro} aria-label="Filtrar por rama">
           <option value="">Todas las ramas</option>
@@ -175,6 +182,6 @@ export default async function EvolucionPage({
           </div>
         </div>
       )}
-    </>
+    </article>
   );
 }

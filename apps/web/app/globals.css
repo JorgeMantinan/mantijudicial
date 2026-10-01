@@ -579,3 +579,12 @@ main.wrap {
 :root[data-densidad="compacta"] table td {
   padding: 3px 8px;
 }
+
+/* Anclas (#articulo, #hoja-2): que no queden bajo la cabecera fija */
+:target,
+section[id],
+article[id],
+h2[id],
+div[id] {
+  scroll-margin-top: 76px;
+}
