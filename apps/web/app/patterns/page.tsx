@@ -2,7 +2,7 @@ import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import { PrintButton } from "@/components/print-button";
 import { computePatterns, getContradicciones, getExitoArgumentos, getGruposFrases, listCases } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
-import { ARG_OUTCOME, ARG_TYPE, BRANCH, OUTCOME, SIDE, label } from "@/lib/labels";
+import { ARG_OUTCOME, ARG_TYPE, BRANCH, INSTANCE, OUTCOME, SIDE, label } from "@/lib/labels";
 import { OutcomeBadge } from "@/lib/ui";
 import Link from "next/link";
 
@@ -82,6 +82,9 @@ export default async function PatternsPage() {
       <PrintButton text="Imprimir los patrones" />
 
       <h1>Patrones del corpus</h1>
+      <p className="small no-print">
+        <a href="/api/export/patrones">descargar CSV (éxito, frases y criterio dividido)</a>
+      </p>
       <p className="lead">
         {Number(patterns.cases_analyzed ?? 0)} casos analizados · soporte mínimo{" "}
         {Number(patterns.min_support ?? 0)} casos · generado{" "}
@@ -117,7 +120,8 @@ export default async function PatternsPage() {
             más largos).
           </p>
         ) : (
-          (["Hechos", "Fundamentos", "Alegaciones"] as const).map((origen) => {
+          (["Hechos", "Fundamentos", "Alegaciones", "Pretensiones", "Cronología"] as const).map(
+            (origen) => {
             const delOrigen = gruposFrases.filter((grupo) => grupo.origen === origen);
             if (delOrigen.length === 0) return null;
             return (
@@ -130,6 +134,7 @@ export default async function PatternsPage() {
                       <th>Casos</th>
                       <th>Se repite el resultado</th>
                       <th>Cómo acabaron</th>
+                      <th>Por instancia</th>
                       <th>Fichas</th>
                     </tr>
                   </thead>
@@ -155,6 +160,19 @@ export default async function PatternsPage() {
                               {label(OUTCOME, outcome)} {cantidad}
                             </span>
                           ))}
+                        </td>
+                        <td className="small">
+                          {grupo.instancias.length === 0 ? (
+                            <span className="muted">—</span>
+                          ) : (
+                            grupo.instancias.map((instancia) => (
+                              <div key={instancia.instancia}>
+                                {label(INSTANCE, instancia.instancia)}: Dmdte{" "}
+                                {instancia.demandante} · Dmddo {instancia.demandado}
+                                {instancia.parcial > 0 ? ` · parcial ${instancia.parcial}` : ""}
+                              </div>
+                            ))
+                          )}
                         </td>
                         <td className="small">
                           {grupo.casos.slice(0, 4).map((caso) => (

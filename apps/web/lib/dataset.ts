@@ -1238,11 +1238,12 @@ async function loadArticleDocs(): Promise<SearchDoc[]> {
 export * from "./dataset-estado";
 
 export interface GrupoFrasesView {
-  origen: "Hechos" | "Fundamentos" | "Alegaciones";
+  origen: "Hechos" | "Fundamentos" | "Alegaciones" | "Pretensiones" | "Cronología";
   ejemplo: string;
   total: number;
   homogenea: number;
   distribucion: Record<string, number>;
+  instancias: Array<{ instancia: string; demandante: number; demandado: number; parcial: number }>;
   casos: Array<{ caseId: string; outcome: string; headline: string }>;
 }
 
@@ -1261,6 +1262,12 @@ export async function getGruposFrases(): Promise<GrupoFrasesView[]> {
   const hechos: FraseCaso[] = [];
   const fundamentos: FraseCaso[] = [];
   const alegaciones: FraseCaso[] = [];
+  const pretensiones: FraseCaso[] = [];
+  const cronologia: FraseCaso[] = [];
+  const mapaInstancias = new Map<
+    string,
+    Array<{ instance: string; result: string }>
+  >();
 
   const cortar = (texto: string, destino: FraseCaso[], caseId: string, outcome: string, max: number) => {
     let dentro = 0;
@@ -1274,11 +1281,29 @@ export async function getGruposFrases(): Promise<GrupoFrasesView[]> {
   };
 
   for (const item of items) {
-    const [facts, reasoning, argumentos] = await Promise.all([
+    const [facts, reasoning, argumentos, claims, timeline, outcome] = await Promise.all([
       section<{ facts?: Array<{ description?: string }> }>(item.id, "facts.json"),
       section<{ holdings?: Array<{ statement?: string }> }>(item.id, "reasoning.json"),
       section<{ arguments?: Array<{ description?: string }> }>(item.id, "arguments.json"),
+      section<{ claims?: Array<{ description?: string }> }>(item.id, "claims.json"),
+      section<{ events?: Array<{ description?: string }> }>(item.id, "timeline.json"),
+      section<{ outcome?: { decisions?: Array<{ instance?: string; result?: string }> } }>(
+        item.id,
+        "outcome.json",
+      ),
     ]);
+    for (const claim of claims?.claims ?? []) {
+      if (claim.description) cortar(claim.description, pretensiones, item.id, item.outcome, 6);
+    }
+    for (const evento of timeline?.events ?? []) {
+      if (evento.description) cortar(evento.description, cronologia, item.id, item.outcome, 5);
+    }
+    mapaInstancias.set(
+      item.id,
+      (outcome?.outcome?.decisions ?? [])
+        .filter((decision) => decision.instance && decision.result)
+        .map((decision) => ({ instance: decision.instance!, result: decision.result! })),
+    );
     for (const fact of facts?.facts ?? []) {
       if (fact.description) cortar(fact.description, hechos, item.id, item.outcome, 8);
     }
@@ -1296,22 +1321,44 @@ export async function getGruposFrases(): Promise<GrupoFrasesView[]> {
   ): GrupoFrasesView[] =>
     agruparFrases(pool, 3, 0.5, 6, 0.7)
       .slice(0, 6)
-      .map((grupo) => ({
-        origen,
-        ejemplo: grupo.ejemplo,
-        total: grupo.total,
-        homogenea: Math.round(grupo.homogenea * 100),
-        distribucion: grupo.distribucion,
-        casos: grupo.casos.map((caso) => ({
-          ...caso,
-          headline: titulos.get(caso.caseId) ?? caso.caseId,
-        })),
-      }));
+      .map((grupo) => {
+        const porInstancia = new Map<
+          string,
+          { demandante: number; demandado: number; parcial: number }
+        >();
+        for (const caso of grupo.casos) {
+          for (const decision of mapaInstancias.get(caso.caseId) ?? []) {
+            const fila =
+              porInstancia.get(decision.instance) ?? { demandante: 0, demandado: 0, parcial: 0 };
+            if (decision.result === "FAVOR_PLAINTIFF") fila.demandante += 1;
+            else if (decision.result === "FAVOR_DEFENDANT") fila.demandado += 1;
+            else if (decision.result === "PARTIAL") fila.parcial += 1;
+            porInstancia.set(decision.instance, fila);
+          }
+        }
+        return {
+          origen,
+          ejemplo: grupo.ejemplo,
+          total: grupo.total,
+          homogenea: Math.round(grupo.homogenea * 100),
+          distribucion: grupo.distribucion,
+          instancias: [...porInstancia.entries()].map(([instancia, fila]) => ({
+            instancia,
+            ...fila,
+          })),
+          casos: grupo.casos.map((caso) => ({
+            ...caso,
+            headline: titulos.get(caso.caseId) ?? caso.caseId,
+          })),
+        };
+      });
 
   const value = [
     ...agrupar(hechos, "Hechos"),
     ...agrupar(fundamentos, "Fundamentos"),
     ...agrupar(alegaciones, "Alegaciones"),
+    ...agrupar(pretensiones, "Pretensiones"),
+    ...agrupar(cronologia, "Cronología"),
   ];
   frasesCache = { value, at: Date.now() };
   return value;
