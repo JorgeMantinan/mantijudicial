@@ -469,6 +469,11 @@ export default async function InformesPage({
       {matrizFrases.length > 0 && informe.periodos.length > 0 && (
         <div className="section">
           <h2>Frases del periodo, mes a mes</h2>
+          <p className="small no-print">
+            <a href={`/api/export/frases?desde=${desde}&hasta=${hasta}`}>
+              descargar CSV de esta matriz
+            </a>
+          </p>
           <p className="small muted">
             Frases homogéneas que aparecen en las sentencias del rango, repartidas por periodo con
             el formato <span className="mono">n (estimados/desestimados)</span>. Sirve para ver si

@@ -1487,3 +1487,25 @@ export function filtrarFrasesDelTema(
     .sort((a, b) => b.homogenea - a.homogenea || b.total - a.total)
     .slice(0, 5);
 }
+
+function patronesVistosPath(): string {
+  return path.join(repoRoot(), "data", "patrones_vistos.json");
+}
+
+/** Patrones emergentes que ya has revisado (no vuelven a salir en alertas). */
+export async function getPatronesVistos(): Promise<string[]> {
+  const list = await readJson<string[]>(patronesVistosPath());
+  return Array.isArray(list) ? list : [];
+}
+
+export async function marcarPatronVisto(ejemplo: string): Promise<void> {
+  const actuales = await getPatronesVistos();
+  if (actuales.includes(ejemplo)) return;
+  const siguiente = [...actuales, ejemplo].slice(-200);
+  await fs.mkdir(path.dirname(patronesVistosPath()), { recursive: true });
+  await fs.writeFile(patronesVistosPath(), `${JSON.stringify(siguiente, null, 2)}\n`, "utf8");
+}
+
+export async function desmarcarPatrones(): Promise<void> {
+  await fs.writeFile(patronesVistosPath(), "[]\n", "utf8");
+}

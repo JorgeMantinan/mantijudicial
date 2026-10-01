@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { PrintButton } from "@/components/print-button";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
-import { filtrarFrasesDelTema, getCalidadCorpus, getContradicciones, getGruposFrases, getReviewStats, getVigenciaAlerts, listCases } from "@/lib/dataset";
+import { filtrarFrasesDelTema, getCalidadCorpus, getContradicciones, getGruposFrases, getPatronesVistos, getReviewStats, getVigenciaAlerts, listCases } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
+import { MarcarVistoButton, RestaurarPatronesButton } from "@/components/patron-visto";
 import { jobs } from "@/lib/jobs";
 import { SortTh } from "@/lib/sort-th";
 
@@ -83,6 +84,10 @@ export default async function AlertasPage({
     (grupo) => grupo.homogenea >= 90 && grupo.total <= 4,
   );
 
+  const vistos = new Set(await getPatronesVistos());
+  const ocultos = emergentes.filter((grupo) => vistos.has(grupo.ejemplo)).length;
+  const visiblesEmergentes = emergentes.filter((grupo) => !vistos.has(grupo.ejemplo));
+
   const total =
     contradictorio.length +
     vigencia.length +
@@ -90,7 +95,7 @@ export default async function AlertasPage({
     fallos.length +
     stale.length +
     escaneados.length +
-    emergentes.length;
+    visiblesEmergentes.length;
 
   return (
     <article className="print-sheet">
@@ -260,27 +265,42 @@ export default async function AlertasPage({
         )}
       </div>
 
-      {emergentes.length > 0 && (
+      {(visiblesEmergentes.length > 0 || ocultos > 0) && (
         <div className="section">
           <h2>Patrones emergentes (por vigilar)</h2>
           <p className="small muted">
             Frases con ≥90% de los casos acabando igual pero con pocos casos (3-4): pueden ser un
             patrón real o una coincidencia. Míralos cuando entre un caso nuevo del mismo tipo.
           </p>
-          <ul className="small">
-            {emergentes.map((grupo) => (
-              <li key={grupo.ejemplo} style={{ marginBottom: 6 }}>
-                «{grupo.ejemplo.length > 110 ? `${grupo.ejemplo.slice(0, 110)}…` : grupo.ejemplo}»{" "}
-                <span className="badge ok">{grupo.homogenea}% igual</span>{" "}
-                <span className="badge">{grupo.total} casos</span>{" "}
-                {grupo.casos.slice(0, 3).map((caso) => (
-                  <Link key={caso.caseId} href={`/cases/${caso.caseId}`} style={{ marginRight: 6 }}>
-                    {caso.caseId.replace("case_", "")}
-                  </Link>
-                ))}
-              </li>
-            ))}
-          </ul>
+          {visiblesEmergentes.length === 0 ? (
+            <p className="small">Todos los emergentes están marcados como vistos.</p>
+          ) : (
+            <ul className="small">
+              {visiblesEmergentes.map((grupo) => (
+                <li key={grupo.ejemplo} style={{ marginBottom: 6 }}>
+                  «{grupo.ejemplo.length > 110 ? `${grupo.ejemplo.slice(0, 110)}…` : grupo.ejemplo}»{" "}
+                  <span className="badge ok">{grupo.homogenea}% igual</span>{" "}
+                  <span className="badge">{grupo.total} casos</span>{" "}
+                  {grupo.casos.slice(0, 3).map((caso) => (
+                    <Link
+                      key={caso.caseId}
+                      href={`/cases/${caso.caseId}`}
+                      style={{ marginRight: 6 }}
+                    >
+                      {caso.caseId.replace("case_", "")}
+                    </Link>
+                  ))}
+                  <MarcarVistoButton ejemplo={grupo.ejemplo} />
+                </li>
+              ))}
+            </ul>
+          )}
+          {ocultos > 0 && (
+            <p className="small muted">
+              {ocultos} ocultos por estar vistos.{" "}
+              <RestaurarPatronesButton />
+            </p>
+          )}
         </div>
       )}
 

@@ -142,7 +142,11 @@ export default async function PatternsPage() {
                   <tbody>
                     {delOrigen.map((grupo) => (
                       <tr key={`${origen}-${grupo.ejemplo}`}>
-                        <td className="small">«{grupo.ejemplo}»</td>
+                        <td className="small">
+                          <Link href={`/patrones/frase?e=${encodeURIComponent(grupo.ejemplo)}`}>
+                            «{grupo.ejemplo}»
+                          </Link>
+                        </td>
                         <td>
                           <span className="badge">{grupo.total}</span>
                         </td>
