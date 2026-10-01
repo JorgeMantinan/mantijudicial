@@ -1,6 +1,6 @@
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import { PrintButton } from "@/components/print-button";
-import { computePatterns, getContradicciones, listCases } from "@/lib/dataset";
+import { computePatterns, getContradicciones, getGruposFrases, listCases } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { ARG_OUTCOME, ARG_TYPE, BRANCH, OUTCOME, SIDE, label } from "@/lib/labels";
 import { OutcomeBadge } from "@/lib/ui";
@@ -37,6 +37,7 @@ export default async function PatternsPage() {
   const grants = await authorizationGrants();
   const cases = (await listCases()).filter((item) => canViewCase(actor, item.id, orgId, grants));
   const computed = await computePatterns(cases.map((item) => item.id));
+  const gruposFrases = await getGruposFrases();
   const contradictorio = (await getContradicciones())
     .map((tema) => ({
       ...tema,
@@ -97,6 +98,66 @@ export default async function PatternsPage() {
               <div className="label">{name}</div>
             </div>
           ))}
+      </div>
+
+      <div className="section">
+        <h2>Frases que se repiten (y cómo se resolvió)</h2>
+        <p className="small muted">
+          Agrupamos frases parecidas de los hechos y de los fundamentos de distintos casos y vemos
+          cómo acabó cada uno. Sirve para ver qué relatos acompañan a sentencias estimadas o
+          desestimadas: es una <strong>asociación</strong>, no una predicción.
+        </p>
+        {gruposFrases.length === 0 ? (
+          <p className="small muted">
+            Todavía no hay frases repetidas en al menos 3 casos (hace falta más corpus o enunciados
+            más largos).
+          </p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Frase (ejemplo)</th>
+                <th>Casos</th>
+                <th>Cómo acabaron</th>
+                <th>Fichas</th>
+              </tr>
+            </thead>
+            <tbody>
+              {gruposFrases.map((grupo) => (
+                <tr key={grupo.ejemplo}>
+                  <td className="small">«{grupo.ejemplo}»</td>
+                  <td>
+                    <span className="badge">{grupo.total}</span>
+                  </td>
+                  <td className="small">
+                    {Object.entries(grupo.distribucion).map(([outcome, cantidad]) => (
+                      <span
+                        key={outcome}
+                        className={`badge ${outcome === "ESTIMED" ? "ok" : outcome === "DISMISSED" ? "ko" : "warn"}`}
+                        style={{ marginRight: 4 }}
+                      >
+                        {label(OUTCOME, outcome)} {cantidad}
+                      </span>
+                    ))}
+                  </td>
+                  <td className="small">
+                    {grupo.casos.slice(0, 4).map((caso) => (
+                      <Link
+                        key={caso.caseId}
+                        href={`/cases/${caso.caseId}`}
+                        style={{ marginRight: 8 }}
+                        title={caso.headline}
+                      >
+                        {caso.caseId.replace("case_", "")}
+                      </Link>
+                    ))}
+                    {grupo.casos.length > 4 && <span className="muted">+{grupo.casos.length - 4}</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {contradictorio.length > 0 && (

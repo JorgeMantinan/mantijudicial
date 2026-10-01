@@ -11,6 +11,7 @@ import {
 import { matchWithCorpus } from "@pipeline/sentencias";
 import { aggregate, normalizeKey, type CaseSignals } from "@pipeline/patterns";
 import { buildIndex, search, type SearchDoc, type SearchHit } from "@pipeline/search";
+import { agruparFrases, type FraseCaso } from "@pipeline/frases";
 
 const INDEX_TTL_MS = 30_000;
 
@@ -1230,3 +1231,60 @@ async function loadArticleDocs(): Promise<SearchDoc[]> {
 
 
 export * from "./dataset-estado";
+
+export interface GrupoFrasesView {
+  ejemplo: string;
+  total: number;
+  distribucion: Record<string, number>;
+  casos: Array<{ caseId: string; outcome: string; headline: string }>;
+}
+
+let frasesCache: { value: GrupoFrasesView[]; at: number } | null = null;
+
+/**
+ * Frases que se repiten en varios casos (hechos y fundamentos) y cómo acabó
+ * cada uno. Cache 60 s: lee facts/razonamiento de todos los casos.
+ */
+export async function getGruposFrases(): Promise<GrupoFrasesView[]> {
+  if (frasesCache && Date.now() - frasesCache.at < 60_000) return frasesCache.value;
+
+  const items = await listCases();
+  const titulos = new Map(items.map((item) => [item.id, item.headline]));
+  const frases: FraseCaso[] = [];
+
+  for (const item of items) {
+    const [facts, reasoning] = await Promise.all([
+      section<{ facts?: Array<{ description?: string }> }>(item.id, "facts.json"),
+      section<{ holdings?: Array<{ statement?: string }> }>(item.id, "reasoning.json"),
+    ]);
+    const candidatas = [
+      ...(facts?.facts ?? []).map((fact) => fact.description ?? ""),
+      ...(reasoning?.holdings ?? []).map((holding) => holding.statement ?? ""),
+    ];
+    let cortadas = 0;
+    for (const texto of candidatas) {
+      if (cortadas >= 14) break;
+      for (const sentencia of texto.split(/(?<=[.?!])\s+/)) {
+        const limpia = sentencia.replace(/\s+/g, " ").trim();
+        if (limpia.length < 25 || limpia.length > 240) continue;
+        frases.push({ caseId: item.id, outcome: item.outcome, texto: limpia });
+        cortadas += 1;
+        if (cortadas >= 14) break;
+      }
+    }
+  }
+
+  const value = agruparFrases(frases, 3)
+    .slice(0, 12)
+    .map((grupo) => ({
+      ejemplo: grupo.ejemplo,
+      total: grupo.total,
+      distribucion: grupo.distribucion,
+      casos: grupo.casos.map((caso) => ({
+        ...caso,
+        headline: titulos.get(caso.caseId) ?? caso.caseId,
+      })),
+    }));
+  frasesCache = { value, at: Date.now() };
+  return value;
+}
