@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { canCreateCase } from "@pipeline/authorization";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
-import { listCases } from "@/lib/dataset";
+import { getClientes, listCases } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { BRANCH, OUTCOME, REVIEW, SIDE, label } from "@/lib/labels";
 import { OutcomeBadge } from "@/lib/ui";
@@ -42,6 +42,7 @@ export default async function CasesPage({
     sort?: string;
     dir?: string;
     archivados?: string;
+    cliente?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -56,10 +57,12 @@ export default async function CasesPage({
       q: params.q,
     })
   ).filter((item) => canViewCase(actor, item.id, orgId, grants));
-  const visibles =
-    params.archivados === "1"
-      ? cases
-      : cases.filter((item) => !item.archived);
+  const clientesMap = await getClientes();
+  const visibles = cases.filter((item) => {
+    if (params.archivados !== "1" && item.archived) return false;
+    if (params.cliente && clientesMap[item.id] !== params.cliente) return false;
+    return true;
+  });
 
   const sort = (SORTS as readonly string[]).includes(params.sort ?? "")
     ? (params.sort as SortKey)
@@ -77,6 +80,7 @@ export default async function CasesPage({
     outcome: params.outcome,
     q: params.q,
     archivados: params.archivados,
+    cliente: params.cliente,
   };
   const csvQuery = new URLSearchParams(
     Object.entries(base).filter((entry): entry is [string, string] => Boolean(entry[1])),
@@ -94,6 +98,7 @@ export default async function CasesPage({
       ? { texto: `Resultado: ${label(OUTCOME, params.outcome)}`, clave: "outcome" }
       : null,
     params.archivados === "1" ? { texto: "Incluye archivados", clave: "archivados" } : null,
+    params.cliente ? { texto: `Cliente: ${params.cliente}`, clave: "cliente" } : null,
   ].filter((chip): chip is { texto: string; clave: string } => chip !== null);
 
   return (
@@ -137,6 +142,17 @@ export default async function CasesPage({
             </option>
           ))}
         </select>
+        <label className="small muted" style={{ display: "grid", gap: 4 }}>
+          Cliente
+          <select name="cliente" defaultValue={params.cliente ?? ""}>
+            <option value="">Todos</option>
+            {[...new Set(Object.values(clientesMap))].sort().map((nombre) => (
+              <option key={nombre} value={nombre}>
+                {nombre}
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="small" style={{ display: "flex", gap: 6, alignItems: "center" }}>
           <input
             type="checkbox"

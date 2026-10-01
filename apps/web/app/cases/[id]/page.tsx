@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { canCreateCase, canShareResource } from "@pipeline/authorization";
 import { canViewCase, caseResource, defaultOrgId, loadIdentity, requireActor } from "@/lib/auth";
-import { getAuditoria, getCase, getComparisons, getDoctrinaCitada, getEscrito, getGoldenInfo, getReviewStats, getSentenciasCitadas, getSimilarCases, getVigenciaChecks, getVias, listLaws } from "@/lib/dataset";
+import { getAuditoria, getCase, getClientes, getComparisons, getDoctrinaCitada, getEscrito, getGoldenInfo, getReviewStats, getSentenciasCitadas, getSimilarCases, getVigenciaChecks, getVias, listLaws } from "@/lib/dataset";
 import { authorizationGrants, loadGrantStore } from "@/lib/grants";
 import {
   ARG_OUTCOME,
@@ -31,6 +31,7 @@ import { OutcomeBadge } from "@/lib/ui";
 import { ReviewForm } from "./review-form";
 import { ArchiveButton } from "./archive-button";
 import { CopyButton } from "@/components/copy-button";
+import { ClientePanel } from "@/components/cliente-panel";
 import { GoldenPanel } from "./golden-panel";
 import { NotesPanel } from "./notes-panel";
 import { ReanalyzeButton } from "./reanalyze-button";
@@ -141,7 +142,7 @@ export default async function CaseDetailPage({
   const detail = await getCase(id);
   if (!detail) notFound();
 
-  const [laws, similar, vias, comparisons, identity, grantStore, golden, sentencias, vigencias, escrito, reviewStats, actividadCaso, doctrina] =
+  const [laws, similar, vias, comparisons, identity, grantStore, golden, sentencias, vigencias, escrito, reviewStats, actividadCaso, doctrina, clientes] =
     await Promise.all([
       listLaws(),
       getSimilarCases(id, 5),
@@ -156,6 +157,7 @@ export default async function CaseDetailPage({
       getReviewStats(),
       getAuditoria(15, id),
       getDoctrinaCitada(id),
+      getClientes(),
     ]);
 
   const nextPendiente = reviewStats.pending.find((item) => item.id !== id)?.id ?? null;
@@ -295,6 +297,15 @@ export default async function CaseDetailPage({
       />
 
       <NotesPanel caseId={id} />
+
+      <div className="section">
+        <h2>Cliente / encargo</h2>
+        <p className="small muted">
+          Para filtrar en la lista de casos y agrupar los asuntos de un mismo cliente. Solo lo ve
+          el despacho (no sale en los dossiers).
+        </p>
+        <ClientePanel caseId={id} cliente={clientes[id] ?? ""} />
+      </div>
 
       <div className="section">
         <h2>Resumen</h2>

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Bar } from "@/components/bar";
 import { PrintButton } from "@/components/print-button";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
-import { filtrarFrasesDelTema, getGruposFrases, getInforme, getVigenciaAlerts } from "@/lib/dataset";
+import { filtrarFrasesDelTema, getGruposFrases, getInforme, getVigenciaAlerts, listCases } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { BRANCH, OUTCOME, label } from "@/lib/labels";
 import { SortTh } from "@/lib/sort-th";
@@ -95,6 +95,12 @@ export default async function InformesPage({
       celdas[clave] = celda;
     }
     return { frase: grupo.ejemplo, total: grupo.total, homogenea: grupo.homogenea, celdas };
+  });
+
+  const entradasMap = new Map((await listCases()).map((item) => [item.id, item.generatedAt]));
+  const incorporadas = informe.casos.filter((caso) => {
+    const fecha = (entradasMap.get(caso.id) ?? "").slice(0, 10);
+    return fecha.length === 10 && fecha >= desde && fecha <= hasta;
   });
 
   const unionOutcomes = [
@@ -546,6 +552,39 @@ export default async function InformesPage({
           </table>
         )}
       </div>
+
+      {incorporadas.length > 0 && (
+        <div className="section">
+          <h2>Incorporadas al corpus en el periodo</h2>
+          <p className="small muted">
+            Casos cuyo <strong>análisis</strong> se hizo entre {desde} y {hasta} (puede que la
+            sentencia sea anterior): es lo que ha entrado de nuevo al sistema en el rango.
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th style={{ width: 120 }}>Analizado el</th>
+                <th>Caso</th>
+                <th style={{ width: 110 }}>Resuelta el</th>
+              </tr>
+            </thead>
+            <tbody>
+              {incorporadas.slice(0, 15).map((caso) => (
+                <tr key={caso.id}>
+                  <td className="mono small">{(entradasMap.get(caso.id) ?? "").slice(0, 10)}</td>
+                  <td className="small">
+                    <Link href={`/cases/${caso.id}`}>{caso.headline}</Link>
+                  </td>
+                  <td className="mono small">{caso.fecha}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {incorporadas.length > 15 && (
+            <p className="small muted">… y {incorporadas.length - 15} más.</p>
+          )}
+        </div>
+      )}
 
       <div className="section">
         <h2>Sentencias del periodo</h2>

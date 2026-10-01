@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { canViewCase, defaultOrgId, getActor } from "@/lib/auth";
-import { listCases } from "@/lib/dataset";
+import { getClientes, listCases } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 
 export const runtime = "nodejs";
@@ -21,6 +21,8 @@ export async function GET(request: Request): Promise<Response> {
   const outcome = url.searchParams.get("outcome") ?? undefined;
   const q = url.searchParams.get("q") ?? undefined;
   const archivados = url.searchParams.get("archivados") === "1";
+  const cliente = url.searchParams.get("cliente") ?? "";
+  const clientesMap = await getClientes();
 
   const orgId = await defaultOrgId();
   const grants = await authorizationGrants();
@@ -28,10 +30,13 @@ export async function GET(request: Request): Promise<Response> {
     await listCases({ branch, outcome, q })
   )
     .filter((item) => canViewCase(actor, item.id, orgId, grants))
-    .filter((item) => (archivados ? true : !item.archived));
+    .filter((item) => (archivados ? true : !item.archived))
+    .filter((item) => (cliente ? clientesMap[item.id] === cliente : true));
 
   const filas: string[] = [
-    ["caso", "asunto", "rama", "resultado", "recurrente", "revisado", "enriquecido"].join(";"),
+    ["caso", "asunto", "rama", "resultado", "recurrente", "revisado", "enriquecido", "cliente"].join(
+      ";",
+    ),
   ];
   for (const caso of casos) {
     filas.push(
@@ -43,6 +48,7 @@ export async function GET(request: Request): Promise<Response> {
         caso.recurringSide,
         caso.reviewStatus,
         caso.enriched ? "si" : "no",
+        clientesMap[caso.id] ?? "",
       ]
         .map(csv)
         .join(";"),

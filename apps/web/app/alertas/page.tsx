@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PrintButton } from "@/components/print-button";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
-import { filtrarFrasesDelTema, getCalidadCorpus, getContradicciones, getGruposFrases, getPatronesVistos, getReviewStats, getVigenciaAlerts, listCases } from "@/lib/dataset";
+import { filtrarFrasesDelTema, getBusquedas, getCalidadCorpus, getContradicciones, getGruposFrases, getPatronesVistos, getReviewStats, getVigenciaAlerts, listCases, runSearch } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { MarcarVistoButton, RestaurarPatronesButton } from "@/components/patron-visto";
 import { jobs } from "@/lib/jobs";
@@ -88,6 +88,37 @@ export default async function AlertasPage({
   const ocultos = emergentes.filter((grupo) => vistos.has(grupo.ejemplo)).length;
   const visiblesEmergentes = emergentes.filter((grupo) => !vistos.has(grupo.ejemplo));
 
+  // Búsquedas guardadas que dan resultado en casos incorporados en los últimos 30 días.
+  const hace30 = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10);
+  const nuevosIds = new Set(
+    (await listCases())
+      .filter((item) => puedeVer(item.id) && (item.generatedAt ?? "").slice(0, 10) >= hace30)
+      .map((item) => item.id),
+  );
+  const busquedasMatch: Array<{ nombre: string; q: string; casos: string[] }> = [];
+  if (nuevosIds.size > 0) {
+    for (const busqueda of (await getBusquedas()).slice(0, 8)) {
+      const resultado = await runSearch(busqueda.q, {
+        limit: 15,
+        kinds: busqueda.kind ? [busqueda.kind] : undefined,
+        allow: (doc) => doc.kind === "case",
+      });
+      const coincidentes = [
+        ...new Set(
+          resultado.hits.map((hit) => hit.id.split("#")[0]).filter((id) => nuevosIds.has(id)),
+        ),
+      ];
+      if (coincidentes.length > 0) {
+        busquedasMatch.push({
+          nombre: busqueda.nombre,
+          q: busqueda.q,
+          casos: coincidentes.slice(0, 4),
+        });
+      }
+    }
+  }
+  const nuevosMatch = busquedasMatch.reduce((total, item) => total + item.casos.length, 0);
+
   const total =
     contradictorio.length +
     vigencia.length +
@@ -95,7 +126,8 @@ export default async function AlertasPage({
     fallos.length +
     stale.length +
     escaneados.length +
-    visiblesEmergentes.length;
+    visiblesEmergentes.length +
+    nuevosMatch;
 
   return (
     <article className="print-sheet">
@@ -264,6 +296,28 @@ export default async function AlertasPage({
           </>
         )}
       </div>
+
+      {busquedasMatch.length > 0 && (
+        <div className="section">
+          <h2>Casos nuevos que encajan con tus búsquedas</h2>
+          <p className="small muted">
+            De los casos incorporados en los últimos 30 días, los que aparecen en tus búsquedas
+            guardadas (y que todavía no habrás visto).
+          </p>
+          <ul className="small">
+            {busquedasMatch.map((item) => (
+              <li key={item.nombre} style={{ marginBottom: 6 }}>
+                <strong>{item.nombre}</strong> <span className="muted">({item.q})</span> —{" "}
+                {item.casos.map((caseId) => (
+                  <Link key={caseId} href={`/cases/${caseId}`} style={{ marginRight: 6 }}>
+                    {caseId.replace("case_", "")}
+                  </Link>
+                ))}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {(visiblesEmergentes.length > 0 || ocultos > 0) && (
         <div className="section">

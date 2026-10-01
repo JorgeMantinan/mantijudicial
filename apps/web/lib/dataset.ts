@@ -55,6 +55,8 @@ export interface CaseListItem {
   stale: boolean;
   /** Archivado: se oculta de la lista de casos (no se borra nada). */
   archived: boolean;
+  /** Fecha en que se analizó el caso (extraction.generated_at). */
+  generatedAt: string;
 }
 
 async function isStale(caseId: string, generatedAt: string | undefined): Promise<boolean> {
@@ -170,6 +172,7 @@ async function listarTodos(): Promise<CaseListItem[]> {
         (review as { review?: { status?: string } } | null)?.review?.status ?? "UNREVIEWED",
       stale: await isStale(name, generatedAt),
       archived: await isArchived(name),
+      generatedAt: generatedAt ?? "",
     });
   }
   todosCache = { value: items, at: Date.now() };
@@ -207,6 +210,7 @@ export async function getCase(caseId: string): Promise<CaseDetail | null> {
     enriched: (review?.extraction as { validation?: string } | undefined)?.validation === "OK",
     reviewStatus: (review?.review as { status?: string } | undefined)?.status ?? "UNREVIEWED",
     archived: await isArchived(caseId),
+    generatedAt: (review?.extraction as { generated_at?: string } | undefined)?.generated_at ?? "",
     stale: await isStale(
       caseId,
       (review?.extraction as { generated_at?: string } | undefined)?.generated_at,
@@ -1508,4 +1512,22 @@ export async function marcarPatronVisto(ejemplo: string): Promise<void> {
 
 export async function desmarcarPatrones(): Promise<void> {
   await fs.writeFile(patronesVistosPath(), "[]\n", "utf8");
+}
+
+function clientesPath(): string {
+  return path.join(repoRoot(), "data", "casos_cliente.json");
+}
+
+/** Mapa caso → cliente/encargo (lo rellena el despacho desde la ficha). */
+export async function getClientes(): Promise<Record<string, string>> {
+  const data = await readJson<Record<string, string>>(clientesPath());
+  return data && typeof data === "object" ? data : {};
+}
+
+export async function setCliente(caseId: string, cliente: string): Promise<void> {
+  const data = await getClientes();
+  if (cliente.trim()) data[caseId] = cliente.trim().slice(0, 80);
+  else delete data[caseId];
+  await fs.mkdir(path.dirname(clientesPath()), { recursive: true });
+  await fs.writeFile(clientesPath(), `${JSON.stringify(data, null, 2)}\n`, "utf8");
 }
