@@ -141,6 +141,17 @@ export const QUOTE: Record<string, string> = {
   NOT_CHECKED: "Sin comprobar",
 };
 
+/** Papel de una cita doctrinal en el asunto (cited_case_law.role). */
+export const PAPELES: Record<string, string> = {
+  DOCTRINE_APPLIED: "Doctrina aplicada",
+  DISTINGUISHED: "Distinguida",
+  QUESTIONED: "Puesta en duda",
+  REJECTED: "No aplicada",
+  CITED: "Citada",
+  MENTIONED: "Mencionada",
+  FOLLOWED: "Seguida",
+};
+
 export const AUDIT: Record<string, string> = {
   "auth.login": "Inicio de sesión",
   "auth.login_failed": "Inicio de sesión fallido",

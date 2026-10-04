@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { loadIdentity, requireActor } from "@/lib/auth";
-import { getAuditoria } from "@/lib/dataset";
+import { getAuditoria, getAuditoriaIntegridad } from "@/lib/dataset";
 import { AUDIT, ROLE, label } from "@/lib/labels";
 import { SortTh } from "@/lib/sort-th";
 import { UserForm } from "./user-form";
@@ -48,6 +48,7 @@ export default async function UsersPage({
   );
   // Solo actividad de los usuarios de mis despachos (un despacho no mira al otro).
   const auditoriaBruta = (await getAuditoria(300)).filter((entrada) => usuariosMios.has(entrada.actor));
+  const integridad = await getAuditoriaIntegridad();
   const accionSel = params.accion ?? "";
   const personaSel = params.persona ?? "";
   const auditoria = auditoriaBruta
@@ -139,7 +140,18 @@ export default async function UsersPage({
       </table>
 
       <div className="section">
-        <h2>Actividad reciente</h2>
+        <h2>
+          Actividad reciente{" "}
+          {integridad.alteradas === 0 ? (
+            <span className="badge ok" title="Cadena de hashes del log verificada">
+              integridad OK ({integridad.total})
+            </span>
+          ) : (
+            <span className="badge ko" title="Entradas alteradas o ilegibles">
+              {integridad.alteradas} alteradas
+            </span>
+          )}
+        </h2>
         <p className="small muted">
           Últimas entradas de <span className="mono">data/audit.log</span> (sin notas privadas).
         </p>

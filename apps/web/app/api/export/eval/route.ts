@@ -1,15 +1,10 @@
 import { NextResponse } from "next/server";
 import { getActor } from "@/lib/auth";
 import { getCalidadCorpus, getCostesIA, getEvalReport, getSistemaInfo } from "@/lib/dataset";
+import { csv } from "@/lib/csv";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-function csv(campo: string): string {
-  const texto = String(campo ?? "");
-  const seguro = /^[=+\-@\t\r]/.test(texto) ? `'${texto}` : texto;
-  return /[";\r\n]/.test(seguro) ? `"${seguro.replace(/"/g, '""')}"` : seguro;
-}
 
 function filas(objeto: unknown, seccion: string, prefijo = ""): string[] {
   const out: string[] = [];

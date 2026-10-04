@@ -9,6 +9,7 @@ import {
   ARG_OUTCOME,
   ARG_TYPE,
   AUDIT,
+  PAPELES,
   BRANCH,
   CLAIM_OUTCOME,
   EVENT,
@@ -94,16 +95,6 @@ type Ref = {
   articles?: Array<{ number?: number; block_id?: string | null; titulo?: string | null; status?: string }>;
 };
 type Decision = { instance?: string; court?: string; date?: string; result?: string; description?: string };
-
-const PAPELES: Record<string, string> = {
-  DOCTRINE_APPLIED: "Doctrina aplicada",
-  DISTINGUISHED: "Distinguida",
-  QUESTIONED: "Puesta en duda",
-  REJECTED: "No aplicada",
-  CITED: "Citada",
-  MENTIONED: "Mencionada",
-  FOLLOWED: "Seguida",
-};
 
 function fechaEs(yyyymmdd: string | null | undefined): string {
   if (!yyyymmdd || !/^\d{8}$/.test(yyyymmdd)) return yyyymmdd || "—";

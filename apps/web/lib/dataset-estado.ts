@@ -1,6 +1,7 @@
 import { execSync } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { verificarAuditoria } from "@pipeline/audit";
 import {
   getEvolucion,
   listCases,
@@ -251,6 +252,11 @@ export async function getAuditoria(limit = 50, resource?: string): Promise<Audit
   }
   const filtradas = resource ? rows.filter((entrada) => entrada.resource === resource) : rows;
   return filtradas.slice(-limit).reverse();
+}
+
+/** Integridad de la cadena de hashes del audit.log (0 alteradas = intacto). */
+export async function getAuditoriaIntegridad(): Promise<{ total: number; alteradas: number }> {
+  return verificarAuditoria(path.join(repoRoot(), "data", "audit.log"));
 }
 
 export interface CostesIA {

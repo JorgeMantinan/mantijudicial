@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { createHash } from "node:crypto";
 
 export type AuditAction =
   | "share.grant"
@@ -24,6 +25,54 @@ export interface AuditEntry {
   action: AuditAction;
   resource: string;
   details: Record<string, unknown>;
+  /** sha256(previo + contenido): cadena de integridad del log. */
+  hash?: string;
+}
+
+function calcularHash(previo: string, record: AuditEntry): string {
+  const { hash: _ignorado, ...resto } = record;
+  return createHash("sha256")
+    .update(previo)
+    .update(JSON.stringify(resto))
+    .digest("hex");
+}
+
+async function ultimaMarca(filePath: string): Promise<string> {
+  try {
+    const raw = await fs.readFile(filePath, "utf8");
+    const lineas = raw.split(/\r?\n/).filter((linea) => linea.trim());
+    if (lineas.length === 0) return "";
+    const ultimaLinea = lineas[lineas.length - 1] ?? "";
+    if (!ultimaLinea) return "";
+    const ultima = JSON.parse(ultimaLinea) as AuditEntry;
+    return ultima.hash ?? "";
+  } catch {
+    return "";
+  }
+}
+
+/** Comprueba la cadena de hashes: `alteradas` > 0 significa log manipulado. */
+export async function verificarAuditoria(
+  filePath: string,
+): Promise<{ total: number; alteradas: number }> {
+  const raw = await fs.readFile(filePath, "utf8").catch(() => "");
+  let previo = "";
+  let total = 0;
+  let alteradas = 0;
+  for (const linea of raw.split(/\r?\n/)) {
+    if (!linea.trim()) continue;
+    try {
+      const entry = JSON.parse(linea) as AuditEntry;
+      total += 1;
+      if (entry.hash) {
+        if (calcularHash(previo, entry) !== entry.hash) alteradas += 1;
+        previo = entry.hash;
+      }
+    } catch {
+      alteradas += 1;
+    }
+  }
+  return { total, alteradas };
 }
 
 export async function appendAudit(
@@ -31,6 +80,7 @@ export async function appendAudit(
   entry: Omit<AuditEntry, "at">,
 ): Promise<AuditEntry> {
   const record: AuditEntry = { at: new Date().toISOString(), ...entry };
+  record.hash = calcularHash(await ultimaMarca(filePath), record);
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.appendFile(filePath, `${JSON.stringify(record)}\n`, "utf8");
   return record;

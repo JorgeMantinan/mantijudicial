@@ -1,15 +1,10 @@
 import { NextResponse } from "next/server";
 import { getActor } from "@/lib/auth";
 import { getContradicciones, getExitoArgumentos, getGruposFrases } from "@/lib/dataset";
+import { csv } from "@/lib/csv";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-function csv(campo: string): string {
-  const texto = String(campo ?? "");
-  const seguro = /^[=+\-@\t\r]/.test(texto) ? `'${texto}` : texto;
-  return /[";\r\n]/.test(seguro) ? `"${seguro.replace(/"/g, '""')}"` : seguro;
-}
 
 /** CSV con los tres bloques de /patterns (éxito, frases y criterio dividido). */
 export async function GET(): Promise<Response> {
