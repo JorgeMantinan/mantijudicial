@@ -165,11 +165,14 @@ referencia) y en `computePatterns` (evita 640 lecturas/render).
 real de `/laws` (antes O(n²) y nunca visible).
 
 **Pendientes de la auditoría (no urgentes):**
-1. Centralizar `csv()` (hoy copiado en 8 rutas).
-2. Avisos en `readJson` (JSON corrupto se pierde en silencio hoy).
-3. Cadena de hash en `audit.log` (integridad) y verificación visible.
-4. Caché de `getLawUsage` y de `getInforme` (ojo: sin mezclar visibilidad).
-5. Limpieza fina: `fechaEs`/`cortar` únicos, `PAPELES` → `labels.ts`.
+1. ~~Centralizar `csv()`~~ ✅ hecho: `lib/csv.ts` y las 8 rutas lo importan.
+2. ~~Avisos en `readJson`~~ ✅ hecho: `console.warn` salvo `ENOENT`.
+3. ~~Cadena de hash en `audit.log`~~ ✅ hecho: `sha256(previo+contenido)` por
+   entrada y badge "integridad OK (N)" en `/users`.
+4. Caché de `getInforme` (ojo: sin mezclar visibilidad entre despachos) —
+   pendiente.
+5. Limpieza fina: `fechaEs`/`cortar` únicos — pendiente (`PAPELES` ya está en
+   `labels.ts`).
 
 **Fuera de alcance decidido:** CSP estricta (pendiente de nonces), Supabase y
 Render (hasta su aviso), embeddings (proveedor no los da).
