@@ -56,28 +56,6 @@ export default async function SearchPage({
   let masPaginas = false;
   const exactos = query.length >= 4 ? await findByIdentifier(query) : [];
   const busquedas = await getBusquedas();
-  const sinResultados = query.length > 0 && hits.length === 0 && exactos.length === 0;
-  let sugerencias: Array<{ topic: string; casos: number }> = [];
-  if (sinResultados) {
-    const palabras = query
-      .toLowerCase()
-      .split(/\s+/)
-      .filter((palabra) => palabra.length >= 4);
-    const puntuados = (await getEvolucion())
-      .map((tema) => ({
-        topic: tema.topic,
-        casos: tema.cases,
-        score:
-          palabras.filter((palabra) => tema.topic.toLowerCase().includes(palabra)).length * 10 +
-          Math.min(tema.cases / 100, 0.9),
-      }))
-      .sort((a, b) => b.score - a.score);
-    const afines = puntuados.filter((tema) => tema.score >= 1).slice(0, 5);
-    sugerencias = (afines.length > 0 ? afines : puntuados.slice(0, 5)).map(({ topic, casos }) => ({
-      topic,
-      casos,
-    }));
-  }
   if (query.length > 0) {
     const filters: Record<string, string> = {};
     if (params.branch) filters.branch = params.branch;
@@ -103,6 +81,30 @@ export default async function SearchPage({
     if (n > 1) p.set("page", String(n));
     return `/search?${p.toString()}`;
   };
+
+  // Se calcula DESPUÉS de poblar `hits` (antes salía siempre "sin resultados").
+  const sinResultados = query.length > 0 && hits.length === 0 && exactos.length === 0;
+  let sugerencias: Array<{ topic: string; casos: number }> = [];
+  if (sinResultados) {
+    const palabras = query
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((palabra) => palabra.length >= 4);
+    const puntuados = (await getEvolucion())
+      .map((tema) => ({
+        topic: tema.topic,
+        casos: tema.cases,
+        score:
+          palabras.filter((palabra) => tema.topic.toLowerCase().includes(palabra)).length * 10 +
+          Math.min(tema.cases / 100, 0.9),
+      }))
+      .sort((a, b) => b.score - a.score);
+    const afines = puntuados.filter((tema) => tema.score >= 1).slice(0, 5);
+    sugerencias = (afines.length > 0 ? afines : puntuados.slice(0, 5)).map(({ topic, casos }) => ({
+      topic,
+      casos,
+    }));
+  }
 
   return (
     <>
