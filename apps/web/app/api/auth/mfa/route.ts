@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { appendAudit } from "@pipeline/audit";
+import { RateLimiter, ipDe } from "@pipeline/rate_limit";
 import { auditPath } from "@/lib/grants";
 import { getActor, identityPath, loadIdentity } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const mfaLimiter = new RateLimiter({ maxIntentos: 10, ventanaMs: 15 * 60_000 });
 
 /**
  * Gestión del doble factor (TOTP):
@@ -26,6 +29,14 @@ export async function POST(request: Request): Promise<NextResponse> {
   const action = typeof body.action === "string" ? body.action : "status";
   const code = typeof body.code === "string" ? body.code.trim() : "";
 
+  const claveMfa = `mfa:${ipDe(request)}:${actor.userId}`;
+  if ((action === "verify" || action === "disable") && !mfaLimiter.intentar(claveMfa)) {
+    return NextResponse.json(
+      { error: `Demasiados intentos. Vuelve a probar en ${mfaLimiter.espera(claveMfa)} s` },
+      { status: 429 },
+    );
+  }
+
   const identity = await loadIdentity();
 
   try {
@@ -43,6 +54,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       const ok = identity.confirmMfa(actor.userId, code);
       if (!ok) return NextResponse.json({ error: "Código incorrecto" }, { status: 400 });
       await identity.save(identityPath());
+      mfaLimiter.liberar(claveMfa);
       await appendAudit(auditPath(), {
         actor: actor.userId,
         action: "user.mfa_enabled",

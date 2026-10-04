@@ -1,7 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { appendAudit } from "@pipeline/audit";
+import { RateLimiter, ipDe } from "@pipeline/rate_limit";
 import { auditPath } from "@/lib/grants";
 import { SESSION_COOKIE, identityPath, loadIdentity } from "@/lib/auth";
+
+const loginLimiter = new RateLimiter({ maxIntentos: 5, ventanaMs: 15 * 60_000 });
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   let body: { email?: unknown; password?: unknown; code?: unknown };
@@ -17,9 +20,20 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Correo y contraseña obligatorios" }, { status: 400 });
   }
 
+  const clave = `login:${ipDe(request)}:${email.toLowerCase()}`;
+  // Cuenta el intento; solo cortamos (429) si además falla, así un usuario
+  // legítimo con la clave correcta nunca se queda fuera.
+  const permitido = loginLimiter.intentar(clave);
+
   const identity = await loadIdentity();
   const user = identity.authenticate(email, password);
   if (!user) {
+    if (!permitido) {
+      return NextResponse.json(
+        { error: `Demasiados intentos. Vuelve a probar en ${loginLimiter.espera(clave)} s` },
+        { status: 429 },
+      );
+    }
     await appendAudit(auditPath(), {
       actor: email,
       action: "auth.login_failed",
@@ -30,6 +44,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   if (identity.mfaEnabled(user.id) && !identity.checkMfa(user.id, code)) {
+    if (!permitido) {
+      return NextResponse.json(
+        { error: `Demasiados intentos. Vuelve a probar en ${loginLimiter.espera(clave)} s` },
+        { status: 429 },
+      );
+    }
     await appendAudit(auditPath(), {
       actor: user.id,
       action: "auth.login_failed",
@@ -52,6 +72,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const session = identity.createSession(user.id, membership.firmId);
   await identity.save(identityPath());
+  loginLimiter.liberar(clave);
   await appendAudit(auditPath(), {
     actor: user.id,
     action: "auth.login",

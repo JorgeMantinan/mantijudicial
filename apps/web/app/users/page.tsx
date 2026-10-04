@@ -23,18 +23,22 @@ export default async function UsersPage({
   const params = await searchParams;
   const identity = await loadIdentity();
   const firms = new Map(identity.listFirms().map((firm) => [firm.id, firm.name]));
-  const users = identity.listUsers().map((user) => {
-    const membership = identity.listMemberships(user.id)[0];
-    return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: membership?.role ?? "—",
-      firm: membership ? (firms.get(membership.firmId) ?? membership.firmId) : "—",
-      created: user.created_at.slice(0, 10),
-      self: user.id === actor.userId,
-    };
-  });
+  const orgIds = new Set(actor.orgIds);
+  const users = identity.listUsers()
+    .map((user) => ({
+      base: user,
+      membership: identity.listMemberships(user.id).find((m) => orgIds.has(m.firmId)),
+    }))
+    .filter((row) => Boolean(row.membership))
+    .map((row) => ({
+      id: row.base.id,
+      email: row.base.email,
+      name: row.base.name,
+      role: row.membership?.role ?? "—",
+      firm: row.membership ? (firms.get(row.membership.firmId) ?? row.membership.firmId) : "—",
+      created: row.base.created_at.slice(0, 10),
+      self: row.base.id === actor.userId,
+    }));
 
   const auditoriaBruta = await getAuditoria(300);
   const accionSel = params.accion ?? "";

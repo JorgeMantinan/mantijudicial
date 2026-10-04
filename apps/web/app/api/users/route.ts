@@ -23,19 +23,24 @@ export async function GET(): Promise<NextResponse> {
   const denied = await requireOrgAdmin();
   if (denied) return denied;
 
+  const actor = (await getActor())!;
+  const orgIds = new Set(actor.orgIds);
   const identity = await loadIdentity();
   const firms = new Map(identity.listFirms().map((firm) => [firm.id, firm.name]));
-  const users = identity.listUsers().map((user) => {
-    const membership = identity.listMemberships(user.id)[0];
-    return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: membership?.role ?? "—",
-      firm: membership ? (firms.get(membership.firmId) ?? membership.firmId) : "—",
-      created_at: user.created_at,
-    };
-  });
+  const users = identity.listUsers()
+    .map((user) => ({
+      base: user,
+      membership: identity.listMemberships(user.id).find((m) => orgIds.has(m.firmId)),
+    }))
+    .filter((row) => Boolean(row.membership))
+    .map((row) => ({
+      id: row.base.id,
+      email: row.base.email,
+      name: row.base.name,
+      role: row.membership?.role ?? "—",
+      firm: row.membership ? (firms.get(row.membership.firmId) ?? row.membership.firmId) : "—",
+      created_at: row.base.created_at,
+    }));
   return NextResponse.json({ users });
 }
 
@@ -68,6 +73,9 @@ export async function POST(request: Request): Promise<NextResponse> {
         identity.listFirms()[0]?.id;
   if (!firmId) {
     return NextResponse.json({ error: "No hay despacho asignado" }, { status: 400 });
+  }
+  if (!actor || !actor.orgIds.includes(firmId)) {
+    return NextResponse.json({ error: "No puedes crear usuarios en ese despacho" }, { status: 403 });
   }
 
   try {
