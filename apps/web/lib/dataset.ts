@@ -268,9 +268,17 @@ export interface LawNorm {
   blocks: LawBlock[];
 }
 
+// Normas de hasta ~6 MB: caché con TTL para no reparsear en cada petición.
+const lawCache = new Map<string, { at: number; norm: LawNorm | null }>();
+
 export async function getLaw(boeId: string): Promise<LawNorm | null> {
   if (!/^BOE-A-[\w-]+$/.test(boeId)) return null;
-  return readJson<LawNorm>(path.join(repoRoot(), "laws", "norms", `${boeId}.json`));
+  const hit = lawCache.get(boeId);
+  if (hit && Date.now() - hit.at < 600_000) return hit.norm;
+  const norm = await readJson<LawNorm>(path.join(repoRoot(), "laws", "norms", `${boeId}.json`));
+  if (lawCache.size >= 8) lawCache.clear();
+  lawCache.set(boeId, { at: Date.now(), norm });
+  return norm;
 }
 
 export async function getPatterns(): Promise<Record<string, unknown> | null> {
@@ -988,14 +996,23 @@ async function loadSignals(caseId: string): Promise<CaseSignals | null> {
   };
 }
 
+// 8 casos × 8 ficheros: caro; el corpus cambia solo al enriquecer.
+let patternsCache: { clave: string; at: number; value: ReturnType<typeof aggregate> | null } | null =
+  null;
+
 export async function computePatterns(
   caseIds: string[],
   minSupport = 5,
 ): Promise<ReturnType<typeof aggregate> | null> {
+  const clave = `${minSupport}|${caseIds.join(",")}`;
+  if (patternsCache && patternsCache.clave === clave && Date.now() - patternsCache.at < 120_000) {
+    return patternsCache.value;
+  }
   const signals = await Promise.all(caseIds.map((caseId) => loadSignals(caseId)));
   const valid = signals.filter((item): item is CaseSignals => item !== null);
-  if (valid.length === 0) return null;
-  return aggregate(valid, minSupport);
+  const value = valid.length === 0 ? null : aggregate(valid, minSupport);
+  patternsCache = { clave, at: Date.now(), value };
+  return value;
 }
 
 export interface ReviewStats {

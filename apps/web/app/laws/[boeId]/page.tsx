@@ -74,7 +74,7 @@ export default async function LawDetailPage({
   const toc = sp.q
     ? norm.blocks.filter((block) => blockMatches(block, sp.q ?? ""))
     : norm.blocks.filter((block) => block.tipo !== "precepto" || block.titulo.startsWith("Art 1"));
-  const rows = withPaths(toc);
+  const rutas = new Map(withPaths(norm.blocks).map((row) => [row.id, row.path]));
 
   return (
     <article className="print-sheet">
@@ -153,7 +153,7 @@ export default async function LawDetailPage({
               titulo: block.titulo,
               tipo: label(BLOCK_TIPO, block.tipo),
               fecha: fechaEs(block.fecha_vigencia),
-              path: withPaths([block])[0]?.path ?? [],
+              path: rutas.get(block.id) ?? [],
             }))}
           />
         </>

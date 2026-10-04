@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { canCreateCase, canShareResource } from "@pipeline/authorization";
+import type { CompareReport } from "@pipeline/compare";
 import { canViewCase, caseResource, defaultOrgId, loadIdentity, requireActor } from "@/lib/auth";
 import { getAuditoria, getCase, getClientes, getComparisons, getDoctrinaCitada, getEscrito, getGoldenInfo, getRecomendaciones, getReviewStats, getSentenciasCitadas, getSimilarCases, getVigenciaChecks, getVias, listLaws } from "@/lib/dataset";
 import { authorizationGrants, loadGrantStore } from "@/lib/grants";
@@ -79,26 +80,7 @@ type Holding = {
 };
 type Issue = { issue_id?: string; topic?: string; description?: string; importance?: number };
 type Citation = { citation_id?: string; raw_text?: string; norma?: string; article?: string; relevance?: string };
-type CompareReport = {
-  aplicabilidad?: string;
-  conclusion?: string;
-  similitudes?: Array<{ aspecto?: string; detalle?: string; apoyo_case_id?: string }>;
-  diferencias?: Array<{ aspecto?: string; detalle?: string; impacto?: string }>;
-  argumentos_efectivos?: Array<{
-    argumento?: string;
-    apoyo_case_id?: string;
-    apoyo_frase?: string;
-    resultado?: string;
-  }>;
-  huecos?: Array<{ descripcion?: string; como_cubrirlo?: string }>;
-  contraargumentos?: Array<{
-    del_contrario?: string;
-    nuestra_respuesta?: string;
-    apoyo_case_id?: string;
-  }>;
-  riesgos?: string[];
-  avisos?: string[];
-};
+
 
 type Ref = {
   norma?: string;
