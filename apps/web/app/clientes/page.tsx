@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { requireActor } from "@/lib/auth";
+import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import { getClientes, listCases } from "@/lib/dataset";
+import { authorizationGrants } from "@/lib/grants";
 import { OUTCOME, label } from "@/lib/labels";
 import { SortTh } from "@/lib/sort-th";
 
@@ -13,9 +14,12 @@ export default async function ClientesPage({
 }: {
   searchParams: Promise<{ sort?: string; dir?: string; q?: string }>;
 }) {
-  await requireActor();
+  const actor = await requireActor();
+  const orgId = await defaultOrgId();
+  const grants = await authorizationGrants();
   const sp = await searchParams;
-  const [clientes, casos] = await Promise.all([getClientes(), listCases()]);
+  const [clientes, todos] = await Promise.all([getClientes(), listCases()]);
+  const casos = todos.filter((caso) => canViewCase(actor, caso.id, orgId, grants));
 
   const agrupados = new Map<string, Casos>();
   const sinAsignar: Casos = [];

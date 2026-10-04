@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { appendAudit } from "@pipeline/audit";
-import { canCreateCase } from "@pipeline/authorization";
-import { getActor } from "@/lib/auth";
+import { can, canCreateCase } from "@pipeline/authorization";
+import { caseResource, defaultOrgId, getActor } from "@/lib/auth";
 import { isArchived, setArchived } from "@/lib/dataset";
-import { auditPath } from "@/lib/grants";
+import { auditPath, loadGrantStore } from "@/lib/grants";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,6 +26,11 @@ export async function POST(request: Request): Promise<NextResponse> {
   const caseId = typeof body.caseId === "string" ? body.caseId : "";
   if (!/^case_\d{6}$/.test(caseId)) {
     return NextResponse.json({ error: "Caso no válido" }, { status: 400 });
+  }
+  const orgId = await defaultOrgId();
+  const grants = (await loadGrantStore()).toAuthorizationGrants();
+  if (!can(actor, "VIEW", caseResource(caseId, orgId), grants)) {
+    return NextResponse.json({ error: "No puedes modificar ese caso" }, { status: 403 });
   }
   const archived = body.archived !== false;
 

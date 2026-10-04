@@ -7,7 +7,8 @@ export const dynamic = "force-dynamic";
 
 function csv(campo: string): string {
   const texto = String(campo ?? "");
-  return /[";\r\n]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto;
+  const seguro = /^[=+\-@\t\r]/.test(texto) ? `'${texto}` : texto;
+  return /[";\r\n]/.test(seguro) ? `"${seguro.replace(/"/g, '""')}"` : seguro;
 }
 
 function filas(objeto: unknown, seccion: string, prefijo = ""): string[] {

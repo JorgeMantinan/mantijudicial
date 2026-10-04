@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { canCreateCase } from "@pipeline/authorization";
-import { getActor } from "@/lib/auth";
+import { can, canCreateCase } from "@pipeline/authorization";
+import { caseResource, defaultOrgId, getActor } from "@/lib/auth";
 import { setCliente } from "@/lib/dataset";
+import { loadGrantStore } from "@/lib/grants";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,6 +26,12 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Caso no válido" }, { status: 400 });
   }
   const cliente = typeof body.cliente === "string" ? body.cliente : "";
+
+  const orgId = await defaultOrgId();
+  const grants = (await loadGrantStore()).toAuthorizationGrants();
+  if (!can(actor, "VIEW", caseResource(caseId, orgId), grants)) {
+    return NextResponse.json({ error: "No puedes modificar ese caso" }, { status: 403 });
+  }
 
   await setCliente(caseId, cliente);
   return NextResponse.json({ ok: true, caseId, cliente: cliente.trim() });

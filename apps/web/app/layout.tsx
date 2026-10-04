@@ -40,7 +40,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const store = await cookies();
   const authenticated = Boolean(store.get("mj_session")?.value);
   const actor = authenticated ? await getActor() : null;
-  const pending = authenticated ? (await getReviewStats()).pending.length : 0;
+  const pending = actor ? (await getReviewStats()).pending.length : 0;
   const items = NAV.map((item) =>
     item.href === "/review" && pending > 0 ? { ...item, badge: pending } : item,
   );

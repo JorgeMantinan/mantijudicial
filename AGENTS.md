@@ -112,6 +112,10 @@ carlos está en **Despacho_B**, sirve para probar el aislamiento).
 
 ## Pendientes / decisiones abiertas
 
+- **Subir casos sin gastar**: `pnpm ingest -- --file=X.pdf --skip-enrich` (CLI,
+  solo extracción/reglas, 0 €) y enriquecer después con
+  `pnpm enrich -- --cases=case_XXXXXX` cuando él lo autorice. Por la web la
+  subida SIEMPRE enriquece (≈ 0,012 $/caso).
 - Supabase (identidad SQL + RLS): sin cupo; hoy identidad en
   `data/identity.json` sobre el disco. `supabase/schema.sql` ya está listo.
 - Despliegue en Render preparado (`render.yaml`, bootstrap en

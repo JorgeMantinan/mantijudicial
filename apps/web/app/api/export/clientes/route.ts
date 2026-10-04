@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
-import { getActor } from "@/lib/auth";
+import { canViewCase, defaultOrgId, getActor } from "@/lib/auth";
 import { getClientes, listCases } from "@/lib/dataset";
+import { authorizationGrants } from "@/lib/grants";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function csv(campo: string): string {
   const texto = String(campo ?? "");
-  return /[";\r\n]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto;
+  const seguro = /^[=+\-@\t\r]/.test(texto) ? `'${texto}` : texto;
+  return /[";\r\n]/.test(seguro) ? `"${seguro.replace(/"/g, '""')}"` : seguro;
 }
 
 /** CSV del panel de clientes (agregado por cliente/encargo). */
@@ -15,7 +17,10 @@ export async function GET(): Promise<Response> {
   const actor = await getActor();
   if (!actor) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
-  const [clientes, casos] = await Promise.all([getClientes(), listCases()]);
+  const [clientes, todos] = await Promise.all([getClientes(), listCases()]);
+  const orgId = await defaultOrgId();
+  const grants = await authorizationGrants();
+  const casos = todos.filter((caso) => canViewCase(actor, caso.id, orgId, grants));
   const agrupados = new Map<string, typeof casos>();
   const sinAsignar: typeof casos = [];
   for (const caso of casos) {

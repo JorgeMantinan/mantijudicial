@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { requireActor } from "@/lib/auth";
+import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import { getEvolucion, getTema } from "@/lib/dataset";
+import { authorizationGrants } from "@/lib/grants";
 import { OUTCOME, label } from "@/lib/labels";
 import { OutcomeBadge } from "@/lib/ui";
 
@@ -11,15 +12,23 @@ export default async function CompararTemasPage({
 }: {
   searchParams: Promise<{ a?: string; b?: string }>;
 }) {
-  await requireActor();
+  const actor = await requireActor();
+  const orgId = await defaultOrgId();
+  const grants = await authorizationGrants();
   const sp = await searchParams;
+  const puedeVer = (caseId: string) => canViewCase(actor, caseId, orgId, grants);
 
-  const todos = await getEvolucion();
+  const todos = (await getEvolucion())
+    .map((tema) => ({
+      ...tema,
+      entries: tema.entries.filter((entry) => puedeVer(entry.caseId)),
+    }))
+    .filter((tema) => tema.entries.length > 0);
   const nombres = todos.map((tema) => tema.topic);
   const a = sp.a && nombres.includes(sp.a) ? sp.a : (nombres[0] ?? "");
   const b = sp.b && nombres.includes(sp.b) ? sp.b : (nombres[1] ?? "");
 
-  const [fichaA, fichaB] = await Promise.all([getTema(a), getTema(b)]);
+  const [fichaA, fichaB] = await Promise.all([getTema(a, puedeVer), getTema(b, puedeVer)]);
 
   const filas: Array<{ metrica: string; a: string; b: string }> = [];
   if (fichaA && fichaB) {

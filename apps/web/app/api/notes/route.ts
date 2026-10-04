@@ -94,6 +94,11 @@ export async function DELETE(request: Request): Promise<NextResponse> {
   if (!/^case_\d{6}$/.test(caseId) || !noteId) {
     return NextResponse.json({ error: "Datos no válidos" }, { status: 400 });
   }
+  const orgId = await defaultOrgId();
+  const grants = await loadGrants();
+  if (!can(actor, "VIEW", caseResource(caseId, orgId), grants)) {
+    return NextResponse.json({ error: "No puedes editar este caso" }, { status: 403 });
+  }
 
   try {
     const store = await NoteStore.load(notesPath(caseId));
