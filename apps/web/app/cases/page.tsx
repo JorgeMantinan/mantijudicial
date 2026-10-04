@@ -61,7 +61,7 @@ export default async function CasesPage({
     })
   ).filter((item) => canViewCase(actor, item.id, orgId, grants));
   const clientesMap = await getClientes();
-  const vistas = await getVistas();
+  const vistas = await getVistas(actor.orgId);
   const visibles = cases.filter((item) => {
     if (params.archivados !== "1" && item.archived) return false;
     if (params.cliente && clientesMap[item.id] !== params.cliente) return false;

@@ -18,13 +18,13 @@ export async function POST(request: Request): Promise<NextResponse> {
   const ejemplo = typeof body.ejemplo === "string" ? body.ejemplo.trim() : "";
   if (!ejemplo) return NextResponse.json({ error: "Falta la frase" }, { status: 400 });
 
-  await marcarPatronVisto(ejemplo);
+  await marcarPatronVisto(actor.orgId, ejemplo);
   return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(): Promise<NextResponse> {
   const actor = await getActor();
   if (!actor) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-  await desmarcarPatrones();
+  await desmarcarPatrones(actor.orgId);
   return NextResponse.json({ ok: true });
 }

@@ -377,28 +377,33 @@ export interface BusquedaGuardada {
   at: string;
 }
 
-function busquedasPath(): string {
-  return path.join(repoRoot(), "data", "busquedas.json");
+function busquedasPath(orgId: string): string {
+  const seguro = orgId.replace(/[^\w-]/g, "_").slice(0, 40) || "sin-org";
+  return path.join(repoRoot(), "data", "org", seguro, "busquedas.json");
 }
 
-export async function getBusquedas(): Promise<BusquedaGuardada[]> {
-  const list = await readJson<BusquedaGuardada[]>(busquedasPath());
+/** Búsquedas guardadas del despacho `orgId` (cada despacho tiene las suyas). */
+export async function getBusquedas(orgId: string): Promise<BusquedaGuardada[]> {
+  const list = await readJson<BusquedaGuardada[]>(busquedasPath(orgId));
   return Array.isArray(list) ? list : [];
 }
 
-export async function saveBusqueda(item: BusquedaGuardada): Promise<BusquedaGuardada[]> {
-  const actuales = await getBusquedas();
+export async function saveBusqueda(
+  orgId: string,
+  item: BusquedaGuardada,
+): Promise<BusquedaGuardada[]> {
+  const actuales = await getBusquedas(orgId);
   const sinRepetir = actuales.filter((busqueda) => busqueda.nombre !== item.nombre);
   const siguiente = [item, ...sinRepetir].slice(0, 20);
-  await fs.mkdir(path.dirname(busquedasPath()), { recursive: true });
-  await fs.writeFile(busquedasPath(), `${JSON.stringify(siguiente, null, 2)}\n`, "utf8");
+  await fs.mkdir(path.dirname(busquedasPath(orgId)), { recursive: true });
+  await fs.writeFile(busquedasPath(orgId), `${JSON.stringify(siguiente, null, 2)}\n`, "utf8");
   return siguiente;
 }
 
-export async function deleteBusqueda(nombre: string): Promise<BusquedaGuardada[]> {
-  const actuales = await getBusquedas();
+export async function deleteBusqueda(orgId: string, nombre: string): Promise<BusquedaGuardada[]> {
+  const actuales = await getBusquedas(orgId);
   const siguiente = actuales.filter((busqueda) => busqueda.nombre !== nombre);
-  await fs.writeFile(busquedasPath(), `${JSON.stringify(siguiente, null, 2)}\n`, "utf8");
+  await fs.writeFile(busquedasPath(orgId), `${JSON.stringify(siguiente, null, 2)}\n`, "utf8");
   return siguiente;
 }
 

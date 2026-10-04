@@ -40,7 +40,14 @@ export default async function UsersPage({
       self: row.base.id === actor.userId,
     }));
 
-  const auditoriaBruta = await getAuditoria(300);
+  const usuariosMios = new Set(
+    identity
+      .listUsers()
+      .filter((user) => identity.listMemberships(user.id).some((m) => orgIds.has(m.firmId)))
+      .map((user) => user.id),
+  );
+  // Solo actividad de los usuarios de mis despachos (un despacho no mira al otro).
+  const auditoriaBruta = (await getAuditoria(300)).filter((entrada) => usuariosMios.has(entrada.actor));
   const accionSel = params.accion ?? "";
   const personaSel = params.persona ?? "";
   const auditoria = auditoriaBruta

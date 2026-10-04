@@ -85,7 +85,7 @@ export default async function AlertasPage({
     (grupo) => grupo.homogenea >= 90 && grupo.total <= 4,
   );
 
-  const vistos = new Set(await getPatronesVistos());
+  const vistos = new Set(await getPatronesVistos(actor.orgId));
   const ocultos = emergentes.filter((grupo) => vistos.has(grupo.ejemplo)).length;
   const visiblesEmergentes = emergentes.filter((grupo) => !vistos.has(grupo.ejemplo));
 
@@ -98,7 +98,7 @@ export default async function AlertasPage({
   );
   const busquedasMatch: Array<{ nombre: string; q: string; casos: string[] }> = [];
   if (nuevosIds.size > 0) {
-    for (const busqueda of (await getBusquedas()).slice(0, 8)) {
+    for (const busqueda of (await getBusquedas(actor.orgId)).slice(0, 8)) {
       const resultado = await runSearch(busqueda.q, {
         limit: 15,
         kinds: busqueda.kind ? [busqueda.kind] : undefined,

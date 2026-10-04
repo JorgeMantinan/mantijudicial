@@ -24,7 +24,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   for (const [clave, valor] of Object.entries(qs as Record<string, unknown>)) {
     if (typeof valor === "string" && valor) limpia[clave] = valor.slice(0, 120);
   }
-  const vistas = await saveVista({ nombre, qs: limpia });
+  const vistas = await saveVista(actor.orgId, { nombre, qs: limpia });
   return NextResponse.json({ ok: true, vistas });
 }
 
@@ -40,6 +40,6 @@ export async function DELETE(request: Request): Promise<NextResponse> {
   }
   const nombre = typeof body.nombre === "string" ? body.nombre : "";
   if (!nombre) return NextResponse.json({ error: "Falta el nombre" }, { status: 400 });
-  const vistas = await deleteVista(nombre);
+  const vistas = await deleteVista(actor.orgId, nombre);
   return NextResponse.json({ ok: true, vistas });
 }

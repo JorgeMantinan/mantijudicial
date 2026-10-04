@@ -6,7 +6,7 @@ import { appendAudit } from "@pipeline/audit";
 import { canCreateCase } from "@pipeline/authorization";
 import { jobs } from "@/lib/jobs";
 import { canViewCase, defaultOrgId, getActor } from "@/lib/auth";
-import { repoRoot } from "@/lib/dataset";
+import { repoRoot, setOrgDelCaso } from "@/lib/dataset";
 import { auditPath, authorizationGrants } from "@/lib/grants";
 
 export const runtime = "nodejs";
@@ -93,6 +93,8 @@ export async function POST(request: Request): Promise<NextResponse> {
         const result = await runIngest(job.id, uploadPath, source);
         if (result.caseId) {
           jobs.patch(job.id, { caseId: result.caseId });
+          // El caso queda como propiedad del despacho que lo subió.
+          await setOrgDelCaso(result.caseId, actor.orgId);
           await appendAudit(auditPath(), {
             actor: actor.userId,
             action: "case.ingest",

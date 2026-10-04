@@ -55,7 +55,7 @@ export default async function SearchPage({
   let docs = 0;
   let masPaginas = false;
   const exactos = query.length >= 4 ? await findByIdentifier(query) : [];
-  const busquedas = await getBusquedas();
+  const busquedas = await getBusquedas(actor.orgId);
   if (query.length > 0) {
     const filters: Record<string, string> = {};
     if (params.branch) filters.branch = params.branch;

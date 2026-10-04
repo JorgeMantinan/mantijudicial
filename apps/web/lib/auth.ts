@@ -1,4 +1,5 @@
 import path from "node:path";
+import { readFileSync } from "node:fs";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { can, type Actor, type Grant, type Resource } from "@pipeline/authorization";
@@ -51,14 +52,36 @@ export function caseResource(caseId: string, orgId: string | null): Resource {
   };
 }
 
+/**
+ * Dueño real del caso (data/casos_org.json, escrito al subirlo). Síncrono a
+ * propósito: `canViewCase` se usa decenas de veces por render. Si el caso no
+ * está registrado (corpus antiguo), devuelve null y se usa el org heredado.
+ */
+let casosOrgCache: { at: number; data: Record<string, string> } | null = null;
+function orgDelCasoSync(caseId: string): string | null {
+  try {
+    if (!casosOrgCache || Date.now() - casosOrgCache.at > 5_000) {
+      const ruta = path.join(repoRoot(), "data", "casos_org.json");
+      casosOrgCache = { at: Date.now(), data: JSON.parse(readFileSync(ruta, "utf8")) };
+    }
+    return casosOrgCache.data[caseId] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function canViewCase(
   actor: Actor,
   caseId: string,
   orgId: string | null,
   grants: Grant[] = [],
 ): boolean {
-  if (!orgId || !caseId.startsWith("case_")) return false;
-  return can(actor, "VIEW", caseResource(caseId, orgId), grants);
+  if (!caseId.startsWith("case_")) return false;
+  // El dueño es el despacho que subió el caso; nunca el "primer despacho"
+  // por defecto. Sin registro, se respeta el org heredado (corpus antiguo).
+  const dueno = orgDelCasoSync(caseId) ?? orgId;
+  if (!dueno) return false;
+  return can(actor, "VIEW", caseResource(caseId, dueno), grants);
 }
 
 export function assertCanViewCase(actor: Actor, caseId: string, orgId: string | null): void {

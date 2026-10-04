@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export async function GET(): Promise<NextResponse> {
   const actor = await getActor();
   if (!actor) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-  return NextResponse.json({ busquedas: await getBusquedas() });
+  return NextResponse.json({ busquedas: await getBusquedas(actor.orgId) });
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
@@ -28,7 +28,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Falta el nombre o la consulta" }, { status: 400 });
   }
 
-  const busquedas = await saveBusqueda({
+  const busquedas = await saveBusqueda(actor.orgId, {
     nombre,
     q,
     kind: typeof body.kind === "string" && body.kind ? body.kind : undefined,
@@ -52,6 +52,6 @@ export async function DELETE(request: Request): Promise<NextResponse> {
   const nombre = typeof body.nombre === "string" ? body.nombre : "";
   if (!nombre) return NextResponse.json({ error: "Falta el nombre" }, { status: 400 });
 
-  const busquedas = await deleteBusqueda(nombre);
+  const busquedas = await deleteBusqueda(actor.orgId, nombre);
   return NextResponse.json({ ok: true, busquedas });
 }

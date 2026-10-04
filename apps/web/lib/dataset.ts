@@ -1498,26 +1498,53 @@ export function filtrarFrasesDelTema(
     .slice(0, limite);
 }
 
-function patronesVistosPath(): string {
-  return path.join(repoRoot(), "data", "patrones_vistos.json");
+function orgFile(orgId: string, nombre: string): string {
+  const seguro = orgId.replace(/[^\w-]/g, "_").slice(0, 40) || "sin-org";
+  return path.join(repoRoot(), "data", "org", seguro, nombre);
 }
 
-/** Patrones emergentes que ya has revisado (no vuelven a salir en alertas). */
-export async function getPatronesVistos(): Promise<string[]> {
-  const list = await readJson<string[]>(patronesVistosPath());
+function patronesVistosPath(orgId: string): string {
+  return orgFile(orgId, "patrones_vistos.json");
+}
+
+/** Patrones emergentes que ya ha revisado este despacho. */
+export async function getPatronesVistos(orgId: string): Promise<string[]> {
+  const list = await readJson<string[]>(patronesVistosPath(orgId));
   return Array.isArray(list) ? list : [];
 }
 
-export async function marcarPatronVisto(ejemplo: string): Promise<void> {
-  const actuales = await getPatronesVistos();
+export async function marcarPatronVisto(orgId: string, ejemplo: string): Promise<void> {
+  const actuales = await getPatronesVistos(orgId);
   if (actuales.includes(ejemplo)) return;
-  const siguiente = [...actuales, ejemplo].slice(-200);
-  await fs.mkdir(path.dirname(patronesVistosPath()), { recursive: true });
-  await fs.writeFile(patronesVistosPath(), `${JSON.stringify(siguiente, null, 2)}\n`, "utf8");
+  const siguiente = [...actuales, ejemplo.slice(0, 300)].slice(-200);
+  await fs.mkdir(path.dirname(patronesVistosPath(orgId)), { recursive: true });
+  await fs.writeFile(patronesVistosPath(orgId), `${JSON.stringify(siguiente, null, 2)}\n`, "utf8");
 }
 
-export async function desmarcarPatrones(): Promise<void> {
-  await fs.writeFile(patronesVistosPath(), "[]\n", "utf8");
+export async function desmarcarPatrones(orgId: string): Promise<void> {
+  await fs.writeFile(patronesVistosPath(orgId), "[]\n", "utf8");
+}
+
+function casosOrgPath(): string {
+  return path.join(repoRoot(), "data", "casos_org.json");
+}
+
+/**
+ * Despacho propietario del caso (quien lo subió). Un despacho no tiene
+ * derechos sobre los de otro: cada caso queda con la firma de quien lo subió
+ * y los demás solo entran por concesión expresa (share grants).
+ */
+export async function getOrgDelCaso(caseId: string): Promise<string | null> {
+  const data = await readJson<Record<string, string>>(casosOrgPath());
+  return data?.[caseId] ?? null;
+}
+
+export async function setOrgDelCaso(caseId: string, orgId: string): Promise<void> {
+  const data = (await readJson<Record<string, string>>(casosOrgPath())) ?? {};
+  if (data[caseId] === orgId) return;
+  data[caseId] = orgId;
+  await fs.mkdir(path.dirname(casosOrgPath()), { recursive: true });
+  await fs.writeFile(casosOrgPath(), `${JSON.stringify(data, null, 2)}\n`, "utf8");
 }
 
 function clientesPath(): string {
@@ -1543,26 +1570,26 @@ export interface VistaGuardada {
   qs: Record<string, string>;
 }
 
-function vistasPath(): string {
-  return path.join(repoRoot(), "data", "vistas_guardadas.json");
+function vistasPath(orgId: string): string {
+  return orgFile(orgId, "vistas_guardadas.json");
 }
 
-export async function getVistas(): Promise<VistaGuardada[]> {
-  const list = await readJson<VistaGuardada[]>(vistasPath());
+export async function getVistas(orgId: string): Promise<VistaGuardada[]> {
+  const list = await readJson<VistaGuardada[]>(vistasPath(orgId));
   return Array.isArray(list) ? list : [];
 }
 
-export async function saveVista(vista: VistaGuardada): Promise<VistaGuardada[]> {
-  const actuales = await getVistas();
+export async function saveVista(orgId: string, vista: VistaGuardada): Promise<VistaGuardada[]> {
+  const actuales = await getVistas(orgId);
   const siguiente = [vista, ...actuales.filter((item) => item.nombre !== vista.nombre)].slice(0, 20);
-  await fs.mkdir(path.dirname(vistasPath()), { recursive: true });
-  await fs.writeFile(vistasPath(), `${JSON.stringify(siguiente, null, 2)}\n`, "utf8");
+  await fs.mkdir(path.dirname(vistasPath(orgId)), { recursive: true });
+  await fs.writeFile(vistasPath(orgId), `${JSON.stringify(siguiente, null, 2)}\n`, "utf8");
   return siguiente;
 }
 
-export async function deleteVista(nombre: string): Promise<VistaGuardada[]> {
-  const siguiente = (await getVistas()).filter((item) => item.nombre !== nombre);
-  await fs.writeFile(vistasPath(), `${JSON.stringify(siguiente, null, 2)}\n`, "utf8");
+export async function deleteVista(orgId: string, nombre: string): Promise<VistaGuardada[]> {
+  const siguiente = (await getVistas(orgId)).filter((item) => item.nombre !== nombre);
+  await fs.writeFile(vistasPath(orgId), `${JSON.stringify(siguiente, null, 2)}\n`, "utf8");
   return siguiente;
 }
 
