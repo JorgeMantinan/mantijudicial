@@ -58,8 +58,6 @@ export async function GET(): Promise<Response> {
       ["calidad", "sin_enriquecer", String(calidad.sinEnriquecer.length)],
       ["calidad", "sin_revisar", String(calidad.sinRevisar.length)],
       ["sistema", "version", sistema.version],
-      ["sistema", "commit", sistema.git ?? ""],
-      ["sistema", "node", sistema.node],
       ["sistema", "casos", String(sistema.casos)],
       ["sistema", "normas", String(sistema.normas)],
       ["sistema", "bytes_cases", String(sistema.bytesCases)],

@@ -1,7 +1,8 @@
-import { requireActor } from "@/lib/auth";
+import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import Link from "next/link";
 import { PrintButton } from "@/components/print-button";
 import { getCalidadCorpus, getCostesIA, getEvalReport, getSistemaInfo } from "@/lib/dataset";
+import { authorizationGrants } from "@/lib/grants";
 import { ultimasMediciones } from "@/lib/timings";
 import { LAW_STATUS, QUOTE, label } from "@/lib/labels";
 
@@ -18,10 +19,20 @@ function asDict(value: unknown): Dict {
 }
 
 export default async function EvalPage() {
-  await requireActor();
+  const actor = await requireActor();
+  const orgId = await defaultOrgId();
+  const grants = await authorizationGrants();
+  const ve = (id: string) => canViewCase(actor, id.split("#")[0], orgId, grants);
   const report = await getEvalReport();
   const costes = await getCostesIA();
-  const calidad = await getCalidadCorpus();
+  const calidadBruta = await getCalidadCorpus();
+  const calidad = {
+    ...calidadBruta,
+    escaneados: calidadBruta.escaneados.filter(ve),
+    stale: calidadBruta.stale.filter(ve),
+    sinEnriquecer: calidadBruta.sinEnriquecer.filter(ve),
+    sinRevisar: calidadBruta.sinRevisar.filter(ve),
+  };
   const sistema = await getSistemaInfo();
   const mediciones = ultimasMediciones();
   if (!report) {
@@ -45,9 +56,15 @@ export default async function EvalPage() {
   const pdf = asDict(citations.pdf_cross_check);
   const golden = asDict(report.golden);
 
-  const crossDetails = (cross.details as Array<Dict>) ?? [];
-  const missing = (pdf.missing_in_pdf as Array<Dict>) ?? [];
-  const failures = (golden.failures as Array<Dict>) ?? [];
+  const crossDetails = ((cross.details as Array<Dict>) ?? []).filter((item) =>
+    ve(String(item.caseId)),
+  );
+  const missing = ((pdf.missing_in_pdf as Array<Dict>) ?? []).filter((item) =>
+    ve(String(item.caseId)),
+  );
+  const failures = ((golden.failures as Array<Dict>) ?? []).filter((item) =>
+    ve(String(item.caseId)),
+  );
   const byField = asDict(golden.by_field);
   const byStatus = asDict(citations.by_status);
   const byQuote = asDict(citations.by_quote_check);
@@ -263,14 +280,6 @@ export default async function EvalPage() {
             <tr>
               <td className="small">Versión de la app</td>
               <td className="mono small">{sistema.version}</td>
-            </tr>
-            <tr>
-              <td className="small">Commit</td>
-              <td className="mono small">{sistema.git ?? "—"}</td>
-            </tr>
-            <tr>
-              <td className="small">Node</td>
-              <td className="mono small">{sistema.node}</td>
             </tr>
             <tr>
               <td className="small">Corpus</td>

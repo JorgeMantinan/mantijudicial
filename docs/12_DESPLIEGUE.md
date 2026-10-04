@@ -26,8 +26,10 @@ Supabase queda pendiente hasta que tengas cupo: la identidad corre hoy en
    `/var/data/mantijudicial` y health check en `/login`.
 4. En **Environment** pega la clave de IA: `AI_API_KEY` → tipo **Secret**.
 5. Espera al build (2-4 min). La primera vez baja el corpus desde la rama `data`.
-6. Abre la URL (`https://mantijudicial-xxxx.onrender.com`) y entra con
-   `admin@local.test` / `mantijudicial`.
+6. Abre la URL (`https://mantijudicial-xxxx.onrender.com`) y entra con las
+   credenciales creadas por `pnpm seed` (**no las publiques**: si este doc las
+   contuviera, rotarlas con `pnpm seed -- --reset-password=…` antes de dar
+   acceso a nadie).
 
 Comprobación: `/cases` debe listar 80 casos y `/search?q=clausula suelo` dar hits.
 

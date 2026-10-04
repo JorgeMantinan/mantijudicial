@@ -5,9 +5,9 @@ import { NextResponse } from "next/server";
 import { appendAudit } from "@pipeline/audit";
 import { canCreateCase } from "@pipeline/authorization";
 import { jobs } from "@/lib/jobs";
-import { getActor } from "@/lib/auth";
+import { canViewCase, defaultOrgId, getActor } from "@/lib/auth";
 import { repoRoot } from "@/lib/dataset";
-import { auditPath } from "@/lib/grants";
+import { auditPath, authorizationGrants } from "@/lib/grants";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -123,8 +123,13 @@ export async function POST(request: Request): Promise<NextResponse> {
 export async function GET(): Promise<NextResponse> {
   const actor = await getActor();
   if (!actor) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  const orgId = await defaultOrgId();
+  const grants = await authorizationGrants();
+  const visibles = jobs
+    .list()
+    .filter((job) => !job.caseId || canViewCase(actor, job.caseId, orgId, grants));
   return NextResponse.json({
-    jobs: jobs.list().map((job) => ({
+    jobs: visibles.map((job) => ({
       id: job.id,
       status: job.status,
       caseId: job.caseId ?? null,
