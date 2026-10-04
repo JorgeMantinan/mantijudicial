@@ -37,7 +37,12 @@ export function repoRoot(): string {
 export async function readJson<T>(filePath: string): Promise<T | null> {
   try {
     return JSON.parse(await fs.readFile(filePath, "utf8")) as T;
-  } catch {
+  } catch (error) {
+    // ENOENT es normal (el fichero aún no existe); el resto (JSON roto,
+    // permisos…) se avisa para no perder silenciosamente información.
+    if ((error as NodeJS.ErrnoException)?.code !== "ENOENT") {
+      console.warn(`[dataset] No se pudo leer ${filePath}: ${String(error)}`);
+    }
     return null;
   }
 }
@@ -900,7 +905,25 @@ interface RefLite {
   articles?: Array<{ number?: number; titulo?: string | null }>;
 }
 
+// La clave incluye los caseIds visibles: así dos despachos no comparten caché
+// (y si alternan, simplemente se recalcula).
+let lawUsageCache: { clave: string; at: number; value: LawUsage } | null = null;
+
 export async function getLawUsage(caseIds: string[]): Promise<LawUsage> {
+  const clave = caseIds.join(",");
+  if (
+    lawUsageCache &&
+    lawUsageCache.clave === clave &&
+    Date.now() - lawUsageCache.at < 120_000
+  ) {
+    return lawUsageCache.value;
+  }
+  const value = await getLawUsageInterno(caseIds);
+  lawUsageCache = { clave, at: Date.now(), value };
+  return value;
+}
+
+async function getLawUsageInterno(caseIds: string[]): Promise<LawUsage> {
   const norms = new Map<string, { titulo: string; citations: number; cases: Set<string> }>();
   const articles = new Map<
     string,

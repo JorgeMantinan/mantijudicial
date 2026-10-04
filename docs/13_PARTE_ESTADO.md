@@ -126,4 +126,50 @@ más útil, por este orden (y siempre avisando antes del coste estimado):
   imprimible con botón; `AGENTS.md` al día.
 
 Verificación de esta etapa: `pnpm typecheck` (pipeline) + `tsc` de `apps/web` +
-245 tests + `next build` + `scripts/smoke.ps1` (33 comprobaciones).
+250 tests + `next build` + `scripts/smoke.ps1` (33 comprobaciones).
+
+## Auditoría de ciberseguridad y calidad (2026-09-30/10-01)
+
+Hecha con dos revisores en paralelo (seguridad y rendimiento/código) y
+aplicada por tandas. Commits: `0f87ebb`, `2f95a16`, `d6b05fe`, `7136ffb`,
+`e87bfa6`, `6c5d960`.
+
+**Corregido (seguridad):**
+- Rate limiting en login (5/15 min por IP+correo) y MFA (10/15 min); el 429
+  solo corta si el intento falla → quien tiene la clave correcta nunca queda
+  bloqueado.
+- `/api/users`: `firmId` restringido a tus despachos (antes un admin podía
+  crear usuarios en otro despacho) y listados filtrados.
+- IDOR: `/api/archivar`, `/api/clientes` y `DELETE /api/notes` exigen permiso
+  sobre el caso.
+- Cross-tenant: `/temas/comparar`, `/clientes` (+CSV), `/eval` (+CSV),
+  `/api/jobs` y `GET /api/ingest` filtran con `canViewCase`; `/users` solo
+  muestra la auditoría de tus despachos; cabecera de revisión solo con actor
+  real.
+- CSV: neutralización de fórmulas (`=`, `+`, `-`, `@`) en las 8 exportaciones.
+- Cabeceras: X-Frame-Options DENY, nosniff, Referrer-Policy, Permissions-
+  Policy, HSTS (CSP pendiente: requiere nonces por los scripts inline de Next).
+- `docs/12` sin credenciales de demo (rotar al desplegar).
+
+**Propiedad de despacho (tu regla):**
+- `data/casos_org.json`: cada caso guarda la firma que lo subió;
+  `canViewCase` resuelve el dueño real (síncrono, caché 5 s). Sin registro,
+  comportamiento heredado (corpus antiguo = primer despacho).
+- Estados por despacho en `data/org/<firmId>/`: busquedas, vistas guardadas y
+  patrones vistos (probado: admin y carlos no se pisan).
+
+**Rendimiento:** caché en `getLaw` (evita reparsear 3,5-6,5 MB por
+referencia) y en `computePatterns` (evita 640 lecturas/render).
+
+**Limpieza:** `CompareReport` importado de `@pipeline/compare`; miga de pan
+real de `/laws` (antes O(n²) y nunca visible).
+
+**Pendientes de la auditoría (no urgentes):**
+1. Centralizar `csv()` (hoy copiado en 8 rutas).
+2. Avisos en `readJson` (JSON corrupto se pierde en silencio hoy).
+3. Cadena de hash en `audit.log` (integridad) y verificación visible.
+4. Caché de `getLawUsage` y de `getInforme` (ojo: sin mezclar visibilidad).
+5. Limpieza fina: `fechaEs`/`cortar` únicos, `PAPELES` → `labels.ts`.
+
+**Fuera de alcance decidido:** CSP estricta (pendiente de nonces), Supabase y
+Render (hasta su aviso), embeddings (proveedor no los da).
