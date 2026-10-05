@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getActor } from "@/lib/auth";
 import { getCalidadCorpus, getCostesIA, getEvalReport, getSistemaInfo } from "@/lib/dataset";
-import { csv } from "@/lib/csv";
+import { csv , csvResponse } from "@/lib/csv";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -62,10 +62,5 @@ export async function GET(): Promise<Response> {
     ].map((fila) => fila.map(csv).join(";")),
   );
 
-  return new Response(`\uFEFF${filasOut.join("\r\n")}\r\n`, {
-    headers: {
-      "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename="eval.csv"`,
-    },
-  });
+  return csvResponse(`eval.csv`, filasOut);
 }

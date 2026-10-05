@@ -1,3 +1,4 @@
+import { csvResponse } from "@/lib/csv";
 import { NextResponse } from "next/server";
 import { canViewCase, defaultOrgId, getActor } from "@/lib/auth";
 import { getTema } from "@/lib/dataset";
@@ -38,10 +39,5 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   const nombre = topic.replace(/[^\wÁÉÍÓÚÑáéíóúñ -]/g, "").trim().replace(/\s+/g, "-").slice(0, 40);
-  return new Response(`\uFEFF${filas.join("\r\n")}\r\n`, {
-    headers: {
-      "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename="tema_${nombre || "sin_nombre"}.csv"`,
-    },
-  });
+  return csvResponse(`tema_${nombre || "sin_nombre"}.csv`, filas);
 }

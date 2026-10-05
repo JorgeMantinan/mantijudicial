@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { canViewCase, defaultOrgId, getActor } from "@/lib/auth";
 import { getClientes, listCases } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
-import { csv } from "@/lib/csv";
+import { csv , csvResponse } from "@/lib/csv";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,10 +52,5 @@ export async function GET(): Promise<Response> {
   }
   if (sinAsignar.length > 0) fila("(sin asignar)", sinAsignar);
 
-  return new Response(`\uFEFF${filas.join("\r\n")}\r\n`, {
-    headers: {
-      "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename="clientes.csv"`,
-    },
-  });
+  return csvResponse(`clientes.csv`, filas);
 }

@@ -1,3 +1,4 @@
+import { csv, csvResponse } from "@/lib/csv";
 import { NextResponse } from "next/server";
 import { canViewCase, defaultOrgId, getActor } from "@/lib/auth";
 import { filtrarFrasesDelTema, getGruposFrases, getTema } from "@/lib/dataset";
@@ -6,12 +7,6 @@ import { OUTCOME, label } from "@/lib/labels";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-function csv(campo: string): string {
-  const texto = String(campo ?? "");
-  const seguro = /^[=+\-@\t\r]/.test(texto) ? `'${texto}` : texto;
-  return /[";\r\n]/.test(seguro) ? `"${seguro.replace(/"/g, '""')}"` : seguro;
-}
 
 /** CSV de la comparación de dos temas (mismas métricas que la pantalla). */
 export async function GET(request: Request): Promise<Response> {
@@ -66,10 +61,5 @@ export async function GET(request: Request): Promise<Response> {
     }
   }
 
-  return new Response(`\uFEFF${filas.join("\r\n")}\r\n`, {
-    headers: {
-      "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename="comparar_temas.csv"`,
-    },
-  });
+  return csvResponse(`comparar_temas.csv`, filas);
 }
