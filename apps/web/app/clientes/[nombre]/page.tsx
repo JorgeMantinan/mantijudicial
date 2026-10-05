@@ -12,6 +12,7 @@ import {
 import { authorizationGrants } from "@/lib/grants";
 import { OUTCOME, REVIEW, label } from "@/lib/labels";
 import { OutcomeBadge } from "@/lib/ui";
+import { cortar } from "@/lib/texto";
 
 export const dynamic = "force-dynamic";
 
@@ -131,7 +132,7 @@ export default async function ClientePage({ params }: { params: Promise<{ nombre
             {frases.map((grupo) => (
               <li key={grupo.ejemplo} style={{ marginBottom: 6 }}>
                 <Link href={`/patrones/frase?e=${encodeURIComponent(grupo.ejemplo)}`}>
-                  «{grupo.ejemplo.length > 110 ? `${grupo.ejemplo.slice(0, 110)}…` : grupo.ejemplo}»
+                  «{cortar(grupo.ejemplo, 110)}»
                 </Link>{" "}
                 <span className={`badge ${grupo.homogenea >= 90 ? "ok" : "warn"}`}>
                   {grupo.homogenea}% igual

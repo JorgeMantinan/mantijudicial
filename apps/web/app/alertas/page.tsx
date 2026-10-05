@@ -7,6 +7,7 @@ import { MarcarVistoButton, RestaurarPatronesButton } from "@/components/patron-
 import { ResolvedorDuplicado } from "@/components/resolvedor-duplicado";
 import { jobs } from "@/lib/jobs";
 import { SortTh } from "@/lib/sort-th";
+import { cortar } from "@/lib/texto";
 
 export const dynamic = "force-dynamic";
 
@@ -214,7 +215,7 @@ export default async function AlertasPage({
                     {alerta.casos.slice(0, 3).map((caso, index) => (
                       <div key={caso.caseId}>
                         <Link href={`/cases/${caso.caseId}`}>
-                          {caso.headline.length > 60 ? `${caso.headline.slice(0, 60)}…` : caso.headline}
+                          {cortar(caso.headline, 60)}
                         </Link>
                         {caso.fecha_sentencia ? ` · ${caso.fecha_sentencia}` : ""}
                       </div>
@@ -354,7 +355,7 @@ export default async function AlertasPage({
             <ul className="small">
               {visiblesEmergentes.map((grupo) => (
                 <li key={grupo.ejemplo} style={{ marginBottom: 6 }}>
-                  «{grupo.ejemplo.length > 110 ? `${grupo.ejemplo.slice(0, 110)}…` : grupo.ejemplo}»{" "}
+                  «{cortar(grupo.ejemplo, 110)}»{" "}
                   <span className="badge ok">{grupo.homogenea}% igual</span>{" "}
                   <span className="badge">{grupo.total} casos</span>{" "}
                   {grupo.casos.map((caso) => (
@@ -420,7 +421,7 @@ export default async function AlertasPage({
             {frios.slice(0, 10).map((item) => (
               <li key={item.id} style={{ marginBottom: 4 }}>
                 <Link href={`/cases/${item.id}`}>
-                  {item.headline.length > 80 ? `${item.headline.slice(0, 80)}…` : item.headline}
+                  {cortar(item.headline, 80)}
                 </Link>{" "}
                 <span className="badge warn">{diasSinTocar(item)} d</span>
               </li>

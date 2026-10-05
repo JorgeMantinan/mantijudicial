@@ -6,6 +6,7 @@ import { BLOCK_TIPO, label } from "@/lib/labels";
 import { CopyButton } from "@/components/copy-button";
 import { PrintButton } from "@/components/print-button";
 import { BlockIndex } from "./block-index";
+import { fechaEs } from "@/lib/texto";
 
 export const dynamic = "force-dynamic";
 
@@ -39,11 +40,6 @@ function withPaths(blocks: LawBlock[]): Row[] {
     }
     return { ...block, path: stack.map((item) => item.titulo) };
   });
-}
-
-function fechaEs(yyyymmdd: string): string {
-  if (!/^\d{8}$/.test(yyyymmdd)) return yyyymmdd || "—";
-  return `${yyyymmdd.slice(6, 8)}/${yyyymmdd.slice(4, 6)}/${yyyymmdd.slice(0, 4)}`;
 }
 
 export default async function LawDetailPage({

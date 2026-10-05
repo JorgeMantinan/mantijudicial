@@ -6,6 +6,7 @@ import { filtrarFrasesDelTema, getGruposFrases, getInforme, getVigenciaAlerts, l
 import { authorizationGrants } from "@/lib/grants";
 import { BRANCH, OUTCOME, label } from "@/lib/labels";
 import { SortTh } from "@/lib/sort-th";
+import { cortar } from "@/lib/texto";
 import { OutcomeBadge } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
@@ -515,7 +516,7 @@ export default async function InformesPage({
             <tbody>
               {matrizFrases.map((fila) => (
                 <tr key={fila.frase}>
-                  <td className="small">«{fila.frase.slice(0, 90)}{fila.frase.length > 90 ? "…" : ""}»</td>
+                  <td className="small">«{cortar(fila.frase, 90)}»</td>
                   {informe.periodos.map((periodo) => {
                     const celda = fila.celdas[periodo];
                     return (

@@ -39,6 +39,7 @@ import { NotesPanel } from "./notes-panel";
 import { ReanalyzeButton } from "./reanalyze-button";
 import { ComparePanel } from "./compare-panel";
 import { SharePanel, type ShareGrantView } from "./share-panel";
+import { cortar, fechaEs } from "@/lib/texto";
 
 export const dynamic = "force-dynamic";
 
@@ -95,11 +96,6 @@ type Ref = {
   articles?: Array<{ number?: number; block_id?: string | null; titulo?: string | null; status?: string }>;
 };
 type Decision = { instance?: string; court?: string; date?: string; result?: string; description?: string };
-
-function fechaEs(yyyymmdd: string | null | undefined): string {
-  if (!yyyymmdd || !/^\d{8}$/.test(yyyymmdd)) return yyyymmdd || "—";
-  return `${yyyymmdd.slice(6, 8)}/${yyyymmdd.slice(4, 6)}/${yyyymmdd.slice(0, 4)}`;
-}
 
 export default async function CaseDetailPage({
   params,
@@ -323,7 +319,7 @@ export default async function CaseDetailPage({
                 {recomendaciones.frases.slice(0, 3).map((grupo) => (
                   <li key={grupo.ejemplo} style={{ marginBottom: 4 }}>
                     <Link href={`/patrones/frase?e=${encodeURIComponent(grupo.ejemplo)}`}>
-                      {grupo.ejemplo.length > 140 ? `${grupo.ejemplo.slice(0, 140)}…` : grupo.ejemplo}
+                      {cortar(grupo.ejemplo, 140)}
                     </Link>{" "}
                     <span className={`badge ${grupo.homogenea >= 90 ? "ok" : "warn"}`}>
                       {grupo.homogenea}% igual

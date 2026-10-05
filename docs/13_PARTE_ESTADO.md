@@ -171,8 +171,9 @@ real de `/laws` (antes O(n²) y nunca visible).
    entrada y badge "integridad OK (N)" en `/users`.
 4. ~~Caché de `getInforme`~~ ✅ hecho: lecturas crudas con `memoClave`
    (60 s); /informes pasó de 1136 ms a 74 ms.
-5. Limpieza fina: `fechaEs`/`cortar` únicos — pendiente (`PAPELES` ya está en
-   `labels.ts`).
+5. ~~Limpieza fina~~ ✅ hecho: `fechaEs`/`cortar` únicos en
+   `lib/texto.ts` (migrados 3 + 5 usos con script) y `PAPELES` en
+   `labels.ts`.
 
 **Fuera de alcance decidido:** CSP estricta (pendiente de nonces), Supabase y
 Render (hasta su aviso), embeddings (proveedor no los da).

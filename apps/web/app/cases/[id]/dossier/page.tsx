@@ -5,6 +5,7 @@ import { Sumario } from "@/components/sumario";
 import { canViewCase, defaultOrgId, loadIdentity, requireActor } from "@/lib/auth";
 import { getCase, getEscrito, getVias, getVigenciaChecks, listLaws } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
+import { fechaEs } from "@/lib/texto";
 import {
   ARG_OUTCOME,
   BRANCH,
@@ -16,11 +17,6 @@ import {
   SIDE,
   label,
 } from "@/lib/labels";
-
-function fechaEs(yyyymmdd: string | null | undefined): string {
-  if (!/^\d{8}$/.test(yyyymmdd ?? "")) return yyyymmdd || "—";
-  return `${yyyymmdd!.slice(6, 8)}/${yyyymmdd!.slice(4, 6)}/${yyyymmdd!.slice(0, 4)}`;
-}
 
 export const dynamic = "force-dynamic";
 
