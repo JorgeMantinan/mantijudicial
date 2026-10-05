@@ -240,10 +240,10 @@ export default async function SearchPage({
             <div className="title">
               {hit.kind === "article" ? (
                 <Link href={`/laws/${hit.meta.boe_id}?block=${encodeURIComponent(hit.id.split("#")[1] ?? "")}`}>
-                  {hit.title}
+                  {resaltar(hit.title, hit.matchedTerms)}
                 </Link>
               ) : (
-                <Link href={`/cases/${hit.id.split("#")[0]}`}>{hit.title}</Link>
+                <Link href={`/cases/${hit.id.split("#")[0]}`}>{resaltar(hit.title, hit.matchedTerms)}</Link>
               )}
               {hit.kind !== "article" && recientes.has(hit.id.split("#")[0]) && (
                 <span className="badge ok" style={{ marginLeft: 6 }}>

@@ -3,6 +3,7 @@ import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import { getClientes, listCases } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { OUTCOME, label } from "@/lib/labels";
+import { PrintButton } from "@/components/print-button";
 import { SortTh } from "@/lib/sort-th";
 
 export const dynamic = "force-dynamic";
@@ -60,7 +61,13 @@ export default async function ClientesPage({
   const base = { q: sp.q };
 
   return (
-    <>
+    <article className="print-sheet">
+      <p className="small muted no-print">
+        <Link href="/">← Resumen</Link> · <a href="/api/export/clientes">descargar CSV</a> ·{" "}
+        <Link href="/clientes/comparar">comparar dos clientes</Link>
+      </p>
+      <PrintButton text="Imprimir el panel de clientes" />
+
       <h1>Clientes y encargos</h1>
       <p className="lead">
         Los casos agrupados por el cliente/encargo que has asignado en cada ficha. Para cambiarlo,
@@ -68,7 +75,7 @@ export default async function ClientesPage({
         <a href="/api/export/clientes">descargar CSV</a>
       </p>
 
-      <form className="filters" action="/clientes" method="get">
+        <form className="filters no-print" action="/clientes" method="get">
         <input name="q" defaultValue={sp.q ?? ""} placeholder="Filtrar por nombre de cliente" />
         <button type="submit">Filtrar</button>
         {q && (
@@ -141,6 +148,6 @@ export default async function ClientesPage({
           <Link href="/cases">Ver la lista →</Link>
         </p>
       </div>
-    </>
+    </article>
   );
 }
