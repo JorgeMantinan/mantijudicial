@@ -284,3 +284,232 @@ export async function getEvolucion(): Promise<EvolucionTema[]> {
   evolucionCache = { value, at: Date.now() };
   return value;
 }
+
+/** Tipos estructurales de las secciones de un caso (JSON de structured/).
+ * Todos los campos opcionales: el JSON puede venir incompleto. */
+export type Party = {
+  party_id?: string;
+  name?: string;
+  side?: string;
+  kind?: string;
+  representation?: string;
+  is_consumer?: string;
+  notes?: string;
+};
+export type Claim = {
+  claim_id?: string;
+  claimant?: string;
+  side?: string;
+  description?: string;
+  outcome?: string;
+  outcome_scope?: string;
+};
+export type Fact = {
+  fact_id?: string;
+  description?: string;
+  fact_type?: string;
+  status?: string;
+  importance?: number;
+};
+export type Event = { event_id?: string; date?: string; description?: string; event_type?: string };
+export type Argument = {
+  argument_id?: string;
+  side?: string;
+  type?: string;
+  description?: string;
+  legal_basis?: string;
+  outcome?: string;
+  importance?: number;
+};
+export type Holding = {
+  holding_id?: string;
+  statement?: string;
+  topic?: string;
+  legal_basis?: string;
+  doctrine?: string;
+  importance?: number;
+  is_literal_quote?: boolean;
+};
+export type Issue = { issue_id?: string; topic?: string; description?: string; importance?: number };
+export type Citation = {
+  citation_id?: string;
+  raw_text?: string;
+  norma?: string;
+  article?: string;
+  relevance?: string;
+};
+export type Ref = {
+  norma?: string;
+  article_raw?: string;
+  boe_id?: string | null;
+  ai_boe_id?: string | null;
+  id_conflict?: boolean;
+  id_source?: string | null;
+  status?: string;
+  quote_check?: string;
+  articles?: Array<{ number?: number; block_id?: string | null; titulo?: string | null; status?: string }>;
+};
+
+export interface CaseDetail extends CaseListItem {
+  summary: Record<string, unknown> | null;
+  parties: Party[];
+  claims: Claim[];
+  facts: Fact[];
+  timeline: Event[];
+  arguments: Argument[];
+  reasoning: Holding[];
+  issues: Issue[];
+  citedLaws: Citation[];
+  outcomeDetail: Record<string, unknown> | null;
+  lawRefs: Ref[];
+  review: Record<string, unknown> | null;
+}
+
+export async function getCase(caseId: string): Promise<CaseDetail | null> {
+  const [summary, classification, outcome, parties, claims, facts, timeline, args, reasoning, issues, citedLaws, lawRefs, review] =
+    await Promise.all([
+      section<Record<string, unknown>>(caseId, "summary.json"),
+      section<{ classification?: Record<string, unknown> }>(caseId, "classification.json"),
+      section<Record<string, unknown>>(caseId, "outcome.json"),
+      section<{ parties?: Party[] }>(caseId, "parties.json"),
+      section<{ claims?: Claim[] }>(caseId, "claims.json"),
+      section<{ facts?: Fact[] }>(caseId, "facts.json"),
+      section<{ events?: Event[] }>(caseId, "timeline.json"),
+      section<{ arguments?: Argument[] }>(caseId, "arguments.json"),
+      section<{ holdings?: Holding[] }>(caseId, "reasoning.json"),
+      section<{ issues?: Issue[] }>(caseId, "issues.json"),
+      section<{ citations?: Citation[] }>(caseId, "cited_laws.json"),
+      section<{ refs?: Ref[] }>(caseId, "law_refs.json"),
+      section<Record<string, unknown>>(caseId, "review.json"),
+    ]);
+
+  if (!outcome && !summary) return null;
+
+  return {
+    id: caseId,
+    headline:
+      (summary?.summary as { headline?: string } | undefined)?.headline ?? caseId,
+    subtopic: (classification?.classification as { subtopic?: string } | undefined)?.subtopic ?? "",
+    branch: (classification?.classification as { civil_branch?: string } | undefined)?.civil_branch ?? "UNKNOWN",
+    outcome: (outcome?.outcome as { cassation_outcome?: string } | undefined)?.cassation_outcome ?? "UNKNOWN",
+    recurringSide: (outcome?.outcome as { recurring_side?: string } | undefined)?.recurring_side ?? "UNKNOWN",
+    enriched: (review?.extraction as { validation?: string } | undefined)?.validation === "OK",
+    reviewStatus: (review?.review as { status?: string } | undefined)?.status ?? "UNREVIEWED",
+    archived: await isArchived(caseId),
+    generatedAt: (review?.extraction as { generated_at?: string } | undefined)?.generated_at ?? "",
+    reviewedAt: (review?.review as { reviewed_at?: string } | undefined)?.reviewed_at ?? "",
+    stale: await isStale(
+      caseId,
+      (review?.extraction as { generated_at?: string } | undefined)?.generated_at,
+    ),
+    summary: summary,
+    parties: parties?.parties ?? [],
+    claims: claims?.claims ?? [],
+    facts: facts?.facts ?? [],
+    timeline: timeline?.events ?? [],
+    arguments: args?.arguments ?? [],
+    reasoning: reasoning?.holdings ?? [],
+    issues: issues?.issues ?? [],
+    citedLaws: citedLaws?.citations ?? [],
+    outcomeDetail: outcome,
+    lawRefs: lawRefs?.refs ?? [],
+    review: review,
+  };
+}
+
+export interface LawBlock {
+  id: string;
+  tipo: string;
+  titulo: string;
+  fecha_vigencia: string;
+  texto: string;
+  versions?: Array<{ fecha_vigencia: string; fecha_publicacion: string; texto: string }>;
+}
+
+export interface LawNorm {
+  boe_id: string;
+  titulo: string;
+  rango: string;
+  ambito: string;
+  url_html: string;
+  retrieved_at: string;
+  notice: string;
+  blocks: LawBlock[];
+}
+
+// Normas completas de hasta ~6 MB: caché pequeña (3 ≈ 18 MB; las páginas de
+// una norma y plazos son las únicas que necesitan el texto entero).
+const lawCache = new Map<string, { at: number; norm: LawNorm | null }>();
+
+export async function getLaw(boeId: string): Promise<LawNorm | null> {
+  if (!/^BOE-A-[\w-]+$/.test(boeId)) return null;
+  const hit = lawCache.get(boeId);
+  if (hit && Date.now() - hit.at < 600_000) {
+    lawCache.delete(boeId); // refresca el orden: se expulsa la menos usada
+    lawCache.set(boeId, hit);
+    return hit.norm;
+  }
+  const norm = await readJson<LawNorm>(path.join(repoRoot(), "laws", "norms", `${boeId}.json`));
+  if (lawCache.size >= 3) {
+    const masAntigua = lawCache.keys().next().value;
+    if (masAntigua !== undefined) lawCache.delete(masAntigua);
+  }
+  lawCache.set(boeId, { at: Date.now(), norm });
+  return norm;
+}
+
+export interface BloqueLey {
+  id: string;
+  tipo: string;
+  titulo: string;
+  fecha_vigencia: string;
+  /** Primeros 150 caracteres del texto, para resúmenes de alertas. */
+  resumen: string;
+  versions?: Array<{ fecha_vigencia: string; fecha_publicacion: string }>;
+}
+
+export interface NormaLigera {
+  boe_id: string;
+  titulo: string;
+  blocks: BloqueLey[];
+}
+
+/** Versión SIN el texto de los bloques (el texto son ~6 MB por norma): la
+ * usan las comprobaciones de vigencia, que solo necesitan metadatos y un
+ * resumen de 150 caracteres. Hasta 64 normas ≈ pocos MB en RAM. */
+const bloquesCache = new Map<string, { at: number; norm: NormaLigera | null }>();
+
+export async function getLawBloques(boeId: string): Promise<NormaLigera | null> {
+  if (!/^BOE-A-[\w-]+$/.test(boeId)) return null;
+  const hit = bloquesCache.get(boeId);
+  if (hit && Date.now() - hit.at < 600_000) {
+    bloquesCache.delete(boeId);
+    bloquesCache.set(boeId, hit);
+    return hit.norm;
+  }
+  const full = await readJson<LawNorm>(path.join(repoRoot(), "laws", "norms", `${boeId}.json`));
+  const norm: NormaLigera | null = full
+    ? {
+        boe_id: full.boe_id,
+        titulo: full.titulo,
+        blocks: full.blocks.map((block) => ({
+          id: block.id,
+          tipo: block.tipo,
+          titulo: block.titulo,
+          fecha_vigencia: block.fecha_vigencia,
+          resumen: block.texto.replace(/\s+/g, " ").slice(0, 150),
+          versions: block.versions?.map((version) => ({
+            fecha_vigencia: version.fecha_vigencia,
+            fecha_publicacion: version.fecha_publicacion,
+          })),
+        })),
+      }
+    : null;
+  while (bloquesCache.size >= 64) {
+    const masAntigua = bloquesCache.keys().next().value;
+    if (masAntigua === undefined) break;
+    bloquesCache.delete(masAntigua);
+  }
+  bloquesCache.set(boeId, { at: Date.now(), norm });
+  return norm;
+}
