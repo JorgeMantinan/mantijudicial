@@ -222,6 +222,11 @@ export default async function InformesPage({
   return (
     <article className="print-sheet">
       <p className="small muted no-print">
+        {(sp.desde2 || sp.hasta2) && (
+          <span className="badge warn" style={{ marginRight: 8 }}>
+            Comparación activa con periodo B personalizado
+          </span>
+        )}
         <Link href="/alertas">← Alertas</Link> · <Link href="/evolucion">Evolución</Link> ·{" "}
         <a
           href={`/api/export/informe?desde=${desde}&hasta=${hasta}${

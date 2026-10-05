@@ -19,6 +19,18 @@ export function FiltroAyuda() {
     }
   }, [texto]);
 
+  // Enlace profundo: /ayuda?seccion=MFA lleva a esa sección.
+  useEffect(() => {
+    const buscado = new URLSearchParams(window.location.search).get("seccion");
+    if (!buscado) return;
+    const objetivo = Array.from(
+      document.querySelectorAll<HTMLElement>("main .section"),
+    ).find((seccion) =>
+      (seccion.querySelector("h2")?.textContent ?? "").toLowerCase().includes(buscado.toLowerCase()),
+    );
+    objetivo?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
   return (
     <div className="filters" style={{ marginTop: 8 }}>
       <input
