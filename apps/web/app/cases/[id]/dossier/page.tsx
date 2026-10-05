@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { PrintButton } from "@/components/print-button";
 import { Sumario } from "@/components/sumario";
+import { InternoToggle } from "./interno-toggle";
 import { canViewCase, defaultOrgId, loadIdentity, requireActor } from "@/lib/auth";
 import { getAuditoria, getCase, getEscrito, getVias, getVigenciaChecks, listLaws } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
@@ -87,17 +88,12 @@ export default async function DossierPage({
         <Link href={`/cases/${id}`}>← Volver a la ficha interna</Link>
       </p>
       <PrintButton />
-      <p className="small no-print">
-        {interno ? (
-          <>
-            <span className="badge warn">Versión interna</span> — no enviar al cliente.{" "}
-            <Link href={`/cases/${id}/dossier`}>Ver versión para el cliente</Link>
-          </>
-        ) : (
-          <Link href={`/cases/${id}/dossier?interno=1`}>
-            Ver versión interna (huecos, comprobaciones y argumentos no aceptados) →
-          </Link>
-        )}
+      <p
+        className="small no-print"
+        style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", margin: "6px 0" }}
+      >
+        <InternoToggle caseId={id} interno={interno} />
+        {interno && <span className="badge warn">No enviar al cliente</span>}
       </p>
       <Sumario />
 

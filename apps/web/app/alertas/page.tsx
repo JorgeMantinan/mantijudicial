@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PrintButton } from "@/components/print-button";
 import { CopyButton } from "@/components/copy-button";
+import { FiltroAlertas } from "./filtro-alertas";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import { filtrarFrasesDelTema, getBusquedas, getCalidadCorpus, getContradicciones, getDuplicados, getGruposFrases, getHistorialAlertas, getPatronesVistos, getReviewStats, getVigenciaAlerts, diasSinTocar, listCases, registrarAlertasDelDia, runSearch } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
@@ -176,6 +177,8 @@ export default async function AlertasPage({
         temas con criterio dividido, casos sin revisar y trabajos fallidos.{" "}
         <strong>{total} en total.</strong>
       </p>
+
+      <FiltroAlertas />
 
       <div className="section">
         <h2>Leyes que cambiaron después de la sentencia</h2>
