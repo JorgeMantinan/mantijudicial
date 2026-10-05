@@ -60,6 +60,9 @@ export interface CaseListItem {
   stale: boolean;
   /** Archivado: se oculta de la lista de casos (no se borra nada). */
   archived: boolean;
+  /** ECLI/ROJ del PDF (del manifiesto), si consta. */
+  ecli?: string;
+  roj?: string;
   /** Fecha en que se analizó el caso (extraction.generated_at). */
   generatedAt: string;
   /** Última revisión humana (review.reviewed_at). */
@@ -155,6 +158,12 @@ async function listarTodos(): Promise<CaseListItem[]> {
   if (todosCache && Date.now() - todosCache.at < TODOS_TTL_MS) return todosCache.value;
   const names = await caseNames();
   const items: CaseListItem[] = [];
+  const manifest = await readJson<{
+    entries?: Array<{ caseDir: string; pdf: { ecli: string | null; roj: string | null } }>;
+  }>(path.join(repoRoot(), "cases", "manifest.json"));
+  const pdfs = new Map(
+    (manifest?.entries ?? []).map((entry) => [entry.caseDir, entry.pdf] as const),
+  );
   for (const name of names) {
     const review = await section<{ extraction?: { validation?: string } }>(name, "review.json");
     const classification = await section<{
@@ -182,6 +191,8 @@ async function listarTodos(): Promise<CaseListItem[]> {
       generatedAt: generatedAt ?? "",
       reviewedAt:
         (review as { review?: { reviewed_at?: string } } | null)?.review?.reviewed_at ?? "",
+      ecli: pdfs.get(name)?.ecli ?? "",
+      roj: pdfs.get(name)?.roj ?? "",
     });
   }
   todosCache = { value: items, at: Date.now() };

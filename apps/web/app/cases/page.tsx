@@ -11,7 +11,7 @@ import { IngestForm } from "./ingest-form";
 
 export const dynamic = "force-dynamic";
 
-const SORTS = ["case", "title", "branch", "outcome", "side", "ia", "review", "dias"] as const;
+const SORTS = ["case", "title", "branch", "outcome", "side", "ia", "review", "dias", "cliente"] as const;
 type SortKey = (typeof SORTS)[number];
 
 function sortValue(item: Awaited<ReturnType<typeof listCases>>[number], key: SortKey): string | number {
@@ -30,6 +30,9 @@ function sortValue(item: Awaited<ReturnType<typeof listCases>>[number], key: Sor
       return item.enriched ? 1 : 0;
     case "review":
       return item.reviewStatus;
+    case "cliente":
+      // Se compara en el comparador (necesita el mapa de clientes).
+      return "";
     case "dias":
       return diasSinTocar(item);
   }
@@ -73,6 +76,9 @@ export default async function CasesPage({
     : "case";
   const dir = params.dir === "desc" ? "desc" : "asc";
   const sorted = [...visibles].sort((a, b) => {
+    if (sort === "cliente") {
+      return (clientesMap[a.id] ?? "").localeCompare(clientesMap[b.id] ?? "", "es") * (dir === "asc" ? 1 : -1);
+    }
     const av = sortValue(a, sort);
     const bv = sortValue(b, sort);
     const cmp = typeof av === "number" && typeof bv === "number" ? av - bv : String(av).localeCompare(String(bv), "es");
@@ -223,6 +229,15 @@ export default async function CasesPage({
               label="Sin tocar"
               base={base}
             />
+            <th>ECLI / ROJ</th>
+            <SortTh
+              path="/cases"
+              sortKey="cliente"
+              current={sort}
+              dir={dir}
+              label="Cliente"
+              base={base}
+            />
           </tr>
         </thead>
         <tbody>
@@ -264,6 +279,12 @@ export default async function CasesPage({
                 >
                   {diasSinTocar(item)} d
                 </span>
+              </td>
+              <td className="mono small">
+                {item.ecli && item.ecli !== "UNKNOWN" ? item.ecli : item.roj || "—"}
+              </td>
+              <td className="small">
+                {clientesMap[item.id] ?? <span className="muted">—</span>}
               </td>
             </tr>
           ))}

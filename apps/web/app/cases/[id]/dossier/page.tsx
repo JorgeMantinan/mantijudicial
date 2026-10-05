@@ -3,11 +3,12 @@ import { notFound, redirect } from "next/navigation";
 import { PrintButton } from "@/components/print-button";
 import { Sumario } from "@/components/sumario";
 import { canViewCase, defaultOrgId, loadIdentity, requireActor } from "@/lib/auth";
-import { getCase, getEscrito, getVias, getVigenciaChecks, listLaws } from "@/lib/dataset";
+import { getAuditoria, getCase, getEscrito, getVias, getVigenciaChecks, listLaws } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { fechaEs } from "@/lib/texto";
 import {
   ARG_OUTCOME,
+  AUDIT,
   BRANCH,
   CLAIM_OUTCOME,
   INSTANCE,
@@ -39,14 +40,16 @@ export default async function DossierPage({
   const detail = await getCase(id);
   if (!detail) notFound();
 
-  const [vias, laws, identity, vigencias, escrito] = await Promise.all([
+  const [vias, laws, identity, vigencias, escrito, actividad] = await Promise.all([
     getVias(id),
     listLaws(),
     loadIdentity(),
     getVigenciaChecks(id),
     getEscrito(id),
+    getAuditoria(15, id),
   ]);
   const despacho = identity.listFirms().find((firm) => firm.id === orgId)?.name ?? "";
+  const nombres = new Map(identity.listUsers().map((usuario) => [usuario.id, usuario.name]));
   const lawTitles = new Map(laws.map((law) => [law.boe_id, law.titulo]));
   const outcome = (detail.outcomeDetail?.outcome ?? {}) as {
     cassation_outcome?: string;
@@ -245,6 +248,32 @@ export default async function DossierPage({
             </ul>
           ) : (
             <p className="small muted">Ninguno marcado como no aceptado.</p>
+          )}
+
+          {actividad.length > 0 && (
+            <>
+              <h3>Actividad de este caso</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Cuándo</th>
+                    <th>Quién</th>
+                    <th>Qué</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {actividad.map((entrada, index) => (
+                    <tr key={`${entrada.at}-${index}`}>
+                      <td className="small mono">
+                        {entrada.at ? new Date(entrada.at).toLocaleString("es-ES") : "—"}
+                      </td>
+                      <td className="small">{nombres.get(entrada.actor) ?? entrada.actor}</td>
+                      <td className="small">{label(AUDIT, entrada.action)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
           )}
         </div>
       )}
