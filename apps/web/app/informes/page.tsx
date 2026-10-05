@@ -134,7 +134,7 @@ export default async function InformesPage({
     },
   ];
 
-  const sort = ["fecha", "caso", "resultado", "m-temas", "m-matriz", "m-normas"].includes(
+  const sort = ["fecha", "caso", "resultado", "m-temas", "m-matriz", "m-normas", "m-incorp"].includes(
     sp.sort ?? "",
   )
     ? (sp.sort as string)
@@ -196,6 +196,16 @@ export default async function InformesPage({
   const matrizOrden = [...informe.matriz].sort((a, b) =>
     sort === "m-matriz" ? (a.total - b.total) * factor : b.total - a.total,
   );
+  const incorporadasOrden = [...incorporadas].sort((a, b) => {
+    if (sort === "m-incorp") {
+      return (
+        (entradasMap.get(a.id) ?? "").localeCompare(entradasMap.get(b.id) ?? "") *
+        (dir === "desc" ? -1 : 1)
+      );
+    }
+    return (entradasMap.get(b.id) ?? "").localeCompare(entradasMap.get(a.id) ?? "");
+  });
+
   const normasOrden = [...informe.leyes].sort((a, b) =>
     sort === "m-normas" ? (a.veces - b.veces) * factor : b.veces - a.veces,
   );
@@ -605,13 +615,22 @@ export default async function InformesPage({
           <table>
             <thead>
               <tr>
-                <th style={{ width: 120 }}>Analizado el</th>
+                <th style={{ width: 140 }}>
+                  <SortTh
+                    path="/informes"
+                    sortKey="m-incorp"
+                    current={sort}
+                    dir={dir}
+                    label="Analizado el"
+                    base={baseInf}
+                  />
+                </th>
                 <th>Caso</th>
                 <th style={{ width: 110 }}>Resuelta el</th>
               </tr>
             </thead>
             <tbody>
-              {incorporadas.slice(0, 15).map((caso) => (
+              {incorporadasOrden.slice(0, 15).map((caso) => (
                 <tr key={caso.id}>
                   <td className="mono small">{(entradasMap.get(caso.id) ?? "").slice(0, 10)}</td>
                   <td className="small">
