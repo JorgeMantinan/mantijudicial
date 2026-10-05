@@ -73,6 +73,9 @@ export function BusquedasGuardadas({
     router.refresh();
   }
 
+  const nombreLimpio = nombre.trim();
+  const yaExiste = nombreLimpio.length > 0 && lista.some((item) => item.nombre === nombreLimpio);
+
   return (
     <div style={{ marginTop: 4 }}>
       <div className="filters" style={{ marginTop: 8 }}>
@@ -83,9 +86,10 @@ export function BusquedasGuardadas({
           style={{ minWidth: 240 }}
         />
         <button type="button" onClick={() => void guardar()} disabled={!q || !nombre.trim()}>
-          Guardar búsqueda
+          {yaExiste ? "Actualizar búsqueda" : "Guardar búsqueda"}
         </button>
         {msg && <span className="badge ok">{msg}</span>}
+        {yaExiste && <span className="small muted">ya existe ese nombre: se actualizará</span>}
       </div>
       {error && (
         <p className="small" style={{ color: "var(--red)" }}>

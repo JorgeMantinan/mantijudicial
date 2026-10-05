@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Bar } from "@/components/bar";
 import { PrintButton } from "@/components/print-button";
-import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
-import { getRevisionPorPersona, listCases } from "@/lib/dataset";
+import { canViewCase, defaultOrgId, loadIdentity, requireActor } from "@/lib/auth";
+import { getMapaOrgs, getRevisionPorPersona, listCases } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { BRANCH, REVIEW, label } from "@/lib/labels";
 import { ReviewTable } from "./review-table";
@@ -35,6 +35,23 @@ export default async function ReviewPage({
   const ramas = [...porRama.entries()]
     .map(([branch, datos]) => ({ branch, ...datos }))
     .sort((a, b) => b.total - a.total);
+
+  const identity = await loadIdentity();
+  const firmas = new Map(identity.listFirms().map((firma) => [firma.id, firma.name]));
+  const orgPorCaso = await getMapaOrgs();
+  const orgPorDefecto = (await defaultOrgId()) ?? "";
+  const porDespacho = new Map<string, { total: number; revisados: number }>();
+  for (const item of all) {
+    const org = orgPorCaso[item.id] ?? orgPorDefecto;
+    const fila = porDespacho.get(org) ?? { total: 0, revisados: 0 };
+    fila.total += 1;
+    if (item.reviewStatus !== "UNREVIEWED") fila.revisados += 1;
+    porDespacho.set(org, fila);
+  }
+  const despachos = [...porDespacho.entries()]
+    .map(([org, datos]) => ({ nombre: firmas.get(org) ?? org, ...datos }))
+    .sort((a, b) => b.total - a.total);
+
   const filtered = all.filter((item) => (status === "TODOS" ? true : item.reviewStatus === status));
 
   return (
@@ -104,6 +121,42 @@ export default async function ReviewPage({
                 <td className="small">{rama.total}</td>
                 <td>
                   <Bar value={rama.revisados} max={rama.total} tone={rama.revisados === rama.total ? "ok" : "accent"} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="section">
+        <h2>Progreso por despacho</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Despacho</th>
+              <th>Revisados</th>
+              <th>De totales</th>
+              <th style={{ width: 180 }}>Progreso</th>
+            </tr>
+          </thead>
+          <tbody>
+            {despachos.map((despacho) => (
+              <tr key={despacho.nombre}>
+                <td className="small">{despacho.nombre}</td>
+                <td>
+                  <span
+                    className={`badge ${despacho.revisados === despacho.total ? "ok" : "warn"}`}
+                  >
+                    {despacho.revisados}/{despacho.total}
+                  </span>
+                </td>
+                <td className="small">{despacho.total}</td>
+                <td>
+                  <Bar
+                    value={despacho.revisados}
+                    max={despacho.total}
+                    tone={despacho.revisados === despacho.total ? "ok" : "accent"}
+                  />
                 </td>
               </tr>
             ))}

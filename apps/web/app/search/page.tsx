@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
-import { getBusquedas, getEvolucion, runSearch } from "@/lib/dataset";
+import { getBusquedas, getEvolucion, listCases, runSearch } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { findByIdentifier } from "@/lib/identifier";
 import { BRANCH, OUTCOME, SEARCH_KIND, label } from "@/lib/labels";
@@ -55,6 +55,7 @@ export default async function SearchPage({
   let docs = 0;
   let totalResultados = 0;
   let masPaginas = false;
+  let recientes = new Set<string>();
   const exactos = query.length >= 4 ? await findByIdentifier(query) : [];
   const busquedas = await getBusquedas(actor.orgId);
   if (query.length > 0) {
@@ -71,6 +72,12 @@ export default async function SearchPage({
     totalResultados = result.hits.length;
     docs = result.docs;
     masPaginas = totalResultados > offset + porPagina;
+    const hace30 = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10);
+    recientes = new Set(
+      (await listCases())
+        .filter((item) => (item.generatedAt ?? "").slice(0, 10) >= hace30)
+        .map((item) => item.id),
+    );
   }
 
   const hrefPagina = (n: number): string => {
@@ -235,6 +242,11 @@ export default async function SearchPage({
                 </Link>
               ) : (
                 <Link href={`/cases/${hit.id.split("#")[0]}`}>{hit.title}</Link>
+              )}
+              {hit.kind !== "article" && recientes.has(hit.id.split("#")[0]) && (
+                <span className="badge ok" style={{ marginLeft: 6 }}>
+                  nuevo
+                </span>
               )}
             </div>
             <div className="small muted">

@@ -1598,6 +1598,11 @@ export async function setOrgDelCaso(caseId: string, orgId: string): Promise<void
   await fs.writeFile(casosOrgPath(), `${JSON.stringify(data, null, 2)}\n`, "utf8");
 }
 
+/** Mapa caso → despacho propietario (lectura única del fichero). */
+export async function getMapaOrgs(): Promise<Record<string, string>> {
+  return (await readJson<Record<string, string>>(casosOrgPath())) ?? {};
+}
+
 function clientesPath(): string {
   return path.join(repoRoot(), "data", "casos_cliente.json");
 }
