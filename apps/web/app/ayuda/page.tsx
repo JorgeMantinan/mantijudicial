@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireActor } from "@/lib/auth";
 import { ARG_OUTCOME, OUTCOME, REVIEW, label } from "@/lib/labels";
+import { PrintButton } from "@/components/print-button";
 import { FiltroAyuda } from "@/components/filtro-ayuda";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +10,8 @@ export default async function AyudaPage() {
   await requireActor();
 
   return (
-    <>
+    <article className="print-sheet">
+      <PrintButton text="Imprimir la ayuda" />
       <h1>Ayuda</h1>
       <p className="lead">
         Cómo funciona la plataforma, qué significan los estados y qué puedes exportar. Todo lo que
@@ -191,6 +193,6 @@ export default async function AyudaPage() {
         jurídicas consulta la publicación oficial. Los análisis asistidos por IA están señalados como
         tales y requieren <strong>revisión profesional</strong>; no constituyen asesoramiento.
       </div>
-    </>
+    </article>
   );
 }

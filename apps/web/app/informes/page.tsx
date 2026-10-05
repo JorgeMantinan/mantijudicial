@@ -299,6 +299,26 @@ export default async function InformesPage({
         </button>
       </form>
 
+      <p className="small no-print" style={{ display: "flex", gap: 14, marginTop: -6 }}>
+        <span className="muted">Atajos:</span>
+        <Link href={`/informes?${new URLSearchParams({ desde: mesInicio, hasta: hoy })}`}>
+          Este mes
+        </Link>
+        <Link
+          href={`/informes?${new URLSearchParams({
+            desde: fechaLocal(new Date(Date.now() - 90 * 86_400_000)),
+            hasta: hoy,
+          })}`}
+        >
+          Últimos 90 días
+        </Link>
+        <Link
+          href={`/informes?${new URLSearchParams({ desde: `${hoy.slice(0, 4)}-01-01`, hasta: hoy })}`}
+        >
+          Este año
+        </Link>
+      </p>
+
       {chips.length > 0 && (
         <p className="small" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: -4 }}>
           {chips.map((chip) => (

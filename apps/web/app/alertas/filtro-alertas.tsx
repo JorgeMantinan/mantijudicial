@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const TIPOS: Array<{ valor: string; texto: string }> = [
   { valor: "", texto: "Todo" },
@@ -33,13 +33,7 @@ export function FiltroAlertas() {
   const searchParams = useSearchParams();
   const [valor, setValor] = useState(searchParams.get("tipo") ?? "");
 
-  function cambiar(nuevo: string) {
-    setValor(nuevo);
-    const params = new URLSearchParams(searchParams.toString());
-    if (nuevo) params.set("tipo", nuevo);
-    else params.delete("tipo");
-    router.replace(`${pathname}${params.toString() ? `?${params}` : ""}`);
-
+  function aplicar(nuevo: string) {
     const secciones = Array.from(document.querySelectorAll<HTMLElement>("main .section"));
     const titulos = COINCIDENCIAS[nuevo];
     for (const seccion of secciones) {
@@ -50,6 +44,21 @@ export function FiltroAlertas() {
       const titulo = (seccion.querySelector("h2")?.textContent ?? "").toLowerCase();
       seccion.style.display = titulos.some((frase) => titulo.includes(frase)) ? "" : "none";
     }
+  }
+
+  // Si llegas con ?tipo=… en la URL, se aplica al cargar.
+  useEffect(() => {
+    aplicar(searchParams.get("tipo") ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function cambiar(nuevo: string) {
+    setValor(nuevo);
+    const params = new URLSearchParams(searchParams.toString());
+    if (nuevo) params.set("tipo", nuevo);
+    else params.delete("tipo");
+    router.replace(`${pathname}${params.toString() ? `?${params}` : ""}`);
+    aplicar(nuevo);
   }
 
   return (

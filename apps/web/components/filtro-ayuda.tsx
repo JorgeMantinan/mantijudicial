@@ -32,7 +32,7 @@ export function FiltroAyuda() {
   }, []);
 
   return (
-    <div className="filters" style={{ marginTop: 8 }}>
+    <div className="filters no-print" style={{ marginTop: 8 }}>
       <input
         value={texto}
         onChange={(event) => setTexto(event.target.value)}
