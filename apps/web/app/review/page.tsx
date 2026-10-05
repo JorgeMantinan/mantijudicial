@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { Bar } from "@/components/bar";
 import { PrintButton } from "@/components/print-button";
-import { canViewCase, defaultOrgId, loadIdentity, requireActor } from "@/lib/auth";
+import { canViewCase, defaultOrgId, loadIdentity, requireActor , contextoVisibilidad } from "@/lib/auth";
 import { getMapaOrgs, getRevisionPorPersona, listCases } from "@/lib/dataset";
-import { authorizationGrants } from "@/lib/grants";
 import { BRANCH, REVIEW, label } from "@/lib/labels";
 import { ReviewTable } from "./review-table";
 
@@ -14,9 +13,7 @@ export default async function ReviewPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
-  const actor = await requireActor();
-  const orgId = await defaultOrgId();
-  const grants = await authorizationGrants();
+  const { actor, orgId, grants } = await contextoVisibilidad();
   const params = await searchParams;
   const status = params.status ?? "UNREVIEWED";
   const carga = await getRevisionPorPersona();

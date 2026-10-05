@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
+import { canViewCase, requireActor , contextoVisibilidad } from "@/lib/auth";
 import { getEvolucion, getTema } from "@/lib/dataset";
-import { authorizationGrants } from "@/lib/grants";
 import { OUTCOME, label } from "@/lib/labels";
 import { OutcomeBadge } from "@/lib/ui";
 
@@ -12,9 +11,7 @@ export default async function CompararTemasPage({
 }: {
   searchParams: Promise<{ a?: string; b?: string }>;
 }) {
-  const actor = await requireActor();
-  const orgId = await defaultOrgId();
-  const grants = await authorizationGrants();
+  const { actor, orgId, grants } = await contextoVisibilidad();
   const sp = await searchParams;
   const puedeVer = (caseId: string) => canViewCase(actor, caseId, orgId, grants);
 

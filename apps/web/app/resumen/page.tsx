@@ -1,15 +1,12 @@
 import Link from "next/link";
 import { PrintButton } from "@/components/print-button";
-import { canViewCase, defaultOrgId, loadIdentity, requireActor } from "@/lib/auth";
+import { canViewCase, loadIdentity, requireActor , contextoVisibilidad } from "@/lib/auth";
 import { getContradicciones, getHistorialAlertas, getReviewStats, getVigenciaAlerts, listCases } from "@/lib/dataset";
-import { authorizationGrants } from "@/lib/grants";
 
 export const dynamic = "force-dynamic";
 
 export default async function ResumenPage() {
-  const actor = await requireActor();
-  const orgId = await defaultOrgId();
-  const grants = await authorizationGrants();
+  const { actor, orgId, grants } = await contextoVisibilidad();
   const puedeVer = (caseId: string) => canViewCase(actor, caseId, orgId, grants);
 
   const [todos, stats, vigencia, contradictorio, identity] = await Promise.all([

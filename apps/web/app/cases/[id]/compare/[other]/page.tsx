@@ -3,9 +3,8 @@ import { notFound, redirect } from "next/navigation";
 import type { CompareReport } from "@pipeline/compare";
 import { PrintButton } from "@/components/print-button";
 import { CopyButton } from "@/components/copy-button";
-import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
+import { canViewCase, requireActor , contextoVisibilidad } from "@/lib/auth";
 import { getCase, getComparisons } from "@/lib/dataset";
-import { authorizationGrants } from "@/lib/grants";
 import { ARG_OUTCOME, label } from "@/lib/labels";
 
 export const dynamic = "force-dynamic";
@@ -17,9 +16,7 @@ export default async function CompareReportPage({
 }) {
   const { id, other } = await params;
   if (!/^case_\d{6}$/.test(id) || !/^case_\d{6}$/.test(other)) notFound();
-  const actor = await requireActor();
-  const orgId = await defaultOrgId();
-  const grants = await authorizationGrants();
+  const { actor, orgId, grants } = await contextoVisibilidad();
   if (!canViewCase(actor, id, orgId, grants) || !canViewCase(actor, other, orgId, grants)) {
     redirect("/cases");
   }

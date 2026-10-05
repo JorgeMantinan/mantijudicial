@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { PrintButton } from "@/components/print-button";
-import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
+import { canViewCase, requireActor , contextoVisibilidad } from "@/lib/auth";
 import { getEvolucion } from "@/lib/dataset";
-import { authorizationGrants } from "@/lib/grants";
 import { BRANCH, OUTCOME, label } from "@/lib/labels";
 import { SortTh } from "@/lib/sort-th";
 import { OutcomeBadge } from "@/lib/ui";
@@ -22,9 +21,7 @@ export default async function EvolucionPage({
     hasta?: string;
   }>;
 }) {
-  const actor = await requireActor();
-  const orgId = await defaultOrgId();
-  const grants = await authorizationGrants();
+  const { actor, orgId, grants } = await contextoVisibilidad();
   const sp = await searchParams;
   const branchFiltro = sp.branch ?? "";
   const outcomeFiltro = sp.outcome ?? "";

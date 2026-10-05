@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
+import { canViewCase, requireActor , contextoVisibilidad } from "@/lib/auth";
 import {
   filtrarFrasesDelTema,
   getClientes,
@@ -9,7 +9,6 @@ import {
   getVigenciaAlerts,
   listCases,
 } from "@/lib/dataset";
-import { authorizationGrants } from "@/lib/grants";
 import { OUTCOME, REVIEW, label } from "@/lib/labels";
 import { OutcomeBadge } from "@/lib/ui";
 import { cortar } from "@/lib/texto";
@@ -18,9 +17,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ClientePage({ params }: { params: Promise<{ nombre: string }> }) {
   const { nombre } = await params;
-  const actor = await requireActor();
-  const orgId = await defaultOrgId();
-  const grants = await authorizationGrants();
+  const { actor, orgId, grants } = await contextoVisibilidad();
 
   const [clientes, todos] = await Promise.all([getClientes(), listCases()]);
   const casos = todos.filter(

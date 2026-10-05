@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { Bar } from "@/components/bar";
-import { requireActor, canViewCase, defaultOrgId } from "@/lib/auth";
+import { canViewCase, defaultOrgId , contextoVisibilidad } from "@/lib/auth";
 import { computePatterns, diasSinTocar, getAuditoria, getLawUsage, getReviewStats, getVigenciaAlerts, listCases, listLaws } from "@/lib/dataset";
-import { authorizationGrants } from "@/lib/grants";
 import { AUDIT, BRANCH, OUTCOME, label } from "@/lib/labels";
 
 export const dynamic = "force-dynamic";
@@ -16,9 +15,7 @@ function groupCount(values: string[]): Array<{ name: string; count: number }> {
 }
 
 export default async function Home() {
-  const actor = await requireActor();
-  const orgId = await defaultOrgId();
-  const grants = await authorizationGrants();
+  const { actor, orgId, grants } = await contextoVisibilidad();
   const all = await listCases();
   const cases = all.filter((item) => canViewCase(actor, item.id, orgId, grants));
   const caseIds = cases.map((item) => item.id);

@@ -2,9 +2,8 @@ import Link from "next/link";
 import { Bar } from "@/components/bar";
 import { PrintButton } from "@/components/print-button";
 import { CopyButton } from "@/components/copy-button";
-import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
+import { canViewCase, requireActor , contextoVisibilidad } from "@/lib/auth";
 import { filtrarFrasesDelTema, getGruposFrases, getInforme, getVigenciaAlerts, listCases } from "@/lib/dataset";
-import { authorizationGrants } from "@/lib/grants";
 import { BRANCH, OUTCOME, label } from "@/lib/labels";
 import { SortTh } from "@/lib/sort-th";
 import { cortar } from "@/lib/texto";
@@ -36,9 +35,7 @@ export default async function InformesPage({
     outcome?: string;
   }>;
 }) {
-  const actor = await requireActor();
-  const orgId = await defaultOrgId();
-  const grants = await authorizationGrants();
+  const { actor, orgId, grants } = await contextoVisibilidad();
   const sp = await searchParams;
   const hoy = fechaLocal(new Date());
   const mesInicio = fechaLocal(new Date(new Date().getFullYear(), new Date().getMonth(), 1));

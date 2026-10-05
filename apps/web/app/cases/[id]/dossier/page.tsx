@@ -3,9 +3,8 @@ import { notFound, redirect } from "next/navigation";
 import { PrintButton } from "@/components/print-button";
 import { Sumario } from "@/components/sumario";
 import { InternoToggle } from "./interno-toggle";
-import { canViewCase, defaultOrgId, loadIdentity, requireActor } from "@/lib/auth";
+import { canViewCase, loadIdentity, requireActor , contextoVisibilidad } from "@/lib/auth";
 import { getAuditoria, getCase, getEscrito, getVias, getVigenciaChecks, listLaws } from "@/lib/dataset";
-import { authorizationGrants } from "@/lib/grants";
 import { fechaEs } from "@/lib/texto";
 import {
   ARG_OUTCOME,
@@ -33,9 +32,7 @@ export default async function DossierPage({
   const sp = await searchParams;
   const interno = sp.interno === "1";
   if (!/^case_\d{6}$/.test(id)) notFound();
-  const actor = await requireActor();
-  const orgId = await defaultOrgId();
-  const grants = await authorizationGrants();
+  const { actor, orgId, grants } = await contextoVisibilidad();
   if (!canViewCase(actor, id, orgId, grants)) redirect("/cases");
 
   const detail = await getCase(id);

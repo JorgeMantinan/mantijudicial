@@ -2,9 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PrintButton } from "@/components/print-button";
 import { CopyButton } from "@/components/copy-button";
-import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
+import { canViewCase, requireActor , contextoVisibilidad } from "@/lib/auth";
 import { filtrarFrasesDelTema, getGruposFrases, getTema } from "@/lib/dataset";
-import { authorizationGrants } from "@/lib/grants";
 import { ARG_OUTCOME, ARG_TYPE, BRANCH, OUTCOME, label } from "@/lib/labels";
 import { OutcomeBadge } from "@/lib/ui";
 
@@ -19,9 +18,7 @@ export default async function TemaPage({
 }) {
   const { topic } = await params;
   const sp = await searchParams;
-  const actor = await requireActor();
-  const orgId = await defaultOrgId();
-  const grants = await authorizationGrants();
+  const { actor, orgId, grants } = await contextoVisibilidad();
   const ficha = await getTema(topic, (caseId) => canViewCase(actor, caseId, orgId, grants), {
     branch: sp.branch,
     outcome: sp.outcome,

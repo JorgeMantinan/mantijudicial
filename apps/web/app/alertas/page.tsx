@@ -2,9 +2,8 @@ import Link from "next/link";
 import { PrintButton } from "@/components/print-button";
 import { CopyButton } from "@/components/copy-button";
 import { FiltroAlertas } from "./filtro-alertas";
-import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
+import { canViewCase, requireActor , contextoVisibilidad } from "@/lib/auth";
 import { filtrarFrasesDelTema, getBusquedas, getCalidadCorpus, getContradicciones, getDuplicados, getGruposFrases, getHistorialAlertas, getPatronesVistos, getReviewStats, getVigenciaAlerts, diasSinTocar, listCases, registrarAlertasDelDia, runSearch } from "@/lib/dataset";
-import { authorizationGrants } from "@/lib/grants";
 import { MarcarVistoButton, RestaurarPatronesButton } from "@/components/patron-visto";
 import { ResolvedorDuplicado } from "@/components/resolvedor-duplicado";
 import { jobs } from "@/lib/jobs";
@@ -29,9 +28,7 @@ export default async function AlertasPage({
   const factor = dir === "desc" ? -1 : 1;
   const cmpTexto = (a: string, b: string) => a.localeCompare(b, "es") * factor;
   const cmpNumero = (a: number, b: number) => (a - b) * factor;
-  const actor = await requireActor();
-  const orgId = await defaultOrgId();
-  const grants = await authorizationGrants();
+  const { actor, orgId, grants } = await contextoVisibilidad();
   const puedeVer = (caseId: string) => canViewCase(actor, caseId, orgId, grants);
 
   const [vigenciaBruta, contradictorioBruto, reviewBruto, calidad] = await Promise.all([

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { can, type Actor, type Grant, type Resource } from "@pipeline/authorization";
 import { IdentityStore } from "@pipeline/identity";
 import { repoRoot } from "./dataset";
+import { authorizationGrants } from "./grants";
 
 export const SESSION_COOKIE = "mj_session";
 
@@ -80,6 +81,28 @@ export async function recursoCaso(caseId: string): Promise<Resource> {
   return caseResource(caseId, dueno);
 }
 
+/**
+ * Contexto de visibilidad que repetían decenas de páginas y APIs:
+ * actor (o redirect), despacho por defecto, grants y predicado
+ * `permitido(caseId)` con deny-by-default.
+ */
+export async function contextoVisibilidad(): Promise<{
+  actor: Actor;
+  orgId: string | null;
+  grants: Grant[];
+  permitido: (caseId: string) => boolean;
+}> {
+  const actor = await requireActor();
+  const orgId = await defaultOrgId();
+  const grants = await authorizationGrants();
+  return {
+    actor,
+    orgId,
+    grants,
+    permitido: (caseId: string) => canViewCase(actor, caseId, orgId, grants),
+  };
+}
+
 export function canViewCase(
   actor: Actor,
   caseId: string,
@@ -97,3 +120,4 @@ export function canViewCase(
 export function assertCanViewCase(actor: Actor, caseId: string, orgId: string | null): void {
   if (!canViewCase(actor, caseId, orgId)) redirect("/cases");
 }
+

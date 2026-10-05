@@ -1,7 +1,6 @@
-import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
+import { canViewCase, requireActor , contextoVisibilidad } from "@/lib/auth";
 import { PrintButton } from "@/components/print-button";
 import { computePatterns, getContradicciones, getExitoArgumentos, getGruposFrases, getLawUsage, listCases } from "@/lib/dataset";
-import { authorizationGrants } from "@/lib/grants";
 import { ARG_OUTCOME, ARG_TYPE, BRANCH, INSTANCE, OUTCOME, SIDE, label } from "@/lib/labels";
 import { OutcomeBadge } from "@/lib/ui";
 import Link from "next/link";
@@ -32,9 +31,7 @@ function dist(counts: Record<string, number> | undefined, map: Record<string, st
 }
 
 export default async function PatternsPage() {
-  const actor = await requireActor();
-  const orgId = await defaultOrgId();
-  const grants = await authorizationGrants();
+  const { actor, orgId, grants } = await contextoVisibilidad();
   const cases = (await listCases()).filter((item) => canViewCase(actor, item.id, orgId, grants));
   const computed = await computePatterns(cases.map((item) => item.id));
   const usage = await getLawUsage(cases.map((item) => item.id));

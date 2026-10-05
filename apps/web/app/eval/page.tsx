@@ -1,8 +1,7 @@
-import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
+import { canViewCase, requireActor , contextoVisibilidad } from "@/lib/auth";
 import Link from "next/link";
 import { PrintButton } from "@/components/print-button";
 import { getCalidadCorpus, getCostesIA, getEvalReport, getSistemaInfo } from "@/lib/dataset";
-import { authorizationGrants } from "@/lib/grants";
 import { ultimasMediciones } from "@/lib/timings";
 import { LAW_STATUS, QUOTE, label } from "@/lib/labels";
 
@@ -19,9 +18,7 @@ function asDict(value: unknown): Dict {
 }
 
 export default async function EvalPage() {
-  const actor = await requireActor();
-  const orgId = await defaultOrgId();
-  const grants = await authorizationGrants();
+  const { actor, orgId, grants } = await contextoVisibilidad();
   const ve = (id: string) => canViewCase(actor, id.split("#")[0], orgId, grants);
   const report = await getEvalReport();
   const costes = await getCostesIA();

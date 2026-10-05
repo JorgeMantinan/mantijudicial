@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
+import { canViewCase, requireActor , contextoVisibilidad } from "@/lib/auth";
 import { getGruposFrases, listCases } from "@/lib/dataset";
-import { authorizationGrants } from "@/lib/grants";
 import { BRANCH, INSTANCE, OUTCOME, label } from "@/lib/labels";
 import { OutcomeBadge } from "@/lib/ui";
 
@@ -14,9 +13,7 @@ export default async function FrasePage({
 }: {
   searchParams: Promise<{ e?: string }>;
 }) {
-  const actor = await requireActor();
-  const orgId = await defaultOrgId();
-  const grants = await authorizationGrants();
+  const { actor, orgId, grants } = await contextoVisibilidad();
   const sp = await searchParams;
   const ejemplo = (sp.e ?? "").trim();
   if (!ejemplo) redirect("/patterns");

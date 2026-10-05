@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
+import { canViewCase, requireActor , contextoVisibilidad } from "@/lib/auth";
 import { getCase, getVias, listLaws } from "@/lib/dataset";
-import { authorizationGrants } from "@/lib/grants";
 import { ARG_OUTCOME, BRANCH, CLAIM_OUTCOME, INSTANCE, KIND, OUTCOME, RESULT, SIDE, label } from "@/lib/labels";
 
 export const dynamic = "force-dynamic";
@@ -10,9 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function PrintCasePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!/^case_\d{6}$/.test(id)) notFound();
-  const actor = await requireActor();
-  const orgId = await defaultOrgId();
-  const grants = await authorizationGrants();
+  const { actor, orgId, grants } = await contextoVisibilidad();
   if (!canViewCase(actor, id, orgId, grants)) redirect("/cases");
 
   const detail = await getCase(id);

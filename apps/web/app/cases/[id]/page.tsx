@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { canCreateCase, canShareResource } from "@pipeline/authorization";
 import type { CompareReport } from "@pipeline/compare";
-import { canViewCase, caseResource, defaultOrgId, loadIdentity, requireActor , recursoCaso } from "@/lib/auth";
+import { canViewCase, caseResource, loadIdentity, requireActor , recursoCaso , contextoVisibilidad } from "@/lib/auth";
 import { getAuditoria, getCase, getClientes, getComparisons, getDoctrinaCitada, getEscrito, getGoldenInfo, getRecomendaciones, getReviewStats, getSentenciasCitadas, getSimilarCases, getVigenciaChecks, getVias, listLaws } from "@/lib/dataset";
 import { authorizationGrants, loadGrantStore } from "@/lib/grants";
 import {
@@ -104,9 +104,7 @@ export default async function CaseDetailPage({
 }) {
   const { id } = await params;
   if (!/^case_\d{6}$/.test(id)) notFound();
-  const actor = await requireActor();
-  const orgId = await defaultOrgId();
-  const grants = await authorizationGrants();
+  const { actor, orgId, grants } = await contextoVisibilidad();
   if (!canViewCase(actor, id, orgId, grants)) redirect("/cases");
   const detail = await getCase(id);
   if (!detail) notFound();

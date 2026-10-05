@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
+import { canViewCase, requireActor , contextoVisibilidad } from "@/lib/auth";
 import { getBusquedas, getEvolucion, listCases, runSearch } from "@/lib/dataset";
-import { authorizationGrants } from "@/lib/grants";
 import { findByIdentifier } from "@/lib/identifier";
 import { BRANCH, OUTCOME, SEARCH_KIND, label } from "@/lib/labels";
 import { BusquedasGuardadas } from "./busquedas-guardadas";
@@ -46,9 +45,7 @@ export default async function SearchPage({
   const pagina = Math.max(1, Number(params.page) || 1);
   const porPagina = 25;
   const offset = (pagina - 1) * porPagina;
-  const actor = await requireActor();
-  const orgId = await defaultOrgId();
-  const grants = await authorizationGrants();
+  const { actor, orgId, grants } = await contextoVisibilidad();
   const canSee = (id: string) =>
     canViewCase(actor, id.split("#")[0] ?? id, orgId, grants);
 
