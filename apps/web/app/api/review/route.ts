@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import { appendAudit } from "@pipeline/audit";
 import { can } from "@pipeline/authorization";
 import { applyReview, validateReviewUpdate } from "@pipeline/review";
-import { caseResource, defaultOrgId, getActor , recursoCaso } from "@/lib/auth";
+import { defaultOrgId, getActor , recursoCaso } from "@/lib/auth";
 import { repoRoot } from "@/lib/dataset";
 import { auditPath } from "@/lib/grants";
 

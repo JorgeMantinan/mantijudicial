@@ -12,6 +12,7 @@ import { matchWithCorpus } from "@pipeline/sentencias";
 import { aggregate, normalizeKey, type CaseSignals } from "@pipeline/patterns";
 import { buildIndex, search, type SearchDoc, type SearchHit } from "@pipeline/search";
 import { agruparFrases, type FraseCaso } from "@pipeline/frases";
+import type { CompareReport } from "@pipeline/compare";
 
 const INDEX_TTL_MS = 30_000;
 
@@ -88,18 +89,83 @@ async function isStale(caseId: string, generatedAt: string | undefined): Promise
   }
 }
 
+/** Tipos estructurales de las secciones de un caso (JSON de structured/).
+ * Todos los campos opcionales: el JSON puede venir incompleto. */
+export type Party = {
+  party_id?: string;
+  name?: string;
+  side?: string;
+  kind?: string;
+  representation?: string;
+  is_consumer?: string;
+  notes?: string;
+};
+export type Claim = {
+  claim_id?: string;
+  claimant?: string;
+  side?: string;
+  description?: string;
+  outcome?: string;
+  outcome_scope?: string;
+};
+export type Fact = {
+  fact_id?: string;
+  description?: string;
+  fact_type?: string;
+  status?: string;
+  importance?: number;
+};
+export type Event = { event_id?: string; date?: string; description?: string; event_type?: string };
+export type Argument = {
+  argument_id?: string;
+  side?: string;
+  type?: string;
+  description?: string;
+  legal_basis?: string;
+  outcome?: string;
+  importance?: number;
+};
+export type Holding = {
+  holding_id?: string;
+  statement?: string;
+  topic?: string;
+  legal_basis?: string;
+  doctrine?: string;
+  importance?: number;
+  is_literal_quote?: boolean;
+};
+export type Issue = { issue_id?: string; topic?: string; description?: string; importance?: number };
+export type Citation = {
+  citation_id?: string;
+  raw_text?: string;
+  norma?: string;
+  article?: string;
+  relevance?: string;
+};
+export type Ref = {
+  norma?: string;
+  article_raw?: string;
+  boe_id?: string | null;
+  ai_boe_id?: string | null;
+  id_conflict?: boolean;
+  id_source?: string | null;
+  status?: string;
+  quote_check?: string;
+  articles?: Array<{ number?: number; block_id?: string | null; titulo?: string | null; status?: string }>;
+};
+
 export interface CaseDetail extends CaseListItem {
   summary: Record<string, unknown> | null;
-  parties: unknown[];
-  claims: unknown[];
-  facts: unknown[];
-  timeline: unknown[];
-  arguments: unknown[];
-  reasoning: unknown[];
-  issues: unknown[];
-  citedLaws: unknown[];
+  parties: Party[];
+  claims: Claim[];
+  facts: Fact[];
+  timeline: Event[];
+  arguments: Argument[];
+  reasoning: Holding[];
+  issues: Issue[];
+  citedLaws: Citation[];
   outcomeDetail: Record<string, unknown> | null;
-  lawRefs: unknown[];
+  lawRefs: Ref[];
   review: Record<string, unknown> | null;
 }
 
@@ -205,15 +271,15 @@ export async function getCase(caseId: string): Promise<CaseDetail | null> {
       section<Record<string, unknown>>(caseId, "summary.json"),
       section<{ classification?: Record<string, unknown> }>(caseId, "classification.json"),
       section<Record<string, unknown>>(caseId, "outcome.json"),
-      section<{ parties?: unknown[] }>(caseId, "parties.json"),
-      section<{ claims?: unknown[] }>(caseId, "claims.json"),
-      section<{ facts?: unknown[] }>(caseId, "facts.json"),
-      section<{ events?: unknown[] }>(caseId, "timeline.json"),
-      section<{ arguments?: unknown[] }>(caseId, "arguments.json"),
-      section<{ holdings?: unknown[] }>(caseId, "reasoning.json"),
-      section<{ issues?: unknown[] }>(caseId, "issues.json"),
-      section<{ citations?: unknown[] }>(caseId, "cited_laws.json"),
-      section<{ refs?: unknown[] }>(caseId, "law_refs.json"),
+      section<{ parties?: Party[] }>(caseId, "parties.json"),
+      section<{ claims?: Claim[] }>(caseId, "claims.json"),
+      section<{ facts?: Fact[] }>(caseId, "facts.json"),
+      section<{ events?: Event[] }>(caseId, "timeline.json"),
+      section<{ arguments?: Argument[] }>(caseId, "arguments.json"),
+      section<{ holdings?: Holding[] }>(caseId, "reasoning.json"),
+      section<{ issues?: Issue[] }>(caseId, "issues.json"),
+      section<{ citations?: Citation[] }>(caseId, "cited_laws.json"),
+      section<{ refs?: Ref[] }>(caseId, "law_refs.json"),
       section<Record<string, unknown>>(caseId, "review.json"),
     ]);
 
@@ -290,9 +356,16 @@ const lawCache = new Map<string, { at: number; norm: LawNorm | null }>();
 export async function getLaw(boeId: string): Promise<LawNorm | null> {
   if (!/^BOE-A-[\w-]+$/.test(boeId)) return null;
   const hit = lawCache.get(boeId);
-  if (hit && Date.now() - hit.at < 600_000) return hit.norm;
+  if (hit && Date.now() - hit.at < 600_000) {
+    lawCache.delete(boeId); // refresca el orden: se expulsa la menos usada
+    lawCache.set(boeId, hit);
+    return hit.norm;
+  }
   const norm = await readJson<LawNorm>(path.join(repoRoot(), "laws", "norms", `${boeId}.json`));
-  if (lawCache.size >= 8) lawCache.clear();
+  if (lawCache.size >= 8) {
+    const masAntigua = lawCache.keys().next().value;
+    if (masAntigua !== undefined) lawCache.delete(masAntigua);
+  }
   lawCache.set(boeId, { at: Date.now(), norm });
   return norm;
 }
@@ -388,7 +461,7 @@ export interface Comparison {
   otro_caso: string;
   generated_at?: string;
   analysis?: { model?: string; cost?: number };
-  report: Record<string, unknown>;
+  report: CompareReport;
 }
 
 export async function getComparisons(caseId: string): Promise<Comparison[]> {
@@ -1184,7 +1257,7 @@ export async function getSimilarCases(caseId: string, limit = 5): Promise<Simila
   const detail = await getCase(caseId);
   if (!detail) return [];
 
-  const topics = (detail.reasoning as Array<{ topic?: string; doctrine?: string }>)
+  const topics = detail.reasoning
     .flatMap((holding) => [holding.topic, holding.doctrine])
     .filter((value): value is string => Boolean(value && value !== "UNKNOWN"));
   const query = [detail.headline, detail.subtopic, ...topics].join(" ");
@@ -1192,7 +1265,7 @@ export async function getSimilarCases(caseId: string, limit = 5): Promise<Simila
   const { index } = await getIndex();
   const hits = search(index, query, { kinds: ["case"], limit: limit + 6 });
   const ownLaws = new Set(
-    (detail.lawRefs as Array<{ boe_id?: string | null; norma?: string }>)
+    detail.lawRefs
       .map((ref) => ref.boe_id)
       .filter((value): value is string => Boolean(value)),
   );

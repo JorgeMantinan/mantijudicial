@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { appendAudit } from "@pipeline/audit";
 import { NoteError, NoteStore } from "@pipeline/notes";
 import { can } from "@pipeline/authorization";
-import { caseResource, defaultOrgId, getActor, loadIdentity , recursoCaso } from "@/lib/auth";
+import { defaultOrgId, getActor, loadIdentity , recursoCaso } from "@/lib/auth";
 import { auditPath, grantsPath, loadGrantStore } from "@/lib/grants";
 import { repoRoot } from "@/lib/dataset";
 

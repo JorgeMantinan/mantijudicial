@@ -3,7 +3,7 @@ import { appendAudit } from "@pipeline/audit";
 import { canShareResource } from "@pipeline/authorization";
 import { GrantError } from "@pipeline/grants";
 import { auditPath, grantsPath, loadGrantStore } from "@/lib/grants";
-import { caseResource, defaultOrgId, getActor, recursoCaso } from "@/lib/auth";
+import { defaultOrgId, getActor, recursoCaso } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 

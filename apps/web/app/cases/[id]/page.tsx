@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { canCreateCase, canShareResource } from "@pipeline/authorization";
-import type { CompareReport } from "@pipeline/compare";
-import { canViewCase, caseResource, loadIdentity, requireActor , recursoCaso , contextoVisibilidad } from "@/lib/auth";
+import { canViewCase, loadIdentity, requireActor , recursoCaso , contextoVisibilidad } from "@/lib/auth";
+import type { Argument, Claim, Citation, Event, Fact, Holding, Party, Ref } from "@/lib/dataset";
 import { getAuditoria, getCase, getClientes, getComparisons, getDoctrinaCitada, getEscrito, getGoldenInfo, getRecomendaciones, getReviewStats, getSentenciasCitadas, getSimilarCases, getVigenciaChecks, getVias, listLaws } from "@/lib/dataset";
-import { authorizationGrants, loadGrantStore } from "@/lib/grants";
+import { loadGrantStore } from "@/lib/grants";
 import {
   ARG_OUTCOME,
   ARG_TYPE,
@@ -43,58 +43,6 @@ import { cortar, fechaEs } from "@/lib/texto";
 
 export const dynamic = "force-dynamic";
 
-type Party = {
-  party_id?: string;
-  name?: string;
-  side?: string;
-  kind?: string;
-  representation?: string;
-  is_consumer?: string;
-  notes?: string;
-};
-type Claim = {
-  claim_id?: string;
-  claimant?: string;
-  side?: string;
-  description?: string;
-  outcome?: string;
-  outcome_scope?: string;
-};
-type Fact = { fact_id?: string; description?: string; fact_type?: string; status?: string; importance?: number };
-type Event = { event_id?: string; date?: string; description?: string; event_type?: string };
-type Argument = {
-  argument_id?: string;
-  side?: string;
-  type?: string;
-  description?: string;
-  legal_basis?: string;
-  outcome?: string;
-  importance?: number;
-};
-type Holding = {
-  holding_id?: string;
-  statement?: string;
-  topic?: string;
-  legal_basis?: string;
-  doctrine?: string;
-  importance?: number;
-  is_literal_quote?: boolean;
-};
-type Issue = { issue_id?: string; topic?: string; description?: string; importance?: number };
-type Citation = { citation_id?: string; raw_text?: string; norma?: string; article?: string; relevance?: string };
-
-
-type Ref = {
-  norma?: string;
-  article_raw?: string;
-  boe_id?: string | null;
-  ai_boe_id?: string | null;
-  id_conflict?: boolean;
-  id_source?: string | null;
-  status?: string;
-  quote_check?: string;
-  articles?: Array<{ number?: number; block_id?: string | null; titulo?: string | null; status?: string }>;
-};
 type Decision = { instance?: string; court?: string; date?: string; result?: string; description?: string };
 
 export default async function CaseDetailPage({
@@ -182,18 +130,14 @@ export default async function CaseDetailPage({
     notes?: string;
   };
 
-  const argumentosDetalle = (detail.arguments ?? []) as Array<{
-    description?: string;
-    type?: string;
-    outcome?: string;
-  }>;
+  const argumentosDetalle = detail.arguments;
   const sinAnalizar = argumentosDetalle.filter((argumento) =>
     ["", "UNKNOWN", "NOT_ANALYZED", "DESCONOCIDO"].includes((argumento.outcome ?? "").toUpperCase()),
   );
   const huecosVias = vias?.report.huecos ?? [];
   const comprobarBorrador = escrito?.report.comprobar_antes ?? [];
   const huecosComparaciones = comparisons.reduce(
-    (total, comparison) => total + ((comparison.report as CompareReport).huecos ?? []).length,
+    (total, comparison) => total + (comparison.report.huecos ?? []).length,
     0,
   );
   const hayFaltas =
@@ -658,7 +602,7 @@ export default async function CaseDetailPage({
             </tr>
           </thead>
           <tbody>
-            {(detail.parties as Party[]).map((party) => (
+            {detail.parties.map((party) => (
               <tr key={party.party_id}>
                 <td>{party.name}</td>
                 <td className="small" title={party.side}>
@@ -687,7 +631,7 @@ export default async function CaseDetailPage({
             </tr>
           </thead>
           <tbody>
-            {(detail.claims as Claim[]).map((claim) => (
+            {detail.claims.map((claim) => (
               <tr key={claim.claim_id}>
                 <td className="small">{claim.description}</td>
                 <td className="small">{claim.claimant}</td>
@@ -708,7 +652,7 @@ export default async function CaseDetailPage({
       <div className="section">
         <h2>Hechos</h2>
         <ol>
-          {(detail.facts as Fact[]).map((fact) => (
+          {detail.facts.map((fact) => (
             <li key={fact.fact_id}>
               {fact.description}{" "}
               <span className="muted small">
@@ -731,7 +675,7 @@ export default async function CaseDetailPage({
             </tr>
           </thead>
           <tbody>
-            {(detail.timeline as Event[]).map((event) => (
+            {detail.timeline.map((event) => (
               <tr key={event.event_id}>
                 <td className="mono small">{event.date}</td>
                 <td className="small" title={event.event_type}>
@@ -757,7 +701,7 @@ export default async function CaseDetailPage({
             </tr>
           </thead>
           <tbody>
-            {(detail.arguments as Argument[]).map((argument) => (
+            {detail.arguments.map((argument) => (
               <tr key={argument.argument_id}>
                 <td className="small" title={argument.side}>
                   {label(SIDE, argument.side)}
@@ -780,7 +724,7 @@ export default async function CaseDetailPage({
 
       <div className="section">
         <h2>Frases del tribunal (ratio decidendi)</h2>
-        {(detail.reasoning as Holding[]).map((holding) => (
+        {detail.reasoning.map((holding) => (
           <div key={holding.holding_id} style={{ marginBottom: 12 }}>
             <blockquote>
               {holding.is_literal_quote ? `«${holding.statement}»` : holding.statement}
@@ -843,7 +787,7 @@ export default async function CaseDetailPage({
         </p>
 
         {comparisons.map((comparison) => {
-          const report = comparison.report as CompareReport;
+          const report = comparison.report;
           return (
             <article
               key={comparison.otro_caso}
@@ -1148,7 +1092,7 @@ export default async function CaseDetailPage({
             </tr>
           </thead>
           <tbody>
-            {(detail.lawRefs as Ref[]).map((ref, index) => {
+            {detail.lawRefs.map((ref, index) => {
               const first = ref.articles?.[0];
               const href =
                 ref.boe_id && first?.block_id
@@ -1185,8 +1129,8 @@ export default async function CaseDetailPage({
                 </tr>
               );
             })}
-            {(detail.lawRefs as Ref[]).length === 0 && (detail.citedLaws as Citation[]).length > 0 &&
-              (detail.citedLaws as Citation[]).map((citation) => (
+            {detail.lawRefs.length === 0 && detail.citedLaws.length > 0 &&
+              detail.citedLaws.map((citation) => (
                 <tr key={citation.citation_id}>
                   <td className="small" colSpan={3}>
                     {citation.raw_text}

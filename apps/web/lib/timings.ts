@@ -5,7 +5,7 @@ export interface Medicion {
 
 const buffer: Medicion[] = [];
 
-/** Tiempo de render de la última petición (se mide en el layout raíz). */
+/** Preámbulo del layout raíz por petición (no el render completo de la página). */
 export function registrarRender(ms: number): void {
   buffer.push({ at: new Date().toISOString(), ms: Math.round(ms) });
   if (buffer.length > 50) buffer.shift();

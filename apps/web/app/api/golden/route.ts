@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { appendAudit } from "@pipeline/audit";
 import { can, canCreateCase } from "@pipeline/authorization";
 import type { GoldenEntry } from "@pipeline/eval";
-import { caseResource, defaultOrgId, getActor , recursoCaso } from "@/lib/auth";
+import { defaultOrgId, getActor , recursoCaso } from "@/lib/auth";
 import { getGoldenInfo, repoRoot } from "@/lib/dataset";
 import { auditPath, loadGrantStore } from "@/lib/grants";
 

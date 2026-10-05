@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import type { CompareReport } from "@pipeline/compare";
 import { PrintButton } from "@/components/print-button";
 import { CopyButton } from "@/components/copy-button";
 import { canViewCase, requireActor , contextoVisibilidad } from "@/lib/auth";
@@ -24,7 +23,7 @@ export default async function CompareReportPage({
   const [a, b, comparisons] = await Promise.all([getCase(id), getCase(other), getComparisons(id)]);
   if (!a || !b) notFound();
   const comparison = comparisons.find((item) => item.otro_caso === other);
-  const report = comparison?.report as CompareReport | undefined;
+  const report = comparison?.report;
 
   return (
     <article className="print-sheet">

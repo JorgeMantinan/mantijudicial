@@ -12,7 +12,10 @@ export async function GET(): Promise<NextResponse> {
   const grants = await authorizationGrants();
   const visibles = jobs
     .list()
-    .filter((job) => !job.caseId || canViewCase(actor, job.caseId, orgId, grants));
+    .filter((job) => {
+      if (job.orgId && job.orgId !== actor.orgId) return false;
+      return !job.caseId || canViewCase(actor, job.caseId, orgId, grants);
+    });
   return NextResponse.json({
     jobs: visibles.map((job) => ({
       id: job.id,

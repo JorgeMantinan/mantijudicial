@@ -67,7 +67,7 @@ export default async function PrintCasePage({ params }: { params: Promise<{ id: 
 
       <h2>Partes</h2>
       <ul>
-        {(detail.parties as Array<{ name?: string; side?: string; kind?: string }>).map((party, index) => (
+        {(detail.parties).map((party, index) => (
           <li key={index}>
             {party.name} — {label(SIDE, party.side)} ({label(KIND, party.kind)})
           </li>
@@ -76,7 +76,7 @@ export default async function PrintCasePage({ params }: { params: Promise<{ id: 
 
       <h2>Pretensiones</h2>
       <ul>
-        {(detail.claims as Array<{ description?: string; outcome?: string }>).map((claim, index) => (
+        {(detail.claims).map((claim, index) => (
           <li key={index}>
             {claim.description} — {label(CLAIM_OUTCOME, claim.outcome)}
           </li>
@@ -85,7 +85,7 @@ export default async function PrintCasePage({ params }: { params: Promise<{ id: 
 
       <h2>Argumentos</h2>
       <ul>
-        {(detail.arguments as Array<{ description?: string; type?: string; outcome?: string; legal_basis?: string }>).map(
+        {(detail.arguments).map(
           (argument, index) => (
             <li key={index}>
               [{label(ARG_OUTCOME, argument.outcome)}] {argument.description}
@@ -96,7 +96,7 @@ export default async function PrintCasePage({ params }: { params: Promise<{ id: 
       </ul>
 
       <h2>Frases del tribunal</h2>
-      {(detail.reasoning as Array<{ statement?: string; topic?: string; doctrine?: string }>).map(
+      {(detail.reasoning).map(
         (holding, index) => (
           <blockquote key={index}>
             {holding.statement}
@@ -109,7 +109,7 @@ export default async function PrintCasePage({ params }: { params: Promise<{ id: 
 
       <h2>Leyes citadas verificadas</h2>
       <ul>
-        {(detail.lawRefs as Array<{ norma?: string; boe_id?: string | null; article_raw?: string; status?: string }>)
+        {(detail.lawRefs)
           .filter((ref) => ref.status === "VERIFIED" && ref.boe_id)
           .map((ref, index) => (
             <li key={index}>

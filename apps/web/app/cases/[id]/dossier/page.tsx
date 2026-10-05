@@ -56,21 +56,11 @@ export default async function DossierPage({
     reasoning_summary?: string;
   };
   const summary = (detail.summary?.summary ?? {}) as { summary?: string; key_points?: string[] };
-  const parties = (detail.parties ?? []) as Array<{ name?: string; side?: string; kind?: string }>;
-  const claims = (detail.claims ?? []) as Array<{ description?: string; outcome?: string }>;
-  const argumentos = (detail.arguments ?? []) as Array<{
-    description?: string;
-    type?: string;
-    outcome?: string;
-    legal_basis?: string;
-  }>;
-  const frases = (detail.reasoning ?? []) as Array<{ statement?: string; topic?: string; doctrine?: string }>;
-  const leyes = (detail.lawRefs ?? []) as Array<{
-    norma?: string;
-    boe_id?: string | null;
-    article_raw?: string;
-    status?: string;
-  }>;
+  const parties = detail.parties;
+  const claims = detail.claims;
+  const argumentos = detail.arguments;
+  const frases = detail.reasoning;
+  const leyes = detail.lawRefs;
   const rechazados = argumentos.filter(
     (argumento) =>
       !["ACEPTADO", "ACCEPTED", "PARTIALLY_ACCEPTED", "PARCIAL"].includes(

@@ -5,6 +5,8 @@ export interface JobRecord {
   kind: string;
   status: JobStatus;
   caseId?: string;
+  /** Despacho que lo lanza: los trabajos sin caseId no deben cruzar firmas. */
+  orgId?: string;
   lines: string[];
   error?: string;
   startedAt: string;

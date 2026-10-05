@@ -20,9 +20,12 @@ function asDict(value: unknown): Dict {
 export default async function EvalPage() {
   const { actor, orgId, grants } = await contextoVisibilidad();
   const ve = (id: string) => canViewCase(actor, id.split("#")[0], orgId, grants);
-  const report = await getEvalReport();
-  const costes = await getCostesIA();
-  const calidadBruta = await getCalidadCorpus();
+  const [report, costes, calidadBruta, sistema] = await Promise.all([
+    getEvalReport(),
+    getCostesIA(),
+    getCalidadCorpus(),
+    getSistemaInfo(),
+  ]);
   const calidad = {
     ...calidadBruta,
     escaneados: calidadBruta.escaneados.filter(ve),
@@ -30,7 +33,6 @@ export default async function EvalPage() {
     sinEnriquecer: calidadBruta.sinEnriquecer.filter(ve),
     sinRevisar: calidadBruta.sinRevisar.filter(ve),
   };
-  const sistema = await getSistemaInfo();
   const mediciones = ultimasMediciones();
   if (!report) {
     return (
@@ -302,7 +304,8 @@ export default async function EvalPage() {
       <div className="section">
         <h2>Tiempos de render (esta sesión)</h2>
         <p className="small muted">
-          Últimas páginas servidas por el servidor (solo memoria: se borran al reiniciar).
+          Preámbulo del layout raíz del servidor (antes de que la página empiece a renderizar;
+          no incluye los datos). Solo memoria: se borran al reiniciar.
         </p>
         {mediciones.length === 0 ? (
           <p className="small">Sin mediciones todavía: recarga un par de páginas.</p>
@@ -312,7 +315,7 @@ export default async function EvalPage() {
               {mediciones.map((medicion) => (
                 <tr key={`${medicion.at}-${medicion.ms}`}>
                   <td className="mono small">{new Date(medicion.at).toLocaleTimeString("es-ES")}</td>
-                  <td className="small">render</td>
+                  <td className="small">layout</td>
                   <td style={{ textAlign: "right" }}>{medicion.ms} ms</td>
                 </tr>
               ))}

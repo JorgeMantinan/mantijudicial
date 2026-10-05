@@ -3,7 +3,7 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 import { appendAudit } from "@pipeline/audit";
 import { can, canCreateCase } from "@pipeline/authorization";
-import { caseResource, defaultOrgId, getActor , recursoCaso } from "@/lib/auth";
+import { defaultOrgId, getActor , recursoCaso } from "@/lib/auth";
 import { auditPath, grantsPath, loadGrantStore } from "@/lib/grants";
 import { jobs } from "@/lib/jobs";
 import { repoRoot } from "@/lib/dataset";
@@ -55,7 +55,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   const job = jobs.create("reanalyze");
-  jobs.patch(job.id, { status: "queued", caseId });
+  jobs.patch(job.id, { status: "queued", caseId, orgId: actor.orgId });
   jobs.append(job.id, `Reanálisis solicitado por ${actor.userId} (~$0,01 de IA)`);
 
   void jobs

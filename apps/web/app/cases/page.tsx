@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { canCreateCase } from "@pipeline/authorization";
-import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
+import { canViewCase, contextoVisibilidad } from "@/lib/auth";
 import { diasSinTocar, getClientes, getVistas, listCases } from "@/lib/dataset";
 import { VistasGuardadas } from "./vistas-guardadas";
-import { authorizationGrants } from "@/lib/grants";
 import { BRANCH, OUTCOME, REVIEW, SIDE, label } from "@/lib/labels";
 import { OutcomeBadge } from "@/lib/ui";
 import { SortTh } from "@/lib/sort-th";
@@ -52,10 +51,8 @@ export default async function CasesPage({
   }>;
 }) {
   const params = await searchParams;
-  const actor = await requireActor();
-  const orgId = await defaultOrgId();
+  const { actor, orgId, grants } = await contextoVisibilidad();
   const canCreate = canCreateCase(actor);
-  const grants = await authorizationGrants();
   const cases = (
     await listCases({
       branch: params.branch,

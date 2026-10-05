@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { can } from "@pipeline/authorization";
-import { caseResource, defaultOrgId, getActor , recursoCaso } from "@/lib/auth";
+import { defaultOrgId, getActor , recursoCaso } from "@/lib/auth";
 import { loadGrantStore } from "@/lib/grants";
 import { getCase, getVias } from "@/lib/dataset";
 

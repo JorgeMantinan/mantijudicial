@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { appendAudit } from "@pipeline/audit";
 import { can, canCreateCase } from "@pipeline/authorization";
-import { caseResource, defaultOrgId, getActor , recursoCaso } from "@/lib/auth";
+import { defaultOrgId, getActor , recursoCaso } from "@/lib/auth";
 import { isArchived, setArchived } from "@/lib/dataset";
 import { auditPath, loadGrantStore } from "@/lib/grants";
 

@@ -83,7 +83,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   await fs.writeFile(uploadPath, Buffer.from(await file.arrayBuffer()));
 
   const job = jobs.create("ingest");
-  jobs.patch(job.id, { status: "queued" });
+  jobs.patch(job.id, { status: "queued", orgId: actor.orgId });
   jobs.append(job.id, `Recibido: ${file.name} (${file.size} bytes) · fuente=${source}`);
 
   void jobs
@@ -129,7 +129,10 @@ export async function GET(): Promise<NextResponse> {
   const grants = await authorizationGrants();
   const visibles = jobs
     .list()
-    .filter((job) => !job.caseId || canViewCase(actor, job.caseId, orgId, grants));
+    .filter((job) => {
+      if (job.orgId && job.orgId !== actor.orgId) return false;
+      return !job.caseId || canViewCase(actor, job.caseId, orgId, grants);
+    });
   return NextResponse.json({
     jobs: visibles.map((job) => ({
       id: job.id,

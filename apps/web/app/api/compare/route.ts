@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { can, canCreateCase } from "@pipeline/authorization";
-import { caseResource, defaultOrgId, getActor , recursoCaso } from "@/lib/auth";
+import { defaultOrgId, getActor , recursoCaso } from "@/lib/auth";
 import { loadGrantStore } from "@/lib/grants";
 import { jobs } from "@/lib/jobs";
 import { repoRoot } from "@/lib/dataset";
@@ -63,7 +63,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   const job = jobs.create("compare");
-  jobs.patch(job.id, { status: "queued", caseId });
+  jobs.patch(job.id, { status: "queued", caseId, orgId: actor.orgId });
   jobs.append(job.id, `Comparando ${caseId} con ${otherId} (≈$0,003 de IA)`);
 
   void jobs
