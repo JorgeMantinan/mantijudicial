@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { can, canCreateCase } from "@pipeline/authorization";
-import { caseResource, defaultOrgId, getActor } from "@/lib/auth";
+import { caseResource, defaultOrgId, getActor , recursoCaso } from "@/lib/auth";
 import { loadGrantStore } from "@/lib/grants";
 import { jobs } from "@/lib/jobs";
 import { repoRoot } from "@/lib/dataset";
@@ -56,8 +56,8 @@ export async function POST(request: Request): Promise<NextResponse> {
   const orgId = await defaultOrgId();
   const grants = (await loadGrantStore()).toAuthorizationGrants();
   if (
-    !can(actor, "ANALYZE", caseResource(caseId, orgId), grants) ||
-    !can(actor, "VIEW", caseResource(otherId, orgId), grants)
+    !can(actor, "ANALYZE", await recursoCaso(caseId), grants) ||
+    !can(actor, "VIEW", await recursoCaso(otherId), grants)
   ) {
     return NextResponse.json({ error: "No puedes analizar esos casos" }, { status: 403 });
   }

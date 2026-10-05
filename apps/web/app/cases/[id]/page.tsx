@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { canCreateCase, canShareResource } from "@pipeline/authorization";
 import type { CompareReport } from "@pipeline/compare";
-import { canViewCase, caseResource, defaultOrgId, loadIdentity, requireActor } from "@/lib/auth";
+import { canViewCase, caseResource, defaultOrgId, loadIdentity, requireActor , recursoCaso } from "@/lib/auth";
 import { getAuditoria, getCase, getClientes, getComparisons, getDoctrinaCitada, getEscrito, getGoldenInfo, getRecomendaciones, getReviewStats, getSentenciasCitadas, getSimilarCases, getVigenciaChecks, getVias, listLaws } from "@/lib/dataset";
 import { authorizationGrants, loadGrantStore } from "@/lib/grants";
 import {
@@ -153,7 +153,7 @@ export default async function CaseDetailPage({
     expiresAt: grant.expiresAt,
     revokedAt: grant.revokedAt,
   }));
-  const canShare = canShareResource(actor, caseResource(id, orgId));
+  const canShare = canShareResource(actor, await recursoCaso(id));
   const canCreate = canCreateCase(actor);
   const lawTitles = new Map(laws.map((law) => [law.boe_id, law.titulo]));
   const outcome = (detail.outcomeDetail?.outcome ?? {}) as {

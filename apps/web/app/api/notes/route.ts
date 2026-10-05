@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { appendAudit } from "@pipeline/audit";
 import { NoteError, NoteStore } from "@pipeline/notes";
 import { can } from "@pipeline/authorization";
-import { caseResource, defaultOrgId, getActor, loadIdentity } from "@/lib/auth";
+import { caseResource, defaultOrgId, getActor, loadIdentity , recursoCaso } from "@/lib/auth";
 import { auditPath, grantsPath, loadGrantStore } from "@/lib/grants";
 import { repoRoot } from "@/lib/dataset";
 
@@ -27,7 +27,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
   const orgId = await defaultOrgId();
   const grants = await loadGrants();
-  if (!can(actor, "VIEW", caseResource(caseId, orgId), grants)) {
+  if (!can(actor, "VIEW", await recursoCaso(caseId), grants)) {
     return NextResponse.json({ error: "No puedes ver este caso" }, { status: 403 });
   }
   const store = await NoteStore.load(notesPath(caseId));
@@ -51,7 +51,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
   const orgId = await defaultOrgId();
   const grants = await loadGrants();
-  if (!can(actor, "VIEW", caseResource(caseId, orgId), grants)) {
+  if (!can(actor, "VIEW", await recursoCaso(caseId), grants)) {
     return NextResponse.json({ error: "No puedes ver este caso" }, { status: 403 });
   }
 
@@ -96,7 +96,7 @@ export async function DELETE(request: Request): Promise<NextResponse> {
   }
   const orgId = await defaultOrgId();
   const grants = await loadGrants();
-  if (!can(actor, "VIEW", caseResource(caseId, orgId), grants)) {
+  if (!can(actor, "VIEW", await recursoCaso(caseId), grants)) {
     return NextResponse.json({ error: "No puedes editar este caso" }, { status: 403 });
   }
 

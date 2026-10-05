@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { can, canCreateCase } from "@pipeline/authorization";
-import { caseResource, defaultOrgId, getActor } from "@/lib/auth";
+import { caseResource, defaultOrgId, getActor , recursoCaso } from "@/lib/auth";
 import { setCliente } from "@/lib/dataset";
 import { loadGrantStore } from "@/lib/grants";
 
@@ -29,7 +29,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   const orgId = await defaultOrgId();
   const grants = (await loadGrantStore()).toAuthorizationGrants();
-  if (!can(actor, "VIEW", caseResource(caseId, orgId), grants)) {
+  if (!can(actor, "VIEW", await recursoCaso(caseId), grants)) {
     return NextResponse.json({ error: "No puedes modificar ese caso" }, { status: 403 });
   }
 

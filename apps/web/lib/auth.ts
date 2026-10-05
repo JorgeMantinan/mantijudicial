@@ -70,6 +70,16 @@ function orgDelCasoSync(caseId: string): string | null {
   }
 }
 
+/**
+ * Recurso de caso con el dueño real (data/cosos_org.json) resuelto. Las APIs
+ * deben usarlo en lugar de `caseResource(id, defaultOrgId())`: el primer
+ * despacho no es el dueño de todo.
+ */
+export async function recursoCaso(caseId: string): Promise<Resource> {
+  const dueno = orgDelCasoSync(caseId) ?? (await defaultOrgId());
+  return caseResource(caseId, dueno);
+}
+
 export function canViewCase(
   actor: Actor,
   caseId: string,

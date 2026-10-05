@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { requireActor } from "@/lib/auth";
+import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
+import { authorizationGrants } from "@/lib/grants";
 import { getClientes, listCases } from "@/lib/dataset";
 import { OUTCOME, label } from "@/lib/labels";
 import { PrintButton } from "@/components/print-button";
@@ -19,9 +20,12 @@ export default async function CompararClientesPage({
 }: {
   searchParams: Promise<{ a?: string; b?: string }>;
 }) {
-  await requireActor();
+  const actor = await requireActor();
+  const orgId = await defaultOrgId();
+  const grants = await authorizationGrants();
   const sp = await searchParams;
-  const [clientes, casos] = await Promise.all([getClientes(), listCases()]);
+  const [clientes, todos] = await Promise.all([getClientes(), listCases()]);
+  const casos = todos.filter((caso) => canViewCase(actor, caso.id, orgId, grants));
 
   const agrupados = new Map<string, Casos>();
   for (const caso of casos) {

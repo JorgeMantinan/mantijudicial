@@ -3,7 +3,7 @@ import { appendAudit } from "@pipeline/audit";
 import { canShareResource } from "@pipeline/authorization";
 import { GrantError } from "@pipeline/grants";
 import { auditPath, grantsPath, loadGrantStore } from "@/lib/grants";
-import { caseResource, defaultOrgId, getActor } from "@/lib/auth";
+import { caseResource, defaultOrgId, getActor, recursoCaso } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +26,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (!existing) return NextResponse.json({ error: "Concesión no encontrada" }, { status: 404 });
 
     const orgId = await defaultOrgId();
-    if (!canShareResource(actor, caseResource(existing.resourceId, orgId))) {
+    if (!canShareResource(actor, await recursoCaso(existing.resourceId))) {
       return NextResponse.json({ error: "No puedes modificar este caso" }, { status: 403 });
     }
 

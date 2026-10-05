@@ -3,7 +3,7 @@ import { appendAudit } from "@pipeline/audit";
 import { can, canShareResource } from "@pipeline/authorization";
 import { GrantError, SHAREABLE_ACTIONS } from "@pipeline/grants";
 import { auditPath, authorizationGrants, grantsPath, loadGrantStore } from "@/lib/grants";
-import { caseResource, defaultOrgId, getActor, loadIdentity } from "@/lib/auth";
+import { caseResource, defaultOrgId, getActor, loadIdentity , recursoCaso } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +28,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
   const orgId = await defaultOrgId();
   const grants = await authorizationGrants();
-  if (!can(actor, "VIEW", caseResource(resourceId, orgId), grants)) {
+  if (!can(actor, "VIEW", await recursoCaso(resourceId), grants)) {
     return NextResponse.json({ error: "No puedes ver este caso" }, { status: 403 });
   }
 
@@ -48,7 +48,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   );
   return NextResponse.json({
     resourceId,
-    canShare: canShareResource(actor, caseResource(resourceId, orgId)),
+    canShare: canShareResource(actor, await recursoCaso(resourceId)),
     shareableActions: SHAREABLE_ACTIONS,
     grants: items,
   });
@@ -71,7 +71,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   const orgId = await defaultOrgId();
-  if (!canShareResource(actor, caseResource(resourceId, orgId))) {
+  if (!canShareResource(actor, await recursoCaso(resourceId))) {
     return NextResponse.json({ error: "No puedes compartir este caso" }, { status: 403 });
   }
 
