@@ -5,6 +5,7 @@ import { authorizationGrants } from "@/lib/grants";
 import { findByIdentifier } from "@/lib/identifier";
 import { BRANCH, OUTCOME, SEARCH_KIND, label } from "@/lib/labels";
 import { BusquedasGuardadas } from "./busquedas-guardadas";
+import { HistorialBusquedas } from "./historial-busquedas";
 
 export const dynamic = "force-dynamic";
 
@@ -162,6 +163,7 @@ export default async function SearchPage({
         branch={params.branch ?? ""}
         outcome={params.outcome ?? ""}
       />
+      <HistorialBusquedas query={query} />
 
       {query.length === 0 && <p className="muted">Escribe una consulta para buscar.</p>}
 

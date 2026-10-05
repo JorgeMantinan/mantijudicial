@@ -612,6 +612,13 @@ main.wrap {
   outline-offset: 2px;
 }
 
+/* En papel no hacen falta las casillas de selección */
+@media print {
+  input[type="checkbox"] {
+    display: none !important;
+  }
+}
+
 /* ---- Densidad de tablas (conmutador en la cabecera) ---- */
 :root[data-densidad="compacta"] table {
   font-size: 13px;

@@ -75,6 +75,14 @@ export default async function CompararTemasPage({
         ))}
       </p>
 
+      <p className="small no-print">
+        <a
+          href={`/api/export/comparar-temas?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`}
+        >
+          descargar CSV de la comparación
+        </a>
+      </p>
+
       <h1>Comparar dos temas</h1>
       <p className="lead">
         Dos líneas de jurisprudencia lado a lado: resultados, vigencia temporal, argumentos que
