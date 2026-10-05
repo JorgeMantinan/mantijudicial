@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PrintButton } from "@/components/print-button";
+import { CopyButton } from "@/components/copy-button";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import { filtrarFrasesDelTema, getBusquedas, getCalidadCorpus, getContradicciones, getDuplicados, getGruposFrases, getHistorialAlertas, getPatronesVistos, getReviewStats, getVigenciaAlerts, diasSinTocar, listCases, registrarAlertasDelDia, runSearch } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
@@ -152,11 +153,20 @@ export default async function AlertasPage({
   });
   const historial = (await getHistorialAlertas()).slice(-14);
 
+  const resumenAlertas = [
+    `Alertas MantiJudicial · total ${total}`,
+    `Leyes cambiadas: ${vigencia.length} · Criterio dividido: ${contradictorio.length}`,
+    `PDFs con problemas: ${stale.length} stale, ${escaneados.length} sin texto`,
+    `Pendientes de revisar: ${review.pending.length} · Casos fríos >30d: ${frios.length}`,
+    `Duplicados: ${duplicados.length} · Patrones emergentes: ${visiblesEmergentes.length} · Nuevos en tus búsquedas: ${nuevosMatch}`,
+  ].join("\n");
+
   return (
     <article className="print-sheet">
       <p className="small muted no-print">
         <Link href="/">← Resumen</Link> ·{" "}
-        <a href="/api/export/alertas">descargar CSV</a>
+        <a href="/api/export/alertas">descargar CSV</a> ·{" "}
+        <CopyButton texto={resumenAlertas} etiqueta="Copiar resumen" />
       </p>
       <PrintButton text="Imprimir el informe de alertas" />
 

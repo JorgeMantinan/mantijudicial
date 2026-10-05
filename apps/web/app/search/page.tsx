@@ -53,6 +53,7 @@ export default async function SearchPage({
 
   let hits: Awaited<ReturnType<typeof runSearch>>["hits"] = [];
   let docs = 0;
+  let totalResultados = 0;
   let masPaginas = false;
   const exactos = query.length >= 4 ? await findByIdentifier(query) : [];
   const busquedas = await getBusquedas(actor.orgId);
@@ -62,14 +63,14 @@ export default async function SearchPage({
     if (params.outcome) filters.outcome = params.outcome;
     const result = await runSearch(query, {
       kinds: params.kind ? [params.kind] : undefined,
-      limit: Math.min(offset + porPagina, 100),
+      limit: 10_000,
       filters: Object.keys(filters).length > 0 ? filters : undefined,
       allow: (doc) => doc.kind === "article" || canSee(doc.id),
     });
-    const ventana = result.hits.slice(offset, offset + porPagina);
-    hits = ventana;
+    hits = result.hits.slice(offset, offset + porPagina);
+    totalResultados = result.hits.length;
     docs = result.docs;
-    masPaginas = result.hits.length > offset + porPagina;
+    masPaginas = totalResultados > offset + porPagina;
   }
 
   const hrefPagina = (n: number): string => {
@@ -85,7 +86,7 @@ export default async function SearchPage({
   // Se calcula DESPUÉS de poblar `hits` (antes salía siempre "sin resultados").
   const sinResultados = query.length > 0 && hits.length === 0 && exactos.length === 0;
   let sugerencias: Array<{ topic: string; casos: number }> = [];
-  if (sinResultados) {
+  if (query.length >= 4) {
     const palabras = query
       .toLowerCase()
       .split(/\s+/)
@@ -159,8 +160,8 @@ export default async function SearchPage({
 
       {query.length > 0 && (
         <p className="small muted">
-          Página {pagina} · mostrando {offset + 1}–{offset + hits.length} de {docs} documentos
-          indexados.
+          Página {pagina} · {offset + 1}–{offset + hits.length} de {totalResultados} resultados ·{" "}
+          {docs} documentos indexados.
         </p>
       )}
 
@@ -248,6 +249,18 @@ export default async function SearchPage({
           </li>
         ))}
       </ol>
+
+      {query.length > 0 && hits.length > 0 && sugerencias.length > 0 && (
+        <p className="small no-print" style={{ marginTop: 10 }}>
+          También podrías mirar:{" "}
+          {sugerencias.slice(0, 3).map((sugerencia, index) => (
+            <span key={sugerencia.topic}>
+              {index > 0 && " · "}
+              <Link href={`/temas/${encodeURIComponent(sugerencia.topic)}`}>{sugerencia.topic}</Link>
+            </span>
+          ))}
+        </p>
+      )}
 
       {query.length > 0 && (pagina > 1 || masPaginas) && (
         <p className="small no-print" style={{ display: "flex", gap: 14 }}>

@@ -78,7 +78,12 @@ export default async function EvolucionPage({
     <article className="print-sheet">
       <p className="small muted no-print">
         <Link href="/">← Resumen</Link> · <Link href="/alertas">Alertas</Link> ·{" "}
-        <Link href="/informes">Informes</Link>
+        <Link href="/informes">Informes</Link> ·{" "}
+        <a
+          href={`/api/export/evolucion${sp.branch || sp.outcome ? `?${new URLSearchParams({ ...(sp.branch ? { branch: sp.branch } : {}), ...(sp.outcome ? { outcome: sp.outcome } : {}) })}` : ""}`}
+        >
+          descargar CSV
+        </a>
       </p>
       <PrintButton text="Imprimir la evolución" />
 

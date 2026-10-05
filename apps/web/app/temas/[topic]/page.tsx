@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PrintButton } from "@/components/print-button";
+import { CopyButton } from "@/components/copy-button";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import { filtrarFrasesDelTema, getGruposFrases, getTema } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
@@ -64,6 +65,13 @@ export default async function TemaPage({
     await getGruposFrases(),
     new Set(entradas.map((entrada) => entrada.caseId)),
   );
+  const resumenTema = [
+    `Tema: ${tema.topic}`,
+    `${tema.cases} casos (${tema.first.slice(0, 10)} → ${tema.last.slice(0, 10)})`,
+    Object.entries(tema.distribution)
+      .map(([outcome, cantidad]) => `${label(OUTCOME, outcome)}: ${cantidad}`)
+      .join(" · "),
+  ].join("\n");
 
   return (
     <article className="print-sheet">
@@ -77,7 +85,8 @@ export default async function TemaPage({
           }${sp.outcome ? `&outcome=${encodeURIComponent(sp.outcome)}` : ""}`}
         >
           descargar CSV
-        </a>
+        </a>{" "}
+        · <CopyButton texto={resumenTema} etiqueta="Copiar resumen" />
       </p>
 
       <form className="filters no-print" action={`/temas/${encodeURIComponent(topic)}`} method="get">
