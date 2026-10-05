@@ -10,7 +10,7 @@ import {
   readJson,
   repoRoot,
   section,
-} from "./dataset";
+} from "./dataset-base";
 
 export interface InformeCaso {
   id: string;
