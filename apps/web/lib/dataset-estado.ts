@@ -228,16 +228,25 @@ export async function getRevisionPorPersona(): Promise<{
   const personas = new Map<string, RevisionPersona>();
   let sinRevisador = 0;
 
-  for (const item of await listCases()) {
-    const review = await section<{
-      review?: { status?: string; reviewed_by?: string | null; reviewed_at?: string };
-    }>(item.id, "review.json");
+  const items = await listCases();
+  // En paralelo: ~320 lecturas de review.json en serie costaban más que el
+  // resto de la página (sin caché a propósito: /review debe verse al instante).
+  const reviews = await Promise.all(
+    items.map((item) =>
+      section<{
+        review?: { status?: string; reviewed_by?: string | null; reviewed_at?: string };
+      }>(item.id, "review.json"),
+    ),
+  );
+
+  items.forEach((_item, index) => {
+    const review = reviews[index];
     const block = review?.review ?? {};
     const status = block.status ?? "UNREVIEWED";
     const persona = (block.reviewed_by ?? "").trim();
     if (!persona) {
       if (status !== "UNREVIEWED") sinRevisador += 1;
-      continue;
+      return;
     }
     const row =
       personas.get(persona) ?? { persona, casos: 0, estados: {}, ultimo: "" };
@@ -246,7 +255,7 @@ export async function getRevisionPorPersona(): Promise<{
     const cuando = block.reviewed_at ?? "";
     if (cuando > row.ultimo) row.ultimo = cuando;
     personas.set(persona, row);
-  }
+  });
 
   return {
     personas: [...personas.values()].sort((a, b) => b.casos - a.casos),

@@ -78,32 +78,45 @@ export default async function AlertasPage({
     .slice()
     .reverse();
 
-  const visibles = new Set(
-    (await listCases()).filter((item) => puedeVer(item.id)).map((item) => item.id),
-  );
-  const emergentes = filtrarFrasesDelTema(await getGruposFrases(), visibles).filter(
+  const [todos, gruposFrases, patronesVistos, guardadas, duplicadosBruto] = await Promise.all([
+    listCases(),
+    getGruposFrases(),
+    getPatronesVistos(actor.orgId),
+    getBusquedas(actor.orgId),
+    getDuplicados(),
+  ]);
+
+  const visibles = new Set(todos.filter((item) => puedeVer(item.id)).map((item) => item.id));
+  const emergentes = filtrarFrasesDelTema(gruposFrases, visibles).filter(
     (grupo) => grupo.homogenea >= 90 && grupo.total <= 4,
   );
 
-  const vistos = new Set(await getPatronesVistos(actor.orgId));
+  const vistos = new Set(patronesVistos);
   const ocultos = emergentes.filter((grupo) => vistos.has(grupo.ejemplo)).length;
   const visiblesEmergentes = emergentes.filter((grupo) => !vistos.has(grupo.ejemplo));
 
   // Búsquedas guardadas que dan resultado en casos incorporados en los últimos 30 días.
   const hace30 = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10);
   const nuevosIds = new Set(
-    (await listCases())
+    todos
       .filter((item) => puedeVer(item.id) && (item.generatedAt ?? "").slice(0, 10) >= hace30)
       .map((item) => item.id),
   );
   const busquedasMatch: Array<{ nombre: string; q: string; casos: string[] }> = [];
   if (nuevosIds.size > 0) {
-    for (const busqueda of (await getBusquedas(actor.orgId)).slice(0, 8)) {
-      const resultado = await runSearch(busqueda.q, {
-        limit: 15,
-        kinds: busqueda.kind ? [busqueda.kind] : undefined,
-        allow: (doc) => doc.kind === "case",
-      });
+    // Las ≤8 búsquedas se lanzan juntas (cada una es barata desde que los
+    // snippets solo se calculan para los top).
+    const resultados = await Promise.all(
+      guardadas.slice(0, 8).map(async (busqueda) => ({
+        busqueda,
+        resultado: await runSearch(busqueda.q, {
+          limit: 15,
+          kinds: busqueda.kind ? [busqueda.kind] : undefined,
+          allow: (doc) => doc.kind === "case",
+        }),
+      })),
+    );
+    for (const { busqueda, resultado } of resultados) {
       const coincidentes = [
         ...new Set(
           resultado.hits.map((hit) => hit.id.split("#")[0]).filter((id) => nuevosIds.has(id)),
@@ -119,11 +132,11 @@ export default async function AlertasPage({
     }
   }
   const nuevosMatch = busquedasMatch.reduce((total, item) => total + item.casos.length, 0);
-  const duplicados = (await getDuplicados())
+  const duplicados = duplicadosBruto
     .map((dup) => ({ ...dup, casos: dup.casos.filter(puedeVer) }))
     .filter((dup) => dup.casos.length > 1);
 
-  const frios = (await listCases())
+  const frios = todos
     .filter(
       (item) =>
         puedeVer(item.id) && item.reviewStatus === "UNREVIEWED" && diasSinTocar(item) > 30,
