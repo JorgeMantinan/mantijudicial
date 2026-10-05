@@ -169,8 +169,8 @@ real de `/laws` (antes O(n²) y nunca visible).
 2. ~~Avisos en `readJson`~~ ✅ hecho: `console.warn` salvo `ENOENT`.
 3. ~~Cadena de hash en `audit.log`~~ ✅ hecho: `sha256(previo+contenido)` por
    entrada y badge "integridad OK (N)" en `/users`.
-4. Caché de `getInforme` (ojo: sin mezclar visibilidad entre despachos) —
-   pendiente.
+4. ~~Caché de `getInforme`~~ ✅ hecho: lecturas crudas con `memoClave`
+   (60 s); /informes pasó de 1136 ms a 74 ms.
 5. Limpieza fina: `fechaEs`/`cortar` únicos — pendiente (`PAPELES` ya está en
    `labels.ts`).
 
