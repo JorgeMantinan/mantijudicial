@@ -101,20 +101,27 @@ export interface SearchOptions {
 }
 
 interface IndexData {
-  docs: Array<{ doc: SearchDoc; length: number; folded: string }>;
+  docs: Array<{ doc: SearchDoc; length: number }>;
   postings: Map<string, Array<{ doc: number; tf: number }>>;
   docFreq: Map<string, number>;
   totalLength: number;
 }
 
+/** Tabla de marcas latinas (á→a…) que no cambian la longitud. Un replace de
+ * regex en toda la cadena es ~10× más rápido que normalize() carácter a
+ * carácter (que era el cuello de botella del build del índice). */
+const FOLD_MAPA: Record<string, string> = {
+  "à": "a", "á": "a", "â": "a", "ã": "a", "ä": "a", "å": "a",
+  "è": "e", "é": "e", "ê": "e", "ë": "e",
+  "ì": "i", "í": "i", "î": "i", "ï": "i",
+  "ò": "o", "ó": "o", "ô": "o", "õ": "o", "ö": "o",
+  "ù": "u", "ú": "u", "û": "u", "ü": "u",
+  "ý": "y", "ç": "c", "ñ": "n",
+};
+const FOLD_RE = /[àáâãäåèéêëìíîïòóôõöùúûüýçñ]/g;
+
 export function foldPreservingLength(text: string): string {
-  let out = "";
-  for (const char of text) {
-    const decomposed = char.normalize("NFD");
-    const base = decomposed.replace(/[\u0300-\u036f]/g, "");
-    out += base.length === 1 ? base.toLowerCase() : char.toLowerCase();
-  }
-  return out;
+  return text.toLowerCase().replace(FOLD_RE, (char) => FOLD_MAPA[char] ?? char);
 }
 
 function variants(token: string): string[] {
@@ -139,7 +146,7 @@ export function tokenize(text: string): string[] {
 export function buildIndex(docs: SearchDoc[]): IndexData {
   const postings = new Map<string, Array<{ doc: number; tf: number }>>();
   const docFreq = new Map<string, number>();
-  const indexed: Array<{ doc: SearchDoc; length: number; folded: string }> = [];
+  const indexed: Array<{ doc: SearchDoc; length: number }> = [];
   let totalLength = 0;
 
   docs.forEach((doc, position) => {
@@ -155,7 +162,7 @@ export function buildIndex(docs: SearchDoc[]): IndexData {
       docFreq.set(token, (docFreq.get(token) ?? 0) + 1);
     }
     totalLength += tokens.length;
-    indexed.push({ doc, length: tokens.length, folded: foldPreservingLength(`${doc.title}\n${doc.body}`) });
+    indexed.push({ doc, length: tokens.length });
   });
 
   return { docs: indexed, postings, docFreq, totalLength };
@@ -182,8 +189,8 @@ function matchesFilters(doc: SearchDoc, filters: Record<string, string> | undefi
   return true;
 }
 
-function snippetFor(text: string, terms: string[]): string {
-  const folded = foldPreservingLength(text);
+function snippetFor(text: string, terms: string[], foldedPrefolded?: string): string {
+  const folded = foldedPrefolded ?? foldPreservingLength(text);
   let position = -1;
   for (const term of terms) {
     const found = folded.indexOf(term);
@@ -227,57 +234,55 @@ export function search(index: IndexData, query: string, options: SearchOptions =
     }
   }
 
-  // Primero puntuamos y ordenamos; el snippet (pliegue de TODO el documento)
-  // solo se calcula para los `limit` que se van a devolver: con docs largos
-  // plegar todos los puntuados costaba ~1 s por búsqueda (hasta 8 s en
-  // /alertas con 8 búsquedas).
+  // 1) Se puntúa sin plegar nada (el texto plegado ya no se guarda en el
+  //    índice: era una copia entera del corpus en RAM, ~300 MB).
   const parciales: Array<{
-    docPosition: number;
+    entry: { doc: SearchDoc; length: number };
     score: number;
     matched: string[];
-    phraseMatch: boolean;
   }> = [];
 
   for (const [docPosition, current] of scores) {
     const entry = index.docs[docPosition];
     if (!entry) continue;
     const coverage = current.matched.size / queryTokens.length;
-    const phraseMatch = foldedQuery.length > 3 && entry.folded.includes(foldedQuery);
-    let score = current.score * (0.5 + 0.5 * coverage);
-    if (phraseMatch) score *= 1.45;
-    parciales.push({ docPosition, score, matched: [...current.matched], phraseMatch });
+    const score = current.score * (0.5 + 0.5 * coverage);
+    parciales.push({ entry, score, matched: [...current.matched] });
   }
 
-  parciales.sort((a, b2) => {
-    if (b2.score !== a.score) return b2.score - a.score;
-    const idA = index.docs[a.docPosition]?.doc.id ?? "";
-    const idB = index.docs[b2.docPosition]?.doc.id ?? "";
-    return idA.localeCompare(idB);
-  });
+  const porId = (a: { entry: { doc: SearchDoc } }, b: { entry: { doc: SearchDoc } }): number =>
+    a.entry.doc.id.localeCompare(b.entry.doc.id);
+  parciales.sort((a, b2) => b2.score - a.score || porId(a, b2));
 
-  return parciales.slice(0, limit).map((parcial) => {
-    const entry = index.docs[parcial.docPosition];
-    if (!entry) {
-      return {
-        id: "",
-        kind: "case" as const,
-        title: "",
-        score: 0,
-        matchedTerms: parcial.matched,
-        phraseMatch: parcial.phraseMatch,
-        snippet: "",
-        meta: {},
-      };
-    }
+  // 2) Bonus por frase exacta SOLO sobre los primeros max(limit×5, 100)
+  //    candidatos: plegar todos los puntuados costaba ~1 s por búsqueda y
+  //    plegar el índice entero en el build, segundos de event loop.
+  const top = parciales.slice(0, Math.max(limit * 5, 100)).map((parcial) => {
+    const folded = foldPreservingLength(`${parcial.entry.doc.title}\n${parcial.entry.doc.body}`);
+    const phraseMatch = foldedQuery.length > 3 && folded.includes(foldedQuery);
     return {
-      id: entry.doc.id,
-      kind: entry.doc.kind,
-      title: entry.doc.title,
-      score: Number(parcial.score.toFixed(4)),
-      matchedTerms: parcial.matched,
-      phraseMatch: parcial.phraseMatch,
-      snippet: snippetFor(`${entry.doc.title}\n${entry.doc.body}`, queryTokens),
-      meta: entry.doc.meta,
+      ...parcial,
+      folded,
+      phraseMatch,
+      score: phraseMatch ? parcial.score * 1.45 : parcial.score,
     };
   });
+  top.sort((a, b2) => b2.score - a.score || porId(a, b2));
+
+  // 3) Snippet solo para los `limit` que se devuelven (reutiliza el pliegue
+  //    del paso 2, que casi siempre ya existe).
+  return top.slice(0, limit).map((parcial) => ({
+    id: parcial.entry.doc.id,
+    kind: parcial.entry.doc.kind,
+    title: parcial.entry.doc.title,
+    score: Number(parcial.score.toFixed(4)),
+    matchedTerms: parcial.matched,
+    phraseMatch: parcial.phraseMatch,
+    snippet: snippetFor(
+      `${parcial.entry.doc.title}\n${parcial.entry.doc.body}`,
+      queryTokens,
+      parcial.folded,
+    ),
+    meta: parcial.entry.doc.meta,
+  }));
 }

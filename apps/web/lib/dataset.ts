@@ -189,7 +189,8 @@ export interface LawNorm {
   blocks: LawBlock[];
 }
 
-// Normas de hasta ~6 MB: caché con TTL para no reparsear en cada petición.
+// Normas completas de hasta ~6 MB: caché pequeña (3 ≈ 18 MB; las páginas de
+// una norma y plazos son las únicas que necesitan el texto entero).
 const lawCache = new Map<string, { at: number; norm: LawNorm | null }>();
 
 export async function getLaw(boeId: string): Promise<LawNorm | null> {
@@ -201,11 +202,67 @@ export async function getLaw(boeId: string): Promise<LawNorm | null> {
     return hit.norm;
   }
   const norm = await readJson<LawNorm>(path.join(repoRoot(), "laws", "norms", `${boeId}.json`));
-  if (lawCache.size >= 8) {
+  if (lawCache.size >= 3) {
     const masAntigua = lawCache.keys().next().value;
     if (masAntigua !== undefined) lawCache.delete(masAntigua);
   }
   lawCache.set(boeId, { at: Date.now(), norm });
+  return norm;
+}
+
+export interface BloqueLey {
+  id: string;
+  tipo: string;
+  titulo: string;
+  fecha_vigencia: string;
+  /** Primeros 150 caracteres del texto, para resúmenes de alertas. */
+  resumen: string;
+  versions?: Array<{ fecha_vigencia: string; fecha_publicacion: string }>;
+}
+
+export interface NormaLigera {
+  boe_id: string;
+  titulo: string;
+  blocks: BloqueLey[];
+}
+
+/** Versión SIN el texto de los bloques (el texto son ~6 MB por norma): la
+ * usan las comprobaciones de vigencia, que solo necesitan metadatos y un
+ * resumen de 150 caracteres. Hasta 64 normas ≈ pocos MB en RAM. */
+const bloquesCache = new Map<string, { at: number; norm: NormaLigera | null }>();
+
+export async function getLawBloques(boeId: string): Promise<NormaLigera | null> {
+  if (!/^BOE-A-[\w-]+$/.test(boeId)) return null;
+  const hit = bloquesCache.get(boeId);
+  if (hit && Date.now() - hit.at < 600_000) {
+    bloquesCache.delete(boeId);
+    bloquesCache.set(boeId, hit);
+    return hit.norm;
+  }
+  const full = await readJson<LawNorm>(path.join(repoRoot(), "laws", "norms", `${boeId}.json`));
+  const norm: NormaLigera | null = full
+    ? {
+        boe_id: full.boe_id,
+        titulo: full.titulo,
+        blocks: full.blocks.map((block) => ({
+          id: block.id,
+          tipo: block.tipo,
+          titulo: block.titulo,
+          fecha_vigencia: block.fecha_vigencia,
+          resumen: block.texto.replace(/\s+/g, " ").slice(0, 150),
+          versions: block.versions?.map((version) => ({
+            fecha_vigencia: version.fecha_vigencia,
+            fecha_publicacion: version.fecha_publicacion,
+          })),
+        })),
+      }
+    : null;
+  while (bloquesCache.size >= 64) {
+    const masAntigua = bloquesCache.keys().next().value;
+    if (masAntigua === undefined) break;
+    bloquesCache.delete(masAntigua);
+  }
+  bloquesCache.set(boeId, { at: Date.now(), norm });
   return norm;
 }
 
@@ -404,7 +461,7 @@ export async function getVigenciaChecks(caseId: string): Promise<VigenciaCheck[]
   const out: VigenciaCheck[] = [];
   for (const ref of lawRefs?.refs ?? []) {
     if (ref.status !== "VERIFIED" || !ref.boe_id) continue;
-    const norm = await getLaw(ref.boe_id);
+    const norm = await getLawBloques(ref.boe_id);
     if (!norm) continue;
     for (const article of ref.articles ?? []) {
       if (!article.block_id || typeof article.number !== "number") continue;
@@ -467,7 +524,7 @@ export async function getVigenciaAlerts(): Promise<VigenciaAlert[]> {
   }
   const cases = await listCases();
   const headlines = new Map(cases.map((item) => [item.id, item.headline]));
-  const normCache = new Map<string, LawNorm | null>();
+  const normCache = new Map<string, NormaLigera | null>();
   const groups = new Map<string, VigenciaAlert>();
 
   for (const item of cases) {
@@ -490,7 +547,7 @@ export async function getVigenciaAlerts(): Promise<VigenciaAlert[]> {
 
     for (const ref of refs?.refs ?? []) {
       if (ref.status !== "VERIFIED" || !ref.boe_id) continue;
-      if (!normCache.has(ref.boe_id)) normCache.set(ref.boe_id, await getLaw(ref.boe_id));
+      if (!normCache.has(ref.boe_id)) normCache.set(ref.boe_id, await getLawBloques(ref.boe_id));
       const norm = normCache.get(ref.boe_id);
       if (!norm) continue;
 
@@ -509,7 +566,7 @@ export async function getVigenciaAlerts(): Promise<VigenciaAlert[]> {
             article: article.number,
             titulo: block.titulo,
             version_actual: block.fecha_vigencia,
-            resumen: block.texto.replace(/\s+/g, " ").slice(0, 150),
+            resumen: block.resumen,
             casos: [],
           } satisfies VigenciaAlert);
         if (entry.casos.some((caso) => caso.caseId === item.id)) continue;
