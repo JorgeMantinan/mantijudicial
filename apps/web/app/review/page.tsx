@@ -47,7 +47,8 @@ export default async function ReviewPage({
       <h1>Revisión humana</h1>
       <p className="lead">
         El análisis lo produce la IA; aquí se registra que una persona lo ha verificado. Es lo que
-        da validez interna a un caso antes de enseñárselo a un cliente.
+        da validez interna a un caso antes de enseñárselo a un cliente.{" "}
+        <a href={`/api/export/review?status=${encodeURIComponent(status)}`}>descargar CSV</a>
       </p>
 
       <div className="grid">

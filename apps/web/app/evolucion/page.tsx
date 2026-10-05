@@ -18,6 +18,8 @@ export default async function EvolucionPage({
     outcome?: string;
     sort?: string;
     dir?: string;
+    desde?: string;
+    hasta?: string;
   }>;
 }) {
   const actor = await requireActor();
@@ -26,6 +28,12 @@ export default async function EvolucionPage({
   const sp = await searchParams;
   const branchFiltro = sp.branch ?? "";
   const outcomeFiltro = sp.outcome ?? "";
+  const desdeFiltro = /^\d{4}-\d{2}-\d{2}$/.test(sp.desde ?? "") ? sp.desde! : "";
+  const hastaFiltro = /^\d{4}-\d{2}-\d{2}$/.test(sp.hasta ?? "") ? sp.hasta! : "";
+  const enFecha = (fecha: string): boolean => {
+    const dia = fecha.slice(0, 10);
+    return (!desdeFiltro || dia >= desdeFiltro) && (!hastaFiltro || dia <= hastaFiltro);
+  };
   const brutas = await getEvolucion();
   const temas = brutas
     .map((tema) => {
@@ -33,7 +41,8 @@ export default async function EvolucionPage({
         (entry) =>
           canViewCase(actor, entry.caseId, orgId, grants) &&
           (!branchFiltro || entry.branch === branchFiltro) &&
-          (!outcomeFiltro || entry.outcome === outcomeFiltro),
+          (!outcomeFiltro || entry.outcome === outcomeFiltro) &&
+          enFecha(entry.fecha),
       );
       const distribution: Record<string, number> = {};
       for (const entry of entries) {
@@ -74,14 +83,18 @@ export default async function EvolucionPage({
       })
     : [];
 
+  const csvQuery = new URLSearchParams();
+  if (sp.branch) csvQuery.set("branch", sp.branch);
+  if (sp.outcome) csvQuery.set("outcome", sp.outcome);
+  if (desdeFiltro) csvQuery.set("desde", desdeFiltro);
+  if (hastaFiltro) csvQuery.set("hasta", hastaFiltro);
+
   return (
     <article className="print-sheet">
       <p className="small muted no-print">
         <Link href="/">← Resumen</Link> · <Link href="/alertas">Alertas</Link> ·{" "}
         <Link href="/informes">Informes</Link> ·{" "}
-        <a
-          href={`/api/export/evolucion${sp.branch || sp.outcome ? `?${new URLSearchParams({ ...(sp.branch ? { branch: sp.branch } : {}), ...(sp.outcome ? { outcome: sp.outcome } : {}) })}` : ""}`}
-        >
+        <a href={`/api/export/evolucion?${csvQuery.toString()}`}>
           descargar CSV
         </a>
       </p>
@@ -113,8 +126,20 @@ export default async function EvolucionPage({
             </option>
           ))}
         </select>
-        <button type="submit">Filtrar</button>
-        {(branchFiltro || outcomeFiltro) && (
+        {sp.sort && <input type="hidden" name="sort" value={sp.sort} />}
+        {sp.dir && <input type="hidden" name="dir" value={sp.dir} />}
+        <label className="small muted" style={{ display: "grid", gap: 4 }}>
+          Desde
+          <input type="date" name="desde" defaultValue={desdeFiltro} />
+        </label>
+        <label className="small muted" style={{ display: "grid", gap: 4 }}>
+          Hasta
+          <input type="date" name="hasta" defaultValue={hastaFiltro} />
+        </label>
+        <button type="submit" style={{ marginTop: 18 }}>
+          Filtrar
+        </button>
+        {(branchFiltro || outcomeFiltro || desdeFiltro || hastaFiltro) && (
           <Link className="small" href="/evolucion">
             limpiar
           </Link>

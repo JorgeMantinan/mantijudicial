@@ -27,6 +27,7 @@ export function IngestForm() {
   const [progreso, setProgreso] = useState<string | null>(null);
   const [resultados, setResultados] = useState<Resultado[]>([]);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => () => {
     if (timer.current) clearInterval(timer.current);
@@ -114,7 +115,7 @@ export function IngestForm() {
 
   return (
     <div>
-      <form onSubmit={submit} className="filters">
+      <form ref={formRef} onSubmit={submit} className="filters">
         <input type="file" name="file" accept="application/pdf" multiple required />
         <input name="source" placeholder="origen (despacho, cliente…)" maxLength={60} />
         <button type="submit" disabled={isPending || running}>
@@ -171,6 +172,22 @@ export function IngestForm() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {resultados.length > 0 && !running && (
+        <p className="small" style={{ marginTop: 10 }}>
+          <button
+            type="button"
+            onClick={() => {
+              formRef.current?.reset();
+              setResultados([]);
+              setError(null);
+              setJob(null);
+            }}
+          >
+            Subir otro PDF
+          </button>
+        </p>
       )}
 
       {job && (

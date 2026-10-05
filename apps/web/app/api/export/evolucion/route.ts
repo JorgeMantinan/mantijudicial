@@ -19,6 +19,12 @@ export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const branch = url.searchParams.get("branch") ?? "";
   const outcome = url.searchParams.get("outcome") ?? "";
+  const desde = url.searchParams.get("desde") ?? "";
+  const hasta = url.searchParams.get("hasta") ?? "";
+  const enRango = (fecha: string): boolean => {
+    const dia = fecha.slice(0, 10);
+    return (!desde || dia >= desde) && (!hasta || dia <= hasta);
+  };
 
   const orgId = await defaultOrgId();
   const grants = await authorizationGrants();
@@ -30,6 +36,7 @@ export async function GET(request: Request): Promise<Response> {
       if (!canViewCase(actor, entry.caseId, orgId, grants)) continue;
       if (branch && entry.branch !== branch) continue;
       if (outcome && entry.outcome !== outcome) continue;
+      if (!enRango(entry.fecha)) continue;
       filas.push(
         [
           entry.fecha.slice(0, 10),
