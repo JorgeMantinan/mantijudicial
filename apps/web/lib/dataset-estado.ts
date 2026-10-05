@@ -47,9 +47,18 @@ export interface Informe {
 const lecturaCache = new Map<string, { at: number; valor: unknown }>();
 async function memoClave<T>(clave: string, cargar: () => Promise<T>): Promise<T> {
   const hit = lecturaCache.get(clave);
-  if (hit && Date.now() - hit.at < 60_000) return hit.valor as T;
+  if (hit && Date.now() - hit.at < 60_000) {
+    lecturaCache.delete(clave); // refresca el orden: se expulsa la menos usada
+    lecturaCache.set(clave, hit);
+    return hit.valor as T;
+  }
   const valor = await cargar();
-  if (lecturaCache.size > 800) lecturaCache.clear();
+  // Expulsión FIFO/LRU: solo sale la entrada más vieja, nunca clear() total.
+  while (lecturaCache.size > 800) {
+    const masAntigua = lecturaCache.keys().next().value;
+    if (masAntigua === undefined) break;
+    lecturaCache.delete(masAntigua);
+  }
   lecturaCache.set(clave, { at: Date.now(), valor });
   return valor;
 }

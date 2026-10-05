@@ -733,20 +733,35 @@ interface RefLite {
 
 // La clave incluye los caseIds visibles: así dos despachos no comparten caché
 // (y si alternan, simplemente se recalcula).
-let lawUsageCache: { clave: string; at: number; value: LawUsage } | null = null;
+/** Caché por clave (máx. 16 ranuras, expulsión de la menos usada): dos
+ * despachos o filtros alternos no se pisan como antes con una sola ranura. */
+async function memoPorClave<T>(
+  cache: Map<string, { at: number; value: T }>,
+  clave: string,
+  ttlMs: number,
+  cargar: () => Promise<T>,
+): Promise<T> {
+  const hit = cache.get(clave);
+  if (hit && Date.now() - hit.at < ttlMs) {
+    cache.delete(clave);
+    cache.set(clave, hit);
+    return hit.value;
+  }
+  const value = await cargar();
+  while (cache.size >= 16) {
+    const vieja = cache.keys().next().value;
+    if (vieja === undefined) break;
+    cache.delete(vieja);
+  }
+  cache.set(clave, { at: Date.now(), value });
+  return value;
+}
+
+const lawUsageCache = new Map<string, { at: number; value: LawUsage }>();
 
 export async function getLawUsage(caseIds: string[]): Promise<LawUsage> {
   const clave = caseIds.join(",");
-  if (
-    lawUsageCache &&
-    lawUsageCache.clave === clave &&
-    Date.now() - lawUsageCache.at < 120_000
-  ) {
-    return lawUsageCache.value;
-  }
-  const value = await getLawUsageInterno(caseIds);
-  lawUsageCache = { clave, at: Date.now(), value };
-  return value;
+  return memoPorClave(lawUsageCache, clave, 120_000, () => getLawUsageInterno(caseIds));
 }
 
 async function getLawUsageInterno(caseIds: string[]): Promise<LawUsage> {
@@ -846,22 +861,18 @@ async function loadSignals(caseId: string): Promise<CaseSignals | null> {
 }
 
 // 8 casos × 8 ficheros: caro; el corpus cambia solo al enriquecer.
-let patternsCache: { clave: string; at: number; value: ReturnType<typeof aggregate> | null } | null =
-  null;
+const patternsCache = new Map<string, { at: number; value: ReturnType<typeof aggregate> | null }>();
 
 export async function computePatterns(
   caseIds: string[],
   minSupport = 5,
 ): Promise<ReturnType<typeof aggregate> | null> {
   const clave = `${minSupport}|${caseIds.join(",")}`;
-  if (patternsCache && patternsCache.clave === clave && Date.now() - patternsCache.at < 120_000) {
-    return patternsCache.value;
-  }
-  const signals = await Promise.all(caseIds.map((caseId) => loadSignals(caseId)));
-  const valid = signals.filter((item): item is CaseSignals => item !== null);
-  const value = valid.length === 0 ? null : aggregate(valid, minSupport);
-  patternsCache = { clave, at: Date.now(), value };
-  return value;
+  return memoPorClave(patternsCache, clave, 120_000, async () => {
+    const signals = await Promise.all(caseIds.map((caseId) => loadSignals(caseId)));
+    const valid = signals.filter((item): item is CaseSignals => item !== null);
+    return valid.length === 0 ? null : aggregate(valid, minSupport);
+  });
 }
 
 export interface ReviewStats {
