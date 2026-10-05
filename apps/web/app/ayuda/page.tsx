@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireActor } from "@/lib/auth";
 import { ARG_OUTCOME, OUTCOME, REVIEW, label } from "@/lib/labels";
+import { FiltroAyuda } from "@/components/filtro-ayuda";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,8 @@ export default async function AyudaPage() {
         <span className="mono">laws/</span> (texto consolidado del BOE). El listado de lo nuevo
         está en <Link href="/novedades">/novedades</Link>.
       </p>
+
+      <FiltroAyuda />
 
       <div className="section">
         <h2>Atajos de teclado</h2>
