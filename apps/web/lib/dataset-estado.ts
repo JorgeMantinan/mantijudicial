@@ -41,6 +41,19 @@ export interface Informe {
 }
 
 /** Informe de un periodo (por fecha de resolucion) para imprimir o mandar. */
+// Lecturas compartidas por las dos llamadas de /informes (periodo A y B):
+// mismo fichero, mismos 60 s. Solo cachea lecturas crudas (sin filtrar por
+// visibilidad), así ningún despacho ve datos de otro.
+const lecturaCache = new Map<string, { at: number; valor: unknown }>();
+async function memoClave<T>(clave: string, cargar: () => Promise<T>): Promise<T> {
+  const hit = lecturaCache.get(clave);
+  if (hit && Date.now() - hit.at < 60_000) return hit.valor as T;
+  const valor = await cargar();
+  if (lecturaCache.size > 800) lecturaCache.clear();
+  lecturaCache.set(clave, { at: Date.now(), valor });
+  return valor;
+}
+
 export async function getInforme(
   desde: string,
   hasta: string,
@@ -58,8 +71,10 @@ export async function getInforme(
     if (!permitido(item.id)) continue;
     if (filtros.branch && item.branch !== filtros.branch) continue;
     if (filtros.outcome && item.outcome !== filtros.outcome) continue;
-    const meta = await readFirstJson<{ resolution_date?: string }>(
-      path.join(repoRoot(), "cases", item.id, "metadata"),
+    const meta = await memoClave(`meta:${item.id}`, () =>
+      readFirstJson<{ resolution_date?: string }>(
+        path.join(repoRoot(), "cases", item.id, "metadata"),
+      ),
     );
     const fecha = (meta?.resolution_date ?? "").slice(0, 10);
     if (fecha.length !== 10 || !enRango(fecha)) continue;
@@ -83,9 +98,11 @@ export async function getInforme(
 
   const leyesMap = new Map<string, { norma: string; boe_id: string | null; veces: number }>();
   for (const caso of casos) {
-    const refs = await section<{
-      refs?: Array<{ status?: string; boe_id?: string | null; norma?: string }>;
-    }>(caso.id, "law_refs.json");
+    const refs = await memoClave(`leyes:${caso.id}`, () =>
+      section<{
+        refs?: Array<{ status?: string; boe_id?: string | null; norma?: string }>;
+      }>(caso.id, "law_refs.json"),
+    );
     for (const ref of refs?.refs ?? []) {
       if (ref.status !== "VERIFIED") continue;
       const key = `${ref.norma ?? "?"}|${ref.boe_id ?? ""}`;
