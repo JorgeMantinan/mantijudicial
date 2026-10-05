@@ -32,6 +32,10 @@ export function Shortcuts() {
         router.push("/search");
       } else if (key === "a") {
         router.push("/alertas");
+      } else if (key === "c") {
+        router.push("/cases");
+      } else if (key === "l") {
+        router.push("/laws");
       } else if (key === "i") {
         router.push("/informes");
       } else if (key === "r") {
@@ -69,6 +73,12 @@ export function Shortcuts() {
         </li>
         <li>
           <strong>a</strong> alertas
+        </li>
+        <li>
+          <strong>c</strong> casos
+        </li>
+        <li>
+          <strong>l</strong> legislación
         </li>
         <li>
           <strong>i</strong> informes

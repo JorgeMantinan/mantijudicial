@@ -6,6 +6,7 @@ import { getReviewStats } from "@/lib/dataset";
 import { registrarRender } from "@/lib/timings";
 import { NavLinks } from "@/components/nav-links";
 import { Shortcuts } from "@/components/shortcuts";
+import paquete from "../package.json";
 import { BackToTop } from "@/components/back-to-top";
 import { TituloRuta } from "@/components/titulo-ruta";
 import { DensityToggle } from "@/components/density-toggle";
@@ -108,7 +109,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <br />
             <span className="small">
               <Link href="/ayuda">Ayuda</Link> · <Link href="/novedades">Novedades</Link> ·{" "}
-              <Link href="/eval">Estado y coste</Link>
+              <Link href="/eval">Estado y coste</Link> · MantiJudicial v{paquete.version}
             </span>
           </div>
         </footer>
