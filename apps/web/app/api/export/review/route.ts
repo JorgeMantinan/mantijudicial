@@ -19,6 +19,9 @@ export async function GET(request: Request): Promise<Response> {
 
   const url = new URL(request.url);
   const status = url.searchParams.get("status") ?? "UNREVIEWED";
+  const statusSeguro = /^(UNREVIEWED|REVIEWED|MODIFIED|REJECTED|TODOS)$/.test(status)
+    ? status
+    : "listado";
 
   const orgId = await defaultOrgId();
   const grants = await authorizationGrants();
@@ -40,7 +43,7 @@ export async function GET(request: Request): Promise<Response> {
   return new Response(`\uFEFF${filas.join("\r\n")}\r\n`, {
     headers: {
       "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename="revision_${status}.csv"`,
+      "content-disposition": `attachment; filename="revision_${statusSeguro}.csv"`,
     },
   });
 }

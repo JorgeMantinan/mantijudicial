@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { getActor } from "@/lib/auth";
+import { canViewCase, defaultOrgId, getActor } from "@/lib/auth";
 import { getReviewStats } from "@/lib/dataset";
 import { registrarRender } from "@/lib/timings";
 import { NavLinks } from "@/components/nav-links";
@@ -41,7 +41,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const store = await cookies();
   const authenticated = Boolean(store.get("mj_session")?.value);
   const actor = authenticated ? await getActor() : null;
-  const pending = actor ? (await getReviewStats()).pending.length : 0;
+  const orgId = actor ? await defaultOrgId() : null;
+  const pending = actor
+    ? (await getReviewStats()).pending.filter((item) =>
+        canViewCase(actor, item.id, orgId, []),
+      ).length
+    : 0;
   const items = NAV.map((item) =>
     item.href === "/review" && pending > 0 ? { ...item, badge: pending } : item,
   );

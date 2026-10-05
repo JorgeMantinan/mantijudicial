@@ -52,5 +52,13 @@ export class RateLimiter {
 }
 
 export function ipDe(request: Request): string {
-  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+  // Último salto: el cliente puede prefijar X-Forwarded-For y así saltarse el
+  // límite cambiando de "IP" en cada petición.
+  const header = request.headers.get("x-forwarded-for");
+  if (!header) return "local";
+  const partes = header
+    .split(",")
+    .map((parte) => parte.trim())
+    .filter(Boolean);
+  return partes[partes.length - 1] ?? "local";
 }

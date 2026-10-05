@@ -21,8 +21,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Falta el nombre o los filtros" }, { status: 400 });
   }
   const limpia: Record<string, string> = {};
-  for (const [clave, valor] of Object.entries(qs as Record<string, unknown>)) {
-    if (typeof valor === "string" && valor) limpia[clave] = valor.slice(0, 120);
+  for (const [clave, valor] of Object.entries(qs as Record<string, unknown>).slice(0, 20)) {
+    if (typeof valor === "string" && valor) limpia[clave.slice(0, 40)] = valor.slice(0, 120);
   }
   const vistas = await saveVista(actor.orgId, { nombre, qs: limpia });
   return NextResponse.json({ ok: true, vistas });

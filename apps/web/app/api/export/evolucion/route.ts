@@ -3,13 +3,10 @@ import { canViewCase, defaultOrgId, getActor } from "@/lib/auth";
 import { getEvolucion } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 
+import { csv } from "@/lib/csv";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-function csv(campo: string): string {
-  const texto = String(campo ?? "");
-  return /[";\r\n]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto;
-}
 
 /** CSV de la cronología de evolución con los filtros indicados. */
 export async function GET(request: Request): Promise<Response> {

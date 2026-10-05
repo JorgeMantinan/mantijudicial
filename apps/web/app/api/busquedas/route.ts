@@ -31,9 +31,9 @@ export async function POST(request: Request): Promise<NextResponse> {
   const busquedas = await saveBusqueda(actor.orgId, {
     nombre,
     q,
-    kind: typeof body.kind === "string" && body.kind ? body.kind : undefined,
-    branch: typeof body.branch === "string" && body.branch ? body.branch : undefined,
-    outcome: typeof body.outcome === "string" && body.outcome ? body.outcome : undefined,
+    kind: typeof body.kind === "string" && body.kind ? body.kind.slice(0, 40) : undefined,
+    branch: typeof body.branch === "string" && body.branch ? body.branch.slice(0, 40) : undefined,
+    outcome: typeof body.outcome === "string" && body.outcome ? body.outcome.slice(0, 40) : undefined,
     at: new Date().toISOString(),
   });
   return NextResponse.json({ ok: true, busquedas });

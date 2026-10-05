@@ -40,11 +40,11 @@ describe("RateLimiter", () => {
 });
 
 describe("ipDe", () => {
-  it("lee x-forwarded-for (primera ip) o 'local'", () => {
+  it("lee el último salto de x-forwarded-for (no el primero, que es spoofable)", () => {
     const conHeader = new Request("http://x", {
       headers: { "x-forwarded-for": "1.2.3.4, 5.6.7.8" },
     });
-    expect(ipDe(conHeader)).toBe("1.2.3.4");
+    expect(ipDe(conHeader)).toBe("5.6.7.8");
     expect(ipDe(new Request("http://x"))).toBe("local");
   });
 });
