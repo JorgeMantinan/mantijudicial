@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Bar } from "@/components/bar";
 import { PrintButton } from "@/components/print-button";
+import { CopyButton } from "@/components/copy-button";
 import { canViewCase, defaultOrgId, requireActor } from "@/lib/auth";
 import { filtrarFrasesDelTema, getGruposFrases, getInforme, getVigenciaAlerts, listCases } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
@@ -199,6 +200,25 @@ export default async function InformesPage({
     sort === "m-normas" ? (a.veces - b.veces) * factor : b.veces - a.veces,
   );
 
+  const resumenPeriodo = [
+    `Informe MantiJudicial ${desde} → ${hasta}`,
+    `Sentencias: ${informe.casos.length} · pendientes de revisar: ${informe.pendientes}`,
+    ...Object.entries(informe.porResultado)
+      .sort((a, b) => b[1] - a[1])
+      .map(([outcome, cantidad]) => `${label(OUTCOME, outcome)}: ${cantidad}`),
+    alertasPeriodo.length > 0
+      ? `Alertas de vigencia que tocan al periodo: ${alertasPeriodo.length}`
+      : null,
+    Object.keys(informe.porRama).length > 0
+      ? `Ramas: ${Object.entries(informe.porRama)
+          .sort((a, b) => b[1] - a[1])
+          .map(([rama, cantidad]) => `${label(BRANCH, rama)} ${cantidad}`)
+          .join(" · ")}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
   return (
     <article className="print-sheet">
       <p className="small muted no-print">
@@ -209,7 +229,8 @@ export default async function InformesPage({
           }${sp.outcome ? `&outcome=${encodeURIComponent(sp.outcome)}` : ""}`}
         >
           descargar CSV
-        </a>
+        </a>{" "}
+        · <CopyButton texto={resumenPeriodo} etiqueta="Copiar resumen" />
       </p>
       <PrintButton text="Imprimir el informe" />
 

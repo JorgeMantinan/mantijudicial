@@ -229,6 +229,11 @@ export default async function CaseDetailPage({
           <CopyButton path={`/cases/${id}`} etiqueta="Copiar enlace" />
           {" · "}
           <ArchiveButton caseId={id} archived={detail.archived} canArchive={canCreate} />
+          {" · "}
+          <CopyButton
+            texto={`${detail.headline} — ${label(OUTCOME, detail.outcome)} · ${id}`}
+            etiqueta="Copiar resumen"
+          />
         </span>
       </p>
 

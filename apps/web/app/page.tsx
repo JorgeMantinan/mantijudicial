@@ -148,6 +148,23 @@ export default async function Home() {
         </div>
       )}
 
+      <div className="section">
+        <h2>Últimos analizados</h2>
+        <ul className="small">
+          {[...cases]
+            .sort((a, b) => (a.generatedAt < b.generatedAt ? 1 : -1))
+            .slice(0, 5)
+            .map((caso) => (
+              <li key={caso.id}>
+                <span className="mono small">{caso.generatedAt.slice(0, 10) || "—"}</span>{" "}
+                <Link href={`/cases/${caso.id}`}>
+                  {caso.headline.length > 90 ? `${caso.headline.slice(0, 90)}…` : caso.headline}
+                </Link>
+              </li>
+            ))}
+        </ul>
+      </div>
+
       <h2>Resultados (casación)</h2>
       <table>
         <thead>
