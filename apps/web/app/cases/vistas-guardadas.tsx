@@ -12,6 +12,7 @@ function hrefDe(vista: VistaGuardada): string {
 }
 
 /** Guarda la combinación actual de filtros de /cases y la reutiliza. */
+import { pedir } from "@/lib/api-client";
 export function VistasGuardadas({
   vistas,
   actuales,
@@ -31,17 +32,21 @@ export function VistasGuardadas({
   async function guardar() {
     setError(null);
     setMsg(null);
-    const response = await fetch("/api/vistas", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nombre: nombre.trim(), qs: actuales }),
-    }).catch(() => null);
-    if (!response?.ok) {
-      const payload = (await response?.json().catch(() => ({}))) as { error?: string };
-      setError(payload?.error ?? "No se pudo guardar");
+    let payload: { vistas?: VistaGuardada[] };
+    try {
+      payload = await pedir<{ vistas?: VistaGuardada[] }>(
+        "/api/vistas",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre: nombre.trim(), qs: actuales }),
+        },
+        "No se pudo guardar",
+      );
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "No se pudo guardar");
       return;
     }
-    const payload = (await response.json()) as { vistas?: VistaGuardada[] };
     setLista(payload.vistas ?? []);
     setNombre("");
     setMsg("Vista guardada ✓");
@@ -50,16 +55,21 @@ export function VistasGuardadas({
 
   async function borrar(vista: VistaGuardada) {
     setError(null);
-    const response = await fetch("/api/vistas", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nombre: vista.nombre }),
-    }).catch(() => null);
-    if (!response?.ok) {
-      setError("No se pudo borrar");
+    let payload: { vistas?: VistaGuardada[] };
+    try {
+      payload = await pedir<{ vistas?: VistaGuardada[] }>(
+        "/api/vistas",
+        {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre: vista.nombre }),
+        },
+        "No se pudo borrar",
+      );
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "No se pudo borrar");
       return;
     }
-    const payload = (await response.json()) as { vistas?: VistaGuardada[] };
     setLista(payload.vistas ?? []);
     startTransition(() => router.refresh());
   }

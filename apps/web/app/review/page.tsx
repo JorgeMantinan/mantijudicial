@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Bar } from "@/components/bar";
 import { PrintButton } from "@/components/print-button";
-import { canViewCase, defaultOrgId, loadIdentity, requireActor , contextoVisibilidad } from "@/lib/auth";
+import { canViewCase, casosVisibles, defaultOrgId, loadIdentity, requireActor , contextoVisibilidad, porStatus } from "@/lib/auth";
 import { getMapaOrgs, getRevisionPorPersona, listCases } from "@/lib/dataset";
 import { BRANCH, REVIEW, label } from "@/lib/labels";
 import { ReviewTable } from "./review-table";
@@ -17,7 +17,7 @@ export default async function ReviewPage({
   const params = await searchParams;
   const status = params.status ?? "UNREVIEWED";
   const carga = await getRevisionPorPersona();
-  const all = (await listCases()).filter((item) => canViewCase(actor, item.id, orgId, grants));
+  const all = await casosVisibles(actor, orgId, grants);
   const pendientes = all.filter((item) => item.enriched && item.reviewStatus === "UNREVIEWED");
   const porEstado: Record<string, number> = {};
   for (const item of all) porEstado[item.reviewStatus] = (porEstado[item.reviewStatus] ?? 0) + 1;
@@ -49,7 +49,7 @@ export default async function ReviewPage({
     .map(([org, datos]) => ({ nombre: firmas.get(org) ?? org, ...datos }))
     .sort((a, b) => b.total - a.total);
 
-  const filtered = all.filter((item) => (status === "TODOS" ? true : item.reviewStatus === status));
+  const filtered = porStatus(all, status);
 
   return (
     <article className="print-sheet">

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { pedir } from "@/lib/api-client";
 
 /** Asigna el cliente/encargo del caso (data/casos_cliente.json). */
 export function ClientePanel({ caseId, cliente }: { caseId: string; cliente: string }) {
@@ -14,14 +15,18 @@ export function ClientePanel({ caseId, cliente }: { caseId: string; cliente: str
   async function guardar() {
     setError(null);
     setMsg(null);
-    const response = await fetch("/api/clientes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ caseId, cliente: valor }),
-    }).catch(() => null);
-    if (!response?.ok) {
-      const payload = (await response?.json().catch(() => ({}))) as { error?: string };
-      setError(payload?.error ?? "No se pudo guardar");
+    try {
+      await pedir(
+        "/api/clientes",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ caseId, cliente: valor }),
+        },
+        "No se pudo guardar",
+      );
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "No se pudo guardar");
       return;
     }
     setMsg("Guardado ✓");

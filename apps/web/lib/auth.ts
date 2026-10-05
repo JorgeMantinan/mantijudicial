@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { can, type Actor, type Grant, type Resource } from "@pipeline/authorization";
 import { IdentityStore } from "@pipeline/identity";
-import { repoRoot } from "./dataset";
+import { getClientes, listCases, repoRoot, type CaseListItem } from "./dataset";
 import { authorizationGrants } from "./grants";
 
 export const SESSION_COOKIE = "mj_session";
@@ -101,6 +101,45 @@ export async function contextoVisibilidad(): Promise<{
     grants,
     permitido: (caseId: string) => canViewCase(actor, caseId, orgId, grants),
   };
+}
+
+/** Filtros comunes de la pantalla /cases y de su CSV: visibilidad,
+ * archivados y cliente. Así los dos lados no pueden divergir. */
+export async function filtrarCasos(
+  actor: Actor,
+  orgId: string | null,
+  grants: Grant[],
+  filtros: {
+    branch?: string;
+    outcome?: string;
+    q?: string;
+    archivados?: boolean;
+    cliente?: string;
+  },
+): Promise<CaseListItem[]> {
+  const [casos, clientesMap] = await Promise.all([
+    listCases({ branch: filtros.branch, outcome: filtros.outcome, q: filtros.q }),
+    filtros.cliente ? getClientes() : Promise.resolve({} as Record<string, string>),
+  ]);
+  return casos
+    .filter((item) => canViewCase(actor, item.id, orgId, grants))
+    .filter((item) => (filtros.archivados ? true : !item.archived))
+    .filter((item) => (filtros.cliente ? clientesMap[item.id] === filtros.cliente : true));
+}
+
+/** Todos los casos que el actor puede ver (base común de /review y su CSV). */
+export async function casosVisibles(
+  actor: Actor,
+  orgId: string | null,
+  grants: Grant[],
+): Promise<CaseListItem[]> {
+  const casos = await listCases();
+  return casos.filter((item) => canViewCase(actor, item.id, orgId, grants));
+}
+
+/** Filtro de estado de revisión compartido por /review y su CSV. */
+export function porStatus(casos: CaseListItem[], status: string): CaseListItem[] {
+  return casos.filter((item) => (status === "TODOS" ? true : item.reviewStatus === status));
 }
 
 export function canViewCase(

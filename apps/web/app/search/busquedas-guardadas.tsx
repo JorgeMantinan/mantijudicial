@@ -14,6 +14,7 @@ function hrefDe(item: BusquedaGuardada): string {
   return `/search?${params.toString()}`;
 }
 
+import { pedir } from "@/lib/api-client";
 export function BusquedasGuardadas({
   items,
   q,
@@ -36,17 +37,21 @@ export function BusquedasGuardadas({
   async function guardar() {
     setError(null);
     setMsg(null);
-    const response = await fetch("/api/busquedas", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nombre: nombre.trim(), q, kind, branch, outcome }),
-    }).catch(() => null);
-    if (!response?.ok) {
-      const payload = (await response?.json().catch(() => ({}))) as { error?: string };
-      setError(payload?.error ?? "No se pudo guardar");
+    let payload: { busquedas?: BusquedaGuardada[] };
+    try {
+      payload = await pedir<{ busquedas?: BusquedaGuardada[] }>(
+        "/api/busquedas",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre: nombre.trim(), q, kind, branch, outcome }),
+        },
+        "No se pudo guardar",
+      );
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "No se pudo guardar");
       return;
     }
-    const payload = (await response.json()) as { busquedas?: BusquedaGuardada[] };
     setLista(payload.busquedas ?? []);
     setNombre("");
     setMsg("Guardada");
@@ -59,16 +64,21 @@ export function BusquedasGuardadas({
 
   async function borrar(nombreItem: string) {
     setError(null);
-    const response = await fetch("/api/busquedas", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nombre: nombreItem }),
-    }).catch(() => null);
-    if (!response?.ok) {
-      setError("No se pudo borrar");
+    let payload: { busquedas?: BusquedaGuardada[] };
+    try {
+      payload = await pedir<{ busquedas?: BusquedaGuardada[] }>(
+        "/api/busquedas",
+        {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre: nombreItem }),
+        },
+        "No se pudo borrar",
+      );
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "No se pudo borrar");
       return;
     }
-    const payload = (await response.json()) as { busquedas?: BusquedaGuardada[] };
     setLista(payload.busquedas ?? []);
     router.refresh();
   }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { canCreateCase } from "@pipeline/authorization";
-import { canViewCase, contextoVisibilidad } from "@/lib/auth";
+import { canViewCase, contextoVisibilidad, filtrarCasos, defaultOrgId, requireActor } from "@/lib/auth";
 import { diasSinTocar, getClientes, getVistas, listCases } from "@/lib/dataset";
 import { VistasGuardadas } from "./vistas-guardadas";
 import { BRANCH, OUTCOME, REVIEW, SIDE, label } from "@/lib/labels";
@@ -53,20 +53,15 @@ export default async function CasesPage({
   const params = await searchParams;
   const { actor, orgId, grants } = await contextoVisibilidad();
   const canCreate = canCreateCase(actor);
-  const cases = (
-    await listCases({
-      branch: params.branch,
-      outcome: params.outcome,
-      q: params.q,
-    })
-  ).filter((item) => canViewCase(actor, item.id, orgId, grants));
+  const visibles = await filtrarCasos(actor, orgId, grants, {
+    branch: params.branch,
+    outcome: params.outcome,
+    q: params.q,
+    archivados: params.archivados === "1",
+    cliente: params.cliente,
+  });
   const clientesMap = await getClientes();
   const vistas = await getVistas(actor.orgId);
-  const visibles = cases.filter((item) => {
-    if (params.archivados !== "1" && item.archived) return false;
-    if (params.cliente && clientesMap[item.id] !== params.cliente) return false;
-    return true;
-  });
 
   const sort = (SORTS as readonly string[]).includes(params.sort ?? "")
     ? (params.sort as SortKey)

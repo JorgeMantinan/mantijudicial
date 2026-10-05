@@ -1,5 +1,7 @@
 "use client";
 
+import { pedir } from "@/lib/api-client";
+
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -10,12 +12,15 @@ export function MarcarVistoButton({ ejemplo }: { ejemplo: string }) {
   const [hecho, setHecho] = useState(false);
 
   async function marcar() {
-    const response = await fetch("/api/patrones-vistos", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ejemplo }),
-    }).catch(() => null);
-    if (!response?.ok) return;
+    try {
+      await pedir("/api/patrones-vistos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ejemplo }),
+      });
+    } catch {
+      return;
+    }
     setHecho(true);
     startTransition(() => router.refresh());
   }
@@ -38,8 +43,11 @@ export function RestaurarPatronesButton() {
   const [isPending, startTransition] = useTransition();
 
   async function restaurar() {
-    const response = await fetch("/api/patrones-vistos", { method: "DELETE" }).catch(() => null);
-    if (!response?.ok) return;
+    try {
+      await pedir("/api/patrones-vistos", { method: "DELETE" });
+    } catch {
+      return;
+    }
     startTransition(() => router.refresh());
   }
 

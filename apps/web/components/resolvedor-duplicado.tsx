@@ -1,5 +1,7 @@
 "use client";
 
+import { pedir } from "@/lib/api-client";
+
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -20,12 +22,16 @@ export function ResolvedorDuplicado({ casos }: { casos: string[] }) {
     let archivados = 0;
     for (const caseId of casos) {
       if (caseId === mantener) continue;
-      const response = await fetch("/api/archivar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ caseId, archived: true }),
-      }).catch(() => null);
-      if (response?.ok) archivados += 1;
+        try {
+          await pedir("/api/archivar", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ caseId, archived: true }),
+          });
+          archivados += 1;
+        } catch {
+          /* sin permisos o red caída: no se cuenta */
+        }
     }
     if (archivados === 0) {
       setError("No se pudo archivar ninguno (¿permisos?)");

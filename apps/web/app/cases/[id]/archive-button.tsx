@@ -1,5 +1,7 @@
 "use client";
 
+import { pedir } from "@/lib/api-client";
+
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -20,17 +22,21 @@ export function ArchiveButton({
 
   async function toggle() {
     setError(null);
-    const response = await fetch("/api/archivar", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ caseId, archived: !archived }),
-    }).catch(() => null);
-    if (!response?.ok) {
-      const payload = (await response?.json().catch(() => ({}))) as { error?: string };
-      setError(payload?.error ?? "No se pudo cambiar el estado");
-      return;
-    }
-    startTransition(() => router.refresh());
+        try {
+          await pedir(
+            "/api/archivar",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ caseId, archived: !archived }),
+            },
+            "No se pudo cambiar el estado",
+          );
+        } catch (error) {
+          setError(error instanceof Error ? error.message : "No se pudo cambiar el estado");
+          return;
+        }
+        startTransition(() => router.refresh());
   }
 
   return (

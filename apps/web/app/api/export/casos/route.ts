@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { canViewCase, defaultOrgId, getActor } from "@/lib/auth";
-import { getClientes, listCases } from "@/lib/dataset";
+import { defaultOrgId, filtrarCasos, getActor } from "@/lib/auth";
+import { getClientes } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 import { csv , csvResponse } from "@/lib/csv";
 
@@ -22,12 +22,13 @@ export async function GET(request: Request): Promise<Response> {
 
   const orgId = await defaultOrgId();
   const grants = await authorizationGrants();
-  const casos = (
-    await listCases({ branch, outcome, q })
-  )
-    .filter((item) => canViewCase(actor, item.id, orgId, grants))
-    .filter((item) => (archivados ? true : !item.archived))
-    .filter((item) => (cliente ? clientesMap[item.id] === cliente : true));
+  const casos = await filtrarCasos(actor, orgId, grants, {
+    branch,
+    outcome,
+    q,
+    archivados,
+    cliente,
+  });
 
   const filas: string[] = [
     ["caso", "asunto", "rama", "resultado", "recurrente", "revisado", "enriquecido", "cliente"].join(

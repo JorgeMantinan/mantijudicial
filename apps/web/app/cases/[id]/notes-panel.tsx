@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, useTransition } from "react";
+import { pedir, pedirOpcional } from "@/lib/api-client";
 
 interface Note {
   id: string;
@@ -16,10 +17,8 @@ export function NotesPanel({ caseId }: { caseId: string }) {
   const [isPending, startTransition] = useTransition();
 
   const load = useCallback(async () => {
-    const response = await fetch(`/api/notes?resource=${caseId}`).catch(() => null);
-    if (!response?.ok) return;
-    const payload = (await response.json().catch(() => ({ notes: [] }))) as { notes?: Note[] };
-    setNotes(payload.notes ?? []);
+    const payload = await pedirOpcional<{ notes?: Note[] }>(`/api/notes?resource=${caseId}`);
+    setNotes(payload?.notes ?? []);
   }, [caseId]);
 
   useEffect(() => {
@@ -29,18 +28,18 @@ export function NotesPanel({ caseId }: { caseId: string }) {
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-    const response = await fetch("/api/notes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ caseId, text }),
-    }).catch(() => null);
-    if (!response) {
-      setError("No se pudo contactar con el servidor");
-      return;
-    }
-    const payload = (await response.json().catch(() => ({}))) as { error?: string };
-    if (!response.ok) {
-      setError(payload.error ?? "No se pudo guardar la nota");
+    try {
+      await pedir(
+        "/api/notes",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ caseId, text }),
+        },
+        "No se pudo guardar la nota",
+      );
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "No se pudo guardar la nota");
       return;
     }
     setText("");
@@ -49,14 +48,18 @@ export function NotesPanel({ caseId }: { caseId: string }) {
 
   async function remove(noteId: string) {
     setError(null);
-    const response = await fetch("/api/notes", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ caseId, noteId }),
-    }).catch(() => null);
-    if (!response?.ok) {
-      const payload = response ? ((await response.json().catch(() => ({}))) as { error?: string }) : {};
-      setError(payload.error ?? "No se pudo borrar la nota");
+    try {
+      await pedir(
+        "/api/notes",
+        {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ caseId, noteId }),
+        },
+        "No se pudo borrar la nota",
+      );
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "No se pudo borrar la nota");
       return;
     }
     startTransition(() => void load());

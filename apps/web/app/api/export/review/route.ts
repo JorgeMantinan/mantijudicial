@@ -1,7 +1,7 @@
 import { csv, csvResponse } from "@/lib/csv";
 import { NextResponse } from "next/server";
-import { canViewCase, defaultOrgId, getActor } from "@/lib/auth";
-import { diasSinTocar, listCases } from "@/lib/dataset";
+import { casosVisibles, defaultOrgId, getActor, porStatus } from "@/lib/auth";
+import { diasSinTocar } from "@/lib/dataset";
 import { authorizationGrants } from "@/lib/grants";
 
 export const runtime = "nodejs";
@@ -20,9 +20,7 @@ export async function GET(request: Request): Promise<Response> {
 
   const orgId = await defaultOrgId();
   const grants = await authorizationGrants();
-  const casos = (await listCases())
-    .filter((item) => canViewCase(actor, item.id, orgId, grants))
-    .filter((item) => (status === "TODOS" ? true : item.reviewStatus === status));
+  const casos = porStatus(await casosVisibles(actor, orgId, grants), status);
 
   const filas: string[] = [
     ["caso", "asunto", "rama", "resultado", "revision", "sin_tocar_dias"].join(";"),
