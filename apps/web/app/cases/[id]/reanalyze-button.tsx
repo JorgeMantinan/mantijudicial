@@ -1,5 +1,7 @@
 "use client";
 
+import { pedirOpcional, pedir } from "@/lib/api-client";
+
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 
@@ -23,10 +25,8 @@ export function ReanalyzeButton({ caseId, stale }: { caseId: string; stale: bool
   }, []);
 
   async function poll(jobId: string) {
-    const response = await fetch("/api/jobs", { cache: "no-store" }).catch(() => null);
-    if (!response?.ok) return;
-    const payload = (await response.json().catch(() => ({ jobs: [] }))) as { jobs: Job[] };
-    const current = payload.jobs.find((item) => item.id === jobId);
+    const payload = await pedirOpcional<{ jobs: Job[] }>("/api/jobs", { cache: "no-store" });
+    const current = payload?.jobs.find((item) => item.id === jobId);
     if (!current) return;
     setJob(current);
     if (current.status === "done" || current.status === "error") {
@@ -40,19 +40,24 @@ export function ReanalyzeButton({ caseId, stale }: { caseId: string; stale: bool
   async function reanalyze() {
     setError(null);
     setJob(null);
-    const response = await fetch("/api/reanalyze", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ caseId }),
-    }).catch(() => null);
-    if (!response) {
-      setError("No se pudo contactar con el servidor");
+    let payload: { jobId?: string };
+    try {
+      payload = await pedir(
+        "/api/reanalyze",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ caseId }),
+        },
+        "No se pudo iniciar el reanálisis",
+      );
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "No se pudo iniciar el reanálisis");
       return;
     }
-    const payload = (await response.json().catch(() => ({}))) as { error?: string; jobId?: string };
     const jobId = payload.jobId;
-    if (!response.ok || !jobId) {
-      setError(payload.error ?? "No se pudo iniciar el reanálisis");
+    if (!jobId) {
+      setError("No se pudo iniciar el reanálisis");
       return;
     }
     setJob({ id: jobId, status: "queued", caseId, lines: [], error: null });

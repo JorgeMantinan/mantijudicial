@@ -1,5 +1,7 @@
 "use client";
 
+import { pedir } from "@/lib/api-client";
+
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -24,21 +26,19 @@ export function UserForm() {
     event.preventDefault();
     setError(null);
     setCreated(null);
-    const response = await fetch("/api/users", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, name, password, role }),
-    }).catch(() => null);
-    if (!response) {
-      setError("No se pudo contactar con el servidor");
-      return;
-    }
-    const payload = (await response.json().catch(() => ({}))) as {
-      error?: string;
-      user?: { email: string };
-    };
-    if (!response.ok) {
-      setError(payload.error ?? "No se pudo crear el usuario");
+    let payload: { user?: { email: string } };
+    try {
+      payload = await pedir(
+        "/api/users",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, name, password, role }),
+        },
+        "No se pudo crear el usuario",
+      );
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "No se pudo crear el usuario");
       return;
     }
     setCreated(payload.user?.email ?? "Usuario creado");

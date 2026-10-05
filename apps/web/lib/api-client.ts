@@ -1,5 +1,13 @@
-/** Error de API con el mensaje en castellano que devolvió el servidor. */
-export class ErrorApi extends Error {}
+/** Error de API con el mensaje en castellano que devolvió el servidor y,
+ * si lo había, el JSON completo (para leer flags como `mfaRequired`). */
+export class ErrorApi extends Error {
+  constructor(
+    message: string,
+    readonly payload?: unknown,
+  ) {
+    super(message);
+  }
+}
 
 /**
  * fetch con manejo uniforme de errores: devuelve el JSON tipado o lanza
@@ -30,16 +38,19 @@ export async function pedir<T>(
     payload = null;
   }
   if (!response.ok) {
-    throw new ErrorApi((payload as { error?: string } | null)?.error || fallback);
+    throw new ErrorApi(
+      (payload as { error?: string } | null)?.error || fallback,
+      payload ?? undefined,
+    );
   }
   return payload as T;
 }
 
 /** Igual que `pedir`, pero para GETs de carga: devuelve `null` en cualquier
  * fallo (red, 4xx, JSON roto) sin lanzar, para usar en `useEffect`. */
-export async function pedirOpcional<T>(url: string): Promise<T | null> {
+export async function pedirOpcional<T>(url: string, init?: RequestInit): Promise<T | null> {
   try {
-    return await pedir<T>(url);
+    return await pedir<T>(url, init);
   } catch {
     return null;
   }

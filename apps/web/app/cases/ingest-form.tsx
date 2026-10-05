@@ -1,5 +1,7 @@
 "use client";
 
+import { pedirOpcional, pedir } from "@/lib/api-client";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -36,10 +38,8 @@ export function IngestForm() {
   function waitForJob(jobId: string): Promise<JobState> {
     return new Promise((resolve) => {
       const tick = async () => {
-        const response = await fetch("/api/ingest", { cache: "no-store" }).catch(() => null);
-        if (!response?.ok) return;
-        const payload = (await response.json().catch(() => ({ jobs: [] }))) as { jobs: JobState[] };
-        const current = payload.jobs.find((item) => item.id === jobId);
+        const payload = await pedirOpcional<{ jobs: JobState[] }>("/api/ingest", { cache: "no-store" });
+        const current = payload?.jobs.find((item) => item.id === jobId);
         if (!current) return;
         setJob(current);
         if (current.status === "done" || current.status === "error") {
@@ -81,17 +81,19 @@ export function IngestForm() {
       data.set("file", file);
       if (source) data.set("source", source);
 
-      const response = await fetch("/api/ingest", { method: "POST", body: data }).catch(() => null);
-      if (!response) {
-        setResultados((prev) => [...prev, { name: file.name, caseId: null, error: "No se pudo contactar con el servidor" }]);
+      let payload: { jobId?: string };
+      try {
+        payload = await pedir("/api/ingest", { method: "POST", body: data }, "No se pudo iniciar la ingesta");
+      } catch (error) {
+        const mensaje = error instanceof Error ? error.message : "No se pudo iniciar la ingesta";
+        setResultados((prev) => [...prev, { name: file.name, caseId: null, error: mensaje }]);
         continue;
       }
-      const payload = (await response.json().catch(() => ({}))) as { error?: string; jobId?: string };
-      if (!response.ok || !payload.jobId) {
-        setResultados((prev) => [...prev, { name: file.name, caseId: null, error: payload.error ?? "No se pudo iniciar la ingesta" }]);
+      if (!payload.jobId) {
+        setResultados((prev) => [...prev, { name: file.name, caseId: null, error: "No se pudo iniciar la ingesta" }]);
         continue;
       }
-
+  
       setJob({ id: payload.jobId, status: "queued", caseId: null, lines: [], error: null });
       const final = await waitForJob(payload.jobId);
       setResultados((prev) => [

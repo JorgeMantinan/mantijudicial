@@ -1,5 +1,7 @@
 "use client";
 
+import { pedir } from "@/lib/api-client";
+
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { REVIEW, label } from "@/lib/labels";
@@ -46,18 +48,18 @@ export function ReviewForm({
     event.preventDefault();
     setError(null);
     setSaved(false);
-    const response = await fetch("/api/review", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ caseId, status, reviewedBy, notes }),
-    }).catch(() => null);
-    if (!response) {
-      setError("No se pudo contactar con el servidor");
-      return;
-    }
-    const payload = (await response.json().catch(() => ({}))) as { error?: string };
-    if (!response.ok) {
-      setError(payload.error ?? "Error al guardar la revisión");
+    try {
+      await pedir(
+        "/api/review",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ caseId, status, reviewedBy, notes }),
+        },
+        "Error al guardar la revisión",
+      );
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Error al guardar la revisión");
       return;
     }
     setSaved(true);

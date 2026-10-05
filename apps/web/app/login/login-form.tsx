@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
+import { ErrorApi, pedir } from "@/lib/api-client";
 
 export function LoginForm() {
   const router = useRouter();
@@ -16,22 +17,20 @@ export function LoginForm() {
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-    const response = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, code: mfaRequired ? code : undefined }),
-    }).catch(() => null);
-    if (!response) {
-      setError("No se pudo contactar con el servidor");
-      return;
-    }
-    const payload = (await response.json().catch(() => ({}))) as {
-      error?: string;
-      mfaRequired?: boolean;
-    };
-    if (!response.ok) {
-      if (payload.mfaRequired) setMfaRequired(true);
-      setError(payload.error ?? "Error al iniciar sesión");
+    try {
+      await pedir(
+        "/api/auth/login",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, code: mfaRequired ? code : undefined }),
+        },
+        "Error al iniciar sesión",
+      );
+    } catch (error) {
+      const datos = error instanceof ErrorApi ? (error.payload as { mfaRequired?: boolean } | undefined) : undefined;
+      if (datos?.mfaRequired) setMfaRequired(true);
+      setError(error instanceof Error ? error.message : "Error al iniciar sesión");
       return;
     }
     setMfaRequired(false);

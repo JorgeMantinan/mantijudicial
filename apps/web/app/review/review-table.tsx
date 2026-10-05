@@ -1,5 +1,7 @@
 "use client";
 
+import { pedir } from "@/lib/api-client";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -89,12 +91,16 @@ export function ReviewTable({ rows }: { rows: ReviewRow[] }) {
     setMsg(null);
     let ok = 0;
     for (const caseId of sel) {
-      const response = await fetch("/api/review", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ caseId, status, reviewedBy: revisor.trim(), notes: "" }),
-      }).catch(() => null);
-      if (response?.ok) ok += 1;
+      try {
+        await pedir("/api/review", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ caseId, status, reviewedBy: revisor.trim(), notes: "" }),
+        });
+        ok += 1;
+      } catch {
+        /* caso no contado: sin permisos o red caída */
+      }
     }
     setBusy(false);
     setMsg(`${ok}/${sel.length} casos guardados`);

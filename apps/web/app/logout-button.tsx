@@ -1,5 +1,7 @@
 "use client";
 
+import { pedir } from "@/lib/api-client";
+
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -10,9 +12,10 @@ export function LogoutButton() {
 
   async function logout() {
     setError(null);
-    const response = await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
-    if (!response || !response.ok) {
-      setError("No se pudo cerrar la sesión");
+    try {
+      await pedir("/api/auth/logout", { method: "POST" }, "No se pudo cerrar la sesión");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "No se pudo cerrar la sesión");
       return;
     }
     startTransition(() => router.push("/login"));

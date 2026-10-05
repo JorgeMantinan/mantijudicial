@@ -1,5 +1,7 @@
 "use client";
 
+import { pedir } from "@/lib/api-client";
+
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useTransition } from "react";
 
@@ -16,14 +18,16 @@ export function MfaPanel() {
   const [message, setMessage] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    const response = await fetch("/api/auth/mfa", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "status" }),
-    }).catch(() => null);
-    if (!response?.ok) return;
-    const payload = (await response.json().catch(() => ({}))) as Status;
-    setEnabled(Boolean(payload.enabled));
+    try {
+      const payload = await pedir<Status>("/api/auth/mfa", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "status" }),
+      });
+      setEnabled(Boolean(payload.enabled));
+    } catch {
+      /* sin estado que mostrar */
+    }
   }, []);
 
   useEffect(() => {
@@ -32,23 +36,19 @@ export function MfaPanel() {
 
   async function call(action: "setup" | "verify" | "disable") {
     setMessage(null);
-    const response = await fetch("/api/auth/mfa", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action, code }),
-    }).catch(() => null);
-    if (!response) {
-      setMessage("No se pudo contactar con el servidor");
-      return;
-    }
-    const payload = (await response.json().catch(() => ({}))) as {
-      error?: string;
-      enabled?: boolean;
-      secret?: string;
-      uri?: string;
-    };
-    if (!response.ok) {
-      setMessage(payload.error ?? "Error");
+    let payload: { enabled?: boolean; secret?: string; uri?: string };
+    try {
+      payload = await pedir(
+        "/api/auth/mfa",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action, code }),
+        },
+        "Error",
+      );
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Error");
       return;
     }
     if (action === "setup" && payload.secret && payload.uri) {

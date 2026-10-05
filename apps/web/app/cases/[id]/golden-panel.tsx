@@ -1,5 +1,7 @@
 "use client";
 
+import { pedir } from "@/lib/api-client";
+
 import { useState, useTransition } from "react";
 import { BRANCH, OUTCOME, label } from "@/lib/labels";
 
@@ -78,18 +80,19 @@ export function GoldenPanel({
     if (holdings) expect.min_holdings = Number(holdings);
     if (facts) expect.min_facts = Number(facts);
 
-    const response = await fetch("/api/golden", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ caseId, confirm, expect }),
-    }).catch(() => null);
-    if (!response) {
-      setError("No se pudo contactar con el servidor");
-      return;
-    }
-    const payload = (await response.json().catch(() => ({}))) as { error?: string; entry?: Entry };
-    if (!response.ok) {
-      setError(payload.error ?? "No se pudo guardar");
+    let payload: { entry?: Entry };
+    try {
+      payload = await pedir(
+        "/api/golden",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ caseId, confirm, expect }),
+        },
+        "No se pudo guardar",
+      );
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "No se pudo guardar");
       return;
     }
     if (payload.entry) setEntry(payload.entry);

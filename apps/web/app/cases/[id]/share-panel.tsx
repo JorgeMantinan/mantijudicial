@@ -1,5 +1,7 @@
 "use client";
 
+import { pedir } from "@/lib/api-client";
+
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { ACTION, label } from "@/lib/labels";
@@ -47,18 +49,18 @@ export function SharePanel({
   async function share(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-    const response = await fetch("/api/grants", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ resourceId: caseId, granteeUserId: grantee, actions }),
-    }).catch(() => null);
-    if (!response) {
-      setError("No se pudo contactar con el servidor");
-      return;
-    }
-    const payload = (await response.json().catch(() => ({}))) as { error?: string };
-    if (!response.ok) {
-      setError(payload.error ?? "No se pudo compartir");
+    try {
+      await pedir(
+        "/api/grants",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ resourceId: caseId, granteeUserId: grantee, actions }),
+        },
+        "No se pudo compartir",
+      );
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "No se pudo compartir");
       return;
     }
     startTransition(() => router.refresh());
@@ -66,14 +68,18 @@ export function SharePanel({
 
   async function revoke(grantId: string) {
     setError(null);
-    const response = await fetch("/api/grants/revoke", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ grantId }),
-    }).catch(() => null);
-    if (!response?.ok) {
-      const payload = response ? ((await response.json().catch(() => ({}))) as { error?: string }) : {};
-      setError(payload.error ?? "No se pudo revocar");
+    try {
+      await pedir(
+        "/api/grants/revoke",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ grantId }),
+        },
+        "No se pudo revocar",
+      );
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "No se pudo revocar");
       return;
     }
     startTransition(() => router.refresh());
