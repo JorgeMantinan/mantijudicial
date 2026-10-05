@@ -1110,14 +1110,46 @@ export async function getDashboard(): Promise<OutcomeTotals> {
 }
 
 let searchDocs: { docs: SearchDoc[]; index: ReturnType<typeof buildIndex>; at: number } | null = null;
+let reconstruyendoIndice = false;
+
+async function construirIndice(): Promise<void> {
+  const [caseDocs, articleDocs] = await Promise.all([loadCaseDocs(), loadArticleDocs()]);
+  const docs = [...caseDocs, ...articleDocs];
+  searchDocs = { docs, index: buildIndex(docs), at: Date.now() };
+}
+
+/** Reconstruye en segundo plano: quien pide búsqueda mientras tanto se sirve
+ * con el índice anterior en lugar de pagar ~3 s (2,5 s bloqueando el event
+ * loop) dentro de su propia petición. */
+function programarReconstruccion(): void {
+  if (reconstruyendoIndice) return;
+  reconstruyendoIndice = true;
+  setTimeout(() => {
+    construirIndice()
+      .catch((error) => console.error("No se pudo reconstruir el índice:", error))
+      .finally(() => {
+        reconstruyendoIndice = false;
+      });
+  }, 0);
+}
+
+/** Precarga del índice al arrancar (instrumentation.ts) para que la primera
+ * petición de búsqueda no pague la construcción. */
+export function warmSearchIndex(): void {
+  if (searchDocs || reconstruyendoIndice) return;
+  programarReconstruccion();
+}
+
 async function getIndex(): Promise<{ docs: SearchDoc[]; index: ReturnType<typeof buildIndex> }> {
   if (searchDocs && Date.now() - searchDocs.at < INDEX_TTL_MS) {
     return { docs: searchDocs.docs, index: searchDocs.index };
   }
-  const [caseDocs, articleDocs] = await Promise.all([loadCaseDocs(), loadArticleDocs()]);
-  const docs = [...caseDocs, ...articleDocs];
-  searchDocs = { docs, index: buildIndex(docs), at: Date.now() };
-  return { docs, index: searchDocs.index };
+  if (searchDocs) {
+    programarReconstruccion();
+    return { docs: searchDocs.docs, index: searchDocs.index };
+  }
+  await construirIndice();
+  return { docs: searchDocs!.docs, index: searchDocs!.index };
 }
 
 export async function runSearch(

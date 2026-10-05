@@ -227,7 +227,17 @@ export function search(index: IndexData, query: string, options: SearchOptions =
     }
   }
 
-  const hits: SearchHit[] = [];
+  // Primero puntuamos y ordenamos; el snippet (pliegue de TODO el documento)
+  // solo se calcula para los `limit` que se van a devolver: con docs largos
+  // plegar todos los puntuados costaba ~1 s por búsqueda (hasta 8 s en
+  // /alertas con 8 búsquedas).
+  const parciales: Array<{
+    docPosition: number;
+    score: number;
+    matched: string[];
+    phraseMatch: boolean;
+  }> = [];
+
   for (const [docPosition, current] of scores) {
     const entry = index.docs[docPosition];
     if (!entry) continue;
@@ -235,18 +245,39 @@ export function search(index: IndexData, query: string, options: SearchOptions =
     const phraseMatch = foldedQuery.length > 3 && entry.folded.includes(foldedQuery);
     let score = current.score * (0.5 + 0.5 * coverage);
     if (phraseMatch) score *= 1.45;
-    hits.push({
+    parciales.push({ docPosition, score, matched: [...current.matched], phraseMatch });
+  }
+
+  parciales.sort((a, b2) => {
+    if (b2.score !== a.score) return b2.score - a.score;
+    const idA = index.docs[a.docPosition]?.doc.id ?? "";
+    const idB = index.docs[b2.docPosition]?.doc.id ?? "";
+    return idA.localeCompare(idB);
+  });
+
+  return parciales.slice(0, limit).map((parcial) => {
+    const entry = index.docs[parcial.docPosition];
+    if (!entry) {
+      return {
+        id: "",
+        kind: "case" as const,
+        title: "",
+        score: 0,
+        matchedTerms: parcial.matched,
+        phraseMatch: parcial.phraseMatch,
+        snippet: "",
+        meta: {},
+      };
+    }
+    return {
       id: entry.doc.id,
       kind: entry.doc.kind,
       title: entry.doc.title,
-      score: Number(score.toFixed(4)),
-      matchedTerms: [...current.matched],
-      phraseMatch,
+      score: Number(parcial.score.toFixed(4)),
+      matchedTerms: parcial.matched,
+      phraseMatch: parcial.phraseMatch,
       snippet: snippetFor(`${entry.doc.title}\n${entry.doc.body}`, queryTokens),
       meta: entry.doc.meta,
-    });
-  }
-
-  hits.sort((a, b2) => b2.score - a.score || a.id.localeCompare(b2.id));
-  return hits.slice(0, limit);
+    };
+  });
 }
