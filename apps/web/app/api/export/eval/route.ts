@@ -29,6 +29,9 @@ function filas(objeto: unknown, seccion: string, prefijo = ""): string[] {
 export async function GET(): Promise<Response> {
   const actor = await getActor();
   if (!actor) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  if (actor.role !== "ORG_ADMIN") {
+    return NextResponse.json({ error: "Solo la administración del despacho" }, { status: 403 });
+  }
 
   const [reporte, costes, calidad, sistema] = await Promise.all([
     getEvalReport(),

@@ -30,7 +30,10 @@ export async function POST(request: Request): Promise<NextResponse> {
   const code = typeof body.code === "string" ? body.code.trim() : "";
 
   const claveMfa = `mfa:${ipDe(request)}:${actor.userId}`;
-  if ((action === "verify" || action === "disable") && !mfaLimiter.intentar(claveMfa)) {
+  if (
+    (action === "verify" || action === "disable" || action === "setup") &&
+    !mfaLimiter.intentar(claveMfa)
+  ) {
     return NextResponse.json(
       { error: `Demasiados intentos. Vuelve a probar en ${mfaLimiter.espera(claveMfa)} s` },
       { status: 429 },
@@ -47,6 +50,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (action === "setup") {
       const { secret, uri } = identity.setupMfa(actor.userId);
       await identity.save(identityPath());
+      mfaLimiter.liberar(claveMfa);
       return NextResponse.json({ secret, uri, enabled: false });
     }
 
@@ -68,6 +72,13 @@ export async function POST(request: Request): Promise<NextResponse> {
       const ok = identity.disableMfa(actor.userId, code);
       if (!ok) return NextResponse.json({ error: "Código incorrecto" }, { status: 400 });
       await identity.save(identityPath());
+      mfaLimiter.liberar(claveMfa);
+      await appendAudit(auditPath(), {
+        actor: actor.userId,
+        action: "user.mfa_disabled",
+        resource: actor.userId,
+        details: {},
+      });
       return NextResponse.json({ ok: true, enabled: false });
     }
 

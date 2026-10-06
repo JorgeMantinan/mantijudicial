@@ -159,6 +159,7 @@ export const AUDIT: Record<string, string> = {
   "share.revoke": "Permiso revocado",
   "user.create": "Usuario creado",
   "user.mfa_enabled": "Doble factor activado",
+  "user.mfa_disabled": "Doble factor desactivado",
   "note.create": "Nota creada",
   "note.delete": "Nota eliminada",
   "golden.confirm": "Golden confirmado",

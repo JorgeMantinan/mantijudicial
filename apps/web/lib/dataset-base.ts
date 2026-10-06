@@ -83,7 +83,15 @@ export async function caseNames(): Promise<string[]> {
   return entries.filter((name) => name.startsWith("case_")).sort();
 }
 
+/** Formato de caso válido: única puerta de entrada a ficheros bajo
+ * cases/. Defensa en profundidad: las APIs ya validan, pero aquí no se
+ * escapa nunca un caseId inventado (traversal) aunque se olvide un validador. */
+export function esCaseId(caseId: string): boolean {
+  return /^case_\d{6}$/.test(caseId);
+}
+
 export async function section<T>(caseId: string, file: string): Promise<T | null> {
+  if (!esCaseId(caseId)) return null;
   return readJson<T>(path.join(repoRoot(), "cases", caseId, "structured", file));
 }
 
@@ -93,6 +101,7 @@ function archivedFlagPath(caseId: string): string {
 
 /** ¿Está archivado el caso? (marcador en cases/<id>/archived.flag). */
 export async function isArchived(caseId: string): Promise<boolean> {
+  if (!esCaseId(caseId)) return false;
   return fs
     .access(archivedFlagPath(caseId))
     .then(() => true)
@@ -100,6 +109,7 @@ export async function isArchived(caseId: string): Promise<boolean> {
 }
 
 export async function setArchived(caseId: string, archived: boolean): Promise<void> {
+  if (!esCaseId(caseId)) throw new Error(`caseId no válido: ${caseId}`);
   const file = archivedFlagPath(caseId);
   if (archived) await fs.writeFile(file, `${new Date().toISOString()}\n`, "utf8");
   else await fs.rm(file, { force: true });
@@ -366,6 +376,7 @@ export interface CaseDetail extends CaseListItem {
 }
 
 export async function getCase(caseId: string): Promise<CaseDetail | null> {
+  if (!esCaseId(caseId)) return null;
   const [summary, classification, outcome, parties, claims, facts, timeline, args, reasoning, issues, citedLaws, lawRefs, review] =
     await Promise.all([
       section<Record<string, unknown>>(caseId, "summary.json"),

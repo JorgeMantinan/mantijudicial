@@ -15,6 +15,7 @@ export type AuditAction =
   | "case.restored"
   | "user.create"
   | "user.mfa_enabled"
+  | "user.mfa_disabled"
   | "auth.login"
   | "auth.login_failed"
   | "auth.logout";

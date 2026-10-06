@@ -1,5 +1,6 @@
 import { canViewCase, requireActor , contextoVisibilidad } from "@/lib/auth";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { PrintButton } from "@/components/print-button";
 import { getCalidadCorpus, getCostesIA, getEvalReport, getSistemaInfo } from "@/lib/dataset";
 import { ultimasMediciones } from "@/lib/timings";
@@ -19,6 +20,9 @@ function asDict(value: unknown): Dict {
 
 export default async function EvalPage() {
   const { actor, orgId, grants } = await contextoVisibilidad();
+  // Métricas globales (coste total de IA, calidad y sistema de todo el
+  // corpus): solo administración, como /users.
+  if (actor.role !== "ORG_ADMIN") redirect("/");
   const ve = (id: string) => canViewCase(actor, id.split("#")[0], orgId, grants);
   const [report, costes, calidadBruta, sistema] = await Promise.all([
     getEvalReport(),

@@ -47,7 +47,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         canViewCase(actor, item.id, orgId, []),
       ).length
     : 0;
-  const items = NAV.map((item) =>
+  const items = NAV.filter(
+    (item) => item.href !== "/eval" || actor?.role === "ORG_ADMIN",
+  ).map((item) =>
     item.href === "/review" && pending > 0 ? { ...item, badge: pending } : item,
   );
   if (actor?.role === "ORG_ADMIN") items.push({ href: "/users", label: "Usuarios" });
@@ -113,8 +115,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             Acceso denegado por defecto: sin sesión no hay acceso a casos ni agregados.
             <br />
             <span className="small">
-              <Link href="/ayuda">Ayuda</Link> · <Link href="/novedades">Novedades</Link> ·{" "}
-              <Link href="/eval">Estado y coste</Link> · MantiJudicial v{paquete.version}
+              <Link href="/ayuda">Ayuda</Link> · <Link href="/novedades">Novedades</Link>
+              {actor?.role === "ORG_ADMIN" && (
+                <>
+                  {" · "}
+                  <Link href="/eval">Estado y coste</Link>
+                </>
+              )}{" "}
+              · MantiJudicial v{paquete.version}
             </span>
           </div>
         </footer>
