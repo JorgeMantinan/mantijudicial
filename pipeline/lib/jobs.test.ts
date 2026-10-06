@@ -60,4 +60,19 @@ describe("JobRegistry", () => {
     registry.patch(job.id, { status: "done", finishedAt: new Date().toISOString() });
     expect(registry.isBusy()).toBe(false);
   });
+
+  it("enCola cuenta solo los trabajos del despacho que siguen activos", () => {
+    const registry = new JobRegistry();
+    const a = registry.create("ingest");
+    registry.patch(a.id, { orgId: "org_A", status: "queued" });
+    const b = registry.create("compare");
+    registry.patch(b.id, { orgId: "org_A", status: "running" });
+    const c = registry.create("ingest");
+    registry.patch(c.id, { orgId: "org_B", status: "queued" });
+    const d = registry.create("ingest");
+    registry.patch(d.id, { orgId: "org_A", status: "done" });
+    expect(registry.enCola("org_A")).toBe(2);
+    expect(registry.enCola("org_B")).toBe(1);
+    expect(registry.enCola("org_C")).toBe(0);
+  });
 });

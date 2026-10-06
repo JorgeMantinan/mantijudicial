@@ -48,6 +48,12 @@ export async function POST(request: Request): Promise<NextResponse> {
   if (!canCreateCase(actor)) {
     return NextResponse.json({ error: "Tu rol no permite reanalizar casos" }, { status: 403 });
   }
+  if (jobs.enCola(actor.orgId) >= 5) {
+    return NextResponse.json(
+      { error: "Ya tienes 5 trabajos en cola: espera a que terminen" },
+      { status: 429 },
+    );
+  }
   const orgId = await defaultOrgId();
   const grants = (await loadGrantStore()).toAuthorizationGrants();
   if (!can(actor, "ANALYZE", await recursoCaso(caseId), grants)) {

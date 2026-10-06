@@ -51,6 +51,12 @@ export async function POST(request: Request): Promise<NextResponse> {
   if (!canCreateCase(actor)) {
     return NextResponse.json({ error: "Tu rol no permite crear casos" }, { status: 403 });
   }
+  if (jobs.enCola(actor.orgId) >= 5) {
+    return NextResponse.json(
+      { error: "Ya tienes 5 trabajos en cola: espera a que terminen" },
+      { status: 429 },
+    );
+  }
 
   let form: FormData;
   try {

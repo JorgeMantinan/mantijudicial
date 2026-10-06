@@ -68,4 +68,12 @@ export class JobRegistry {
   isBusy(): boolean {
     return this.list().some((job) => job.status === "queued" || job.status === "running");
   }
+
+  /** Trabajos en cola o en marcha de un despacho (para limitar el coste de IA). */
+  enCola(orgId: string): number {
+    return this.list().filter(
+      (job) =>
+        job.orgId === orgId && (job.status === "queued" || job.status === "running"),
+    ).length;
+  }
 }
