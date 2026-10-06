@@ -220,15 +220,20 @@ export interface RevisionPersona {
 
 /**
  * Carga de revisión por persona: quién ha revisado qué y cuánto lleva.
+ * `permitido(caseId)` limita el agregado a los casos que el actor ve
+ * (igual que getInforme/getTema): sin eso, /review filtraba la tabla pero
+ * aquí se colaban los casos de otros despachos.
  */
-export async function getRevisionPorPersona(): Promise<{
+export async function getRevisionPorPersona(
+  permitido: (caseId: string) => boolean = () => true,
+): Promise<{
   personas: RevisionPersona[];
   sinRevisador: number;
 }> {
   const personas = new Map<string, RevisionPersona>();
   let sinRevisador = 0;
 
-  const items = await listCases();
+  const items = (await listCases()).filter((item) => permitido(item.id));
   // En paralelo: ~320 lecturas de review.json en serie costaban más que el
   // resto de la página (sin caché a propósito: /review debe verse al instante).
   const reviews = await Promise.all(

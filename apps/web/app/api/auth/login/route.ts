@@ -21,19 +21,20 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const clave = `login:${ipDe(request)}:${email.toLowerCase()}`;
-  // Cuenta el intento; solo cortamos (429) si además falla, así un usuario
-  // legítimo con la clave correcta nunca se queda fuera.
+  // Bloqueo real: pasado el límite NO se comprueba la contraseña (antes se
+  // comprobaba siempre y el límite solo cambiaba el mensaje de error, así la
+  // fuerza bruta seguía probando claves; además un acierto relevaba el corte).
   const permitido = loginLimiter.intentar(clave);
+  if (!permitido) {
+    return NextResponse.json(
+      { error: `Demasiados intentos. Vuelve a probar en ${loginLimiter.espera(clave)} s` },
+      { status: 429 },
+    );
+  }
 
   const identity = await loadIdentity();
   const user = identity.authenticate(email, password);
   if (!user) {
-    if (!permitido) {
-      return NextResponse.json(
-        { error: `Demasiados intentos. Vuelve a probar en ${loginLimiter.espera(clave)} s` },
-        { status: 429 },
-      );
-    }
     await appendAudit(auditPath(), {
       actor: email,
       action: "auth.login_failed",
@@ -44,12 +45,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   if (identity.mfaEnabled(user.id) && !identity.checkMfa(user.id, code)) {
-    if (!permitido) {
-      return NextResponse.json(
-        { error: `Demasiados intentos. Vuelve a probar en ${loginLimiter.espera(clave)} s` },
-        { status: 429 },
-      );
-    }
     await appendAudit(auditPath(), {
       actor: user.id,
       action: "auth.login_failed",

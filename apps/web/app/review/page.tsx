@@ -16,7 +16,7 @@ export default async function ReviewPage({
   const { actor, orgId, grants } = await contextoVisibilidad();
   const params = await searchParams;
   const status = params.status ?? "UNREVIEWED";
-  const carga = await getRevisionPorPersona();
+  const carga = await getRevisionPorPersona((id) => canViewCase(actor, id, orgId, grants));
   const all = await casosVisibles(actor, orgId, grants);
   const pendientes = all.filter((item) => item.enriched && item.reviewStatus === "UNREVIEWED");
   const porEstado: Record<string, number> = {};
