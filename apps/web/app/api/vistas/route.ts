@@ -1,3 +1,4 @@
+import { leerJson } from "@/lib/api-body";
 import { NextResponse } from "next/server";
 import { getActor } from "@/lib/auth";
 import { deleteVista, saveVista, type VistaGuardada } from "@/lib/dataset";
@@ -11,7 +12,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   let body: Record<string, unknown>;
   try {
-    body = (await request.json()) as Record<string, unknown>;
+    body = await leerJson(request);
   } catch {
     return NextResponse.json({ error: "Cuerpo JSON no válido" }, { status: 400 });
   }
@@ -34,7 +35,7 @@ export async function DELETE(request: Request): Promise<NextResponse> {
 
   let body: Record<string, unknown>;
   try {
-    body = (await request.json()) as Record<string, unknown>;
+    body = await leerJson(request);
   } catch {
     return NextResponse.json({ error: "Cuerpo JSON no válido" }, { status: 400 });
   }

@@ -11,13 +11,8 @@ const nextConfig = {
       { key: "Referrer-Policy", value: "same-origin" },
       { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
       { key: "X-DNS-Prefetch-Control", value: "off" },
-      // Todo el CSS/JS es propio (sin CDN): 'self' basta; el 'unsafe-inline'
-      // de scripts lo necesita el bootstrap de Next (no hay eval ni CDNs).
-      {
-        key: "Content-Security-Policy",
-        value:
-          "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'",
-      },
+      // La CSP (con nonce por petición) la pone proxy.ts; aquí solo las
+      // cabeceras fijas.
       // Solo aporta sobre HTTPS (Render); en local no hace nada.
       { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
     ];

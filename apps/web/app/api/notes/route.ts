@@ -1,3 +1,4 @@
+import { leerJson } from "@/lib/api-body";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { appendAudit } from "@pipeline/audit";
@@ -40,7 +41,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   let body: Record<string, unknown>;
   try {
-    body = (await request.json()) as Record<string, unknown>;
+    body = await leerJson(request);
   } catch {
     return NextResponse.json({ error: "Cuerpo JSON no válido" }, { status: 400 });
   }
@@ -85,7 +86,7 @@ export async function DELETE(request: Request): Promise<NextResponse> {
 
   let body: Record<string, unknown>;
   try {
-    body = (await request.json()) as Record<string, unknown>;
+    body = await leerJson(request);
   } catch {
     return NextResponse.json({ error: "Cuerpo JSON no válido" }, { status: 400 });
   }

@@ -4,6 +4,7 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 import { appendAudit } from "@pipeline/audit";
 import { canCreateCase } from "@pipeline/authorization";
+import { leerBytes } from "@/lib/api-body";
 import { jobs } from "@/lib/jobs";
 import { canViewCase, defaultOrgId, getActor } from "@/lib/auth";
 import { repoRoot, setOrgDelCaso } from "@/lib/dataset";
@@ -60,7 +61,12 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   let form: FormData;
   try {
-    form = await request.formData();
+    // Con tope: request.formData() haría buffering completo y un cuerpo
+    // chunked sin content-length esquiva el chequeo del proxy.
+    const bytes = await leerBytes(request, 30 * 1024 * 1024);
+    form = await new Response(new Uint8Array(bytes), {
+      headers: { "content-type": request.headers.get("content-type") ?? "" },
+    }).formData();
   } catch {
     return NextResponse.json({ error: "Formulario no válido" }, { status: 400 });
   }

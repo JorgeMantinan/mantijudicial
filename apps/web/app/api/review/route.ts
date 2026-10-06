@@ -1,3 +1,4 @@
+import { leerJson } from "@/lib/api-body";
 import { revalidatePath } from "next/cache";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -15,7 +16,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   let body: unknown;
   try {
-    body = await request.json();
+    body = (await leerJson(request)) as typeof body;
   } catch {
     return NextResponse.json({ error: "Cuerpo JSON no válido" }, { status: 400 });
   }

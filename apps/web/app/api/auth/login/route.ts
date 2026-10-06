@@ -1,3 +1,4 @@
+import { leerJson } from "@/lib/api-body";
 import { NextResponse, type NextRequest } from "next/server";
 import { appendAudit } from "@pipeline/audit";
 import { RateLimiter, ipDe } from "@pipeline/rate_limit";
@@ -9,7 +10,7 @@ const loginLimiter = new RateLimiter({ maxIntentos: 5, ventanaMs: 15 * 60_000 })
 export async function POST(request: NextRequest): Promise<NextResponse> {
   let body: { email?: unknown; password?: unknown; code?: unknown };
   try {
-    body = await request.json();
+    body = (await leerJson(request)) as typeof body;
   } catch {
     return NextResponse.json({ error: "Cuerpo JSON no válido" }, { status: 400 });
   }

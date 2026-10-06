@@ -135,7 +135,9 @@ describe("IdentityStore", () => {
     expect(store.mfaEnabled(user.id)).toBe(true);
 
     expect(store.checkMfa(user.id, undefined)).toBe(false);
-    expect(store.checkMfa(user.id, totp(secret))).toBe(true);
+    const codigoLogin = totp(secret);
+    expect(store.checkMfa(user.id, codigoLogin)).toBe(true);
+    expect(store.checkMfa(user.id, codigoLogin)).toBe(false);
     expect(store.checkMfa(user.id, "999999")).toBe(false);
 
     expect(store.disableMfa(user.id, totp(secret))).toBe(true);

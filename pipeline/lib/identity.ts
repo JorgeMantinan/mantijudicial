@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { Actor, Role } from "./authorization.js";
-import { generateSecret, otpauthUri, verifyTotp } from "./totp";
+import { generateSecret, otpauthUri, totp, verifyTotp } from "./totp";
 
 const SCRYPT_OPTIONS = { N: 16384, r: 8, p: 1 };
 const KEYLEN = 64;
@@ -17,6 +17,8 @@ export interface User {
   /** TOTP pendiente de confirmar (solo si mfa_enabled es true está activo). */
   mfa_secret?: string | null;
   mfa_enabled?: boolean;
+  /** Último contador TOTP consumido en el login (no se reutiliza un código). */
+  mfa_last_counter?: number;
 }
 
 export interface Firm {
@@ -271,14 +273,27 @@ export class IdentityStore {
     return this.data.users.find((item) => item.id === userId)?.mfa_enabled === true;
   }
 
-  /** true si el código TOTP es válido para este usuario (o no tiene MFA). */
+  /** true si el código TOTP es válido para este usuario (o no tiene MFA).
+   * El contador del código se consume: el mismo código no sirve dos veces
+   * (replay dentro de su ventana de ±1 paso). */
   checkMfa(userId: string, code: string | undefined): boolean {
     const user = this.data.users.find((item) => item.id === userId);
     if (!user) return false;
     if (!user.mfa_enabled) return true;
     if (!user.mfa_secret) return false;
     if (!code) return false;
-    return verifyTotp(user.mfa_secret, code);
+    const paso = 30_000;
+    const ahora = Date.now();
+    const actual = Math.floor(ahora / paso);
+    for (let offset = -1; offset <= 1; offset += 1) {
+      const contador = actual + offset;
+      if (contador <= (user.mfa_last_counter ?? -1)) continue;
+      if (totp(user.mfa_secret, contador * paso + Math.floor(paso / 2)) === code) {
+        user.mfa_last_counter = contador;
+        return true;
+      }
+    }
+    return false;
   }
 
   pruneSessions(now = new Date()): number {

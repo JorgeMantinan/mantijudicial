@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { canViewCase, defaultOrgId, getActor } from "@/lib/auth";
 import { getReviewStats } from "@/lib/dataset";
 import { registrarRender } from "@/lib/timings";
@@ -39,6 +39,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const inicio = performance.now();
   const cuerpo = await Promise.resolve(children);
   const store = await cookies();
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   const authenticated = Boolean(store.get("mj_session")?.value);
   const actor = authenticated ? await getActor() : null;
   const orgId = actor ? await defaultOrgId() : null;
@@ -59,6 +60,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="es">
       <body>
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html:
               "(function(){try{var t=localStorage.getItem('mj-tema');var claro=window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches;if(t==='light'||(!t&&claro)){document.documentElement.setAttribute('data-theme','light');}if(localStorage.getItem('mj-densidad')==='compacta'){document.documentElement.setAttribute('data-densidad','compacta');}}catch(e){}})();",
