@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import { appendAudit } from "@pipeline/audit";
 import { can, canCreateCase } from "@pipeline/authorization";
 import type { GoldenEntry } from "@pipeline/eval";
-import { defaultOrgId, getActor , recursoCaso } from "@/lib/auth";
+import { getActor, recursoCaso } from "@/lib/auth";
 import { getGoldenInfo, repoRoot } from "@/lib/dataset";
 import { auditPath, loadGrantStore } from "@/lib/grants";
 
@@ -37,7 +37,6 @@ async function writeGolden(entries: GoldenEntry[]): Promise<void> {
 async function authorize(caseId: string, action: "VIEW" | "EDIT"): Promise<NextResponse | null> {
   const actor = await getActor();
   if (!actor) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-  const orgId = await defaultOrgId();
   const grants = (await loadGrantStore()).toAuthorizationGrants();
   if (!can(actor, action, await recursoCaso(caseId), grants)) {
     return NextResponse.json({ error: "No tienes permiso sobre este caso" }, { status: 403 });

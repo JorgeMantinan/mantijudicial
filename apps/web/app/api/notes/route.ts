@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import { appendAudit } from "@pipeline/audit";
 import { NoteError, NoteStore } from "@pipeline/notes";
 import { can } from "@pipeline/authorization";
-import { defaultOrgId, getActor, loadIdentity , recursoCaso } from "@/lib/auth";
+import { getActor, loadIdentity, recursoCaso } from "@/lib/auth";
 import { auditPath, loadGrantStore } from "@/lib/grants";
 import { repoRoot } from "@/lib/dataset";
 
@@ -41,7 +41,6 @@ export async function GET(request: Request): Promise<NextResponse> {
   if (!casoExiste(caseId)) {
     return NextResponse.json({ error: "Caso no encontrado" }, { status: 404 });
   }
-  const orgId = await defaultOrgId();
   const grants = await loadGrants();
   if (!can(actor, "VIEW", await recursoCaso(caseId), grants)) {
     return NextResponse.json({ error: "No puedes ver este caso" }, { status: 403 });
@@ -74,7 +73,6 @@ export async function POST(request: Request): Promise<NextResponse> {
   if (!casoExiste(caseId)) {
     return NextResponse.json({ error: "Caso no encontrado" }, { status: 404 });
   }
-  const orgId = await defaultOrgId();
   const grants = await loadGrants();
   if (!can(actor, "VIEW", await recursoCaso(caseId), grants)) {
     return NextResponse.json({ error: "No puedes ver este caso" }, { status: 403 });
@@ -122,7 +120,6 @@ export async function DELETE(request: Request): Promise<NextResponse> {
   if (!casoExiste(caseId)) {
     return NextResponse.json({ error: "Caso no encontrado" }, { status: 404 });
   }
-  const orgId = await defaultOrgId();
   const grants = await loadGrants();
   if (!can(actor, "VIEW", await recursoCaso(caseId), grants)) {
     return NextResponse.json({ error: "No puedes editar este caso" }, { status: 403 });

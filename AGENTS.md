@@ -25,10 +25,14 @@ pnpm web:build / web:start
 ```
 
 CI: `.github/workflows/ci.yml` (push y PR a `main`) con pnpm 11 + Node 20:
-`pnpm typecheck`, `tsc --noEmit` de `apps/web` y `pnpm test`. **Sin `next
-build`**: el build necesita el corpus (`cases/`), que no está en `main`.
-Para que esa comprobación funcione, `pnpm-workspace.yaml` declara
-`packages: ["apps/*"]` (si no, `pnpm install` en la raíz no instala la web).
+`pnpm typecheck`, `tsc --noEmit` de `apps/web` (con `noUnusedLocals`), `pnpm
+test` y `pnpm --dir apps/web exec next build`. Para poder compilar sin datos,
+**antes** del build crea un corpus de juguete en un temporal:
+`node scripts/crear-corpus-juguete.mjs "$RUNNER_TEMP/corpus"` +
+`MANTIJUDICIAL_ROOT=$RUNNER_TEMP/corpus` (el build real sigue tocando el corpus
+completo en local). Para que esas comprobaciones funcionen,
+`pnpm-workspace.yaml` declara `packages: ["apps/*"]` (si no, `pnpm install` en
+la raíz no instala la web).
 
 Pipeline (CLI, `tsx`): `pnpm hygiene|extract|metadata|enrich|laws|match|
 patterns|search|vias|ingest|seed|eval|supplement|compare|escrito`.

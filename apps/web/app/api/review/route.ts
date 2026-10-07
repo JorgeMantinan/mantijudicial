@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 import { appendAudit } from "@pipeline/audit";
 import { can } from "@pipeline/authorization";
 import { applyReview, validateReviewUpdate } from "@pipeline/review";
-import { defaultOrgId, getActor , recursoCaso } from "@/lib/auth";
+import { getActor, recursoCaso } from "@/lib/auth";
 import { repoRoot } from "@/lib/dataset";
 import { auditPath } from "@/lib/grants";
 
@@ -32,7 +32,6 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Caso no encontrado" }, { status: 404 });
   }
 
-  const orgId = await defaultOrgId();
   if (!can(actor, "EDIT", await recursoCaso(caseId), [])) {
     return NextResponse.json({ error: "No tienes permiso para editar este caso" }, { status: 403 });
   }

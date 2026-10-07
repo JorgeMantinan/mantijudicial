@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { can } from "@pipeline/authorization";
-import { defaultOrgId, getActor , recursoCaso } from "@/lib/auth";
+import { getActor, recursoCaso } from "@/lib/auth";
 import { loadGrantStore } from "@/lib/grants";
 import { getCase, getVias } from "@/lib/dataset";
 
@@ -19,7 +19,6 @@ export async function GET(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "resource no válido" }, { status: 400 });
   }
 
-  const orgId = await defaultOrgId();
   const grants = (await loadGrantStore()).toAuthorizationGrants();
   if (!can(actor, "VIEW", await recursoCaso(caseId), grants)) {
     return NextResponse.json({ error: "No puedes ver este caso" }, { status: 403 });

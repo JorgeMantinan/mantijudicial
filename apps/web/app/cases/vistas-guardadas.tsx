@@ -21,7 +21,7 @@ export function VistasGuardadas({
   actuales: Record<string, string>;
 }) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const [nombre, setNombre] = useState("");
   const [lista, setLista] = useState(vistas);
   const [msg, setMsg] = useState<string | null>(null);

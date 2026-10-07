@@ -19,7 +19,6 @@ type Group = {
   share_estimated: number | null;
 };
 
-type ArgRow = { key: string; cases: number; outcomes: Record<string, number> };
 type LawRow = { boe_id: string; siglas: string[]; cases: number; outcomes: Record<string, number> };
 
 function dist(counts: Record<string, number> | undefined, map: Record<string, string> = OUTCOME) {
@@ -56,16 +55,10 @@ export default async function PatternsPage() {
 
   const groups = (value: unknown): Group[] =>
     Array.isArray(value) ? (value as Group[]) : [];
-  const rows = (value: unknown): ArgRow[] => (Array.isArray(value) ? (value as ArgRow[]) : []);
   const laws = (value: unknown): LawRow[] => (Array.isArray(value) ? (value as LawRow[]) : []);
 
   const outcomes = (patterns.outcomes as { counts?: Record<string, number>; total?: number }) ?? {};
-  const branch = groups(patterns.by_branch);
-  const side = groups(patterns.by_recurring_side);
-  const topics = groups(patterns.by_holding_topic);
   const doctrines = groups(patterns.by_doctrine);
-  const issues = groups(patterns.by_issue);
-  const args = rows(patterns.by_argument_type);
   const verifiedLaws = laws(patterns.by_verified_law);
 
   return (

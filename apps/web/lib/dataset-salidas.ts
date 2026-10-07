@@ -136,7 +136,6 @@ export interface GoldenInfo {
 
 export async function getGoldenInfo(caseId: string): Promise<GoldenInfo | null> {
   if (!/^case_\d{6}$/.test(caseId)) return null;
-  const dir = path.join(repoRoot(), "cases", caseId, "structured");
   const text = await fs
     .readFile(path.join(repoRoot(), "cases", caseId, "extracted", "judgment.txt"), "utf8")
     .catch(() => "");

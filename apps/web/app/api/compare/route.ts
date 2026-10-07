@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { can, canCreateCase } from "@pipeline/authorization";
-import { defaultOrgId, getActor , recursoCaso } from "@/lib/auth";
+import { getActor, recursoCaso } from "@/lib/auth";
 import { loadGrantStore } from "@/lib/grants";
 import { jobs } from "@/lib/jobs";
 import { repoRoot } from "@/lib/dataset";
@@ -54,7 +54,6 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Tu rol no permite generar análisis" }, { status: 403 });
   }
 
-  const orgId = await defaultOrgId();
   const grants = (await loadGrantStore()).toAuthorizationGrants();
   if (
     !can(actor, "ANALYZE", await recursoCaso(caseId), grants) ||

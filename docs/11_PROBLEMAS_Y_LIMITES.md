@@ -50,7 +50,13 @@ que no se reintenta sin permiso nuevo. El índice maestro (manifest) sí existe:
 
 ### 1.4 Muestra pequeña y concentrada
 
-- 76 casos, de los cuales los 8 ya analizados son 100% CONTRACTUAL.
+- 79/80 casos enriquecidos y ya **no** son 100% CONTRACTUAL, pero la rama
+  predomina todavía. Distribución real por `civil_branch` (recalculada sobre
+  `cases/*/structured/classification.json`; el caso sin clasificar es
+  `case_000056`): CONTRACTUAL 22 (27,8 %), CIVIL_LIABILITY 18 (22,8 %),
+  CONSUMER_ABUSIVE_CLAUSES 17 (21,5 %), LEASE_PROPERTY 9 (11,4 %),
+  PROPERTY_COMMUNITY 6 (7,6 %), COMMERCIAL 5 (6,3 %), OTHER 1 y PROCEDURAL 1;
+  **FAMILY y SUCCESSIONS, 0 casos**.
 - Fechas concentradas (predomina 2026).
 - Con esto **no se pueden afirmar** "el sistema detecta patrones
   estadísticos". Sí se puede: "muestra de doctrina del TS con ejemplos

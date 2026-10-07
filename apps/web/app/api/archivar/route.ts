@@ -2,7 +2,7 @@ import { leerJson } from "@/lib/api-body";
 import { NextResponse } from "next/server";
 import { appendAudit } from "@pipeline/audit";
 import { can, canCreateCase } from "@pipeline/authorization";
-import { defaultOrgId, getActor , recursoCaso } from "@/lib/auth";
+import { getActor, recursoCaso } from "@/lib/auth";
 import { isArchived, setArchived } from "@/lib/dataset";
 import { auditPath, loadGrantStore } from "@/lib/grants";
 
@@ -28,7 +28,6 @@ export async function POST(request: Request): Promise<NextResponse> {
   if (!/^case_\d{6}$/.test(caseId)) {
     return NextResponse.json({ error: "Caso no válido" }, { status: 400 });
   }
-  const orgId = await defaultOrgId();
   const grants = (await loadGrantStore()).toAuthorizationGrants();
   const recurso = await recursoCaso(caseId);
   // VIEW no basta: un grant de lectura cross-despacho no puede archivar.

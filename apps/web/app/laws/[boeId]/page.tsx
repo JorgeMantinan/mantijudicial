@@ -67,9 +67,6 @@ export default async function LawDetailPage({
       ? (selected.versions ?? []).find((version) => version.fecha_vigencia === sp.version)
       : null;
 
-  const toc = sp.q
-    ? norm.blocks.filter((block) => blockMatches(block, sp.q ?? ""))
-    : norm.blocks.filter((block) => block.tipo !== "precepto" || block.titulo.startsWith("Art 1"));
   const rutas = new Map(withPaths(norm.blocks).map((row) => [row.id, row.path]));
 
   return (

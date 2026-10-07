@@ -1,7 +1,9 @@
-# Verificación mínima en CI: tipos + tests. NO se ejecuta `next build` aquí:
-# el build necesita el corpus real (cases/, laws/), que está fuera de la rama
-# main (viven en la rama `data`), así que fallaría en un runner limpio.
-# El build completo se hace en local antes de cada commit (AGENTS.md).
+# Verificación en CI: tipos + tests + `next build` de la web.
+# El corpus real (cases/, laws/) vive en la rama `data` y no está en main,
+# así que ANTES del build se crea un corpus de juguete en un directorio
+# temporal (scripts/crear-corpus-juguete.mjs) y `MANTIJUDICIAL_ROOT` apunta a
+# él: `repoRoot()` lo encuentra y el build no toca ningún dato real.
+# El build con el corpus completo se sigue haciendo en local (AGENTS.md).
 name: CI
 
 on:
@@ -35,6 +37,13 @@ jobs:
       - name: Typecheck (apps/web)
         run: pnpm --dir apps/web exec tsc --noEmit
 
-      # Sin `next build`: requiere el corpus cases/ que no está en main.
       - name: Tests (vitest)
         run: pnpm test
+
+      - name: Corpus de juguete (para poder compilar la web)
+        run: node scripts/crear-corpus-juguete.mjs "$RUNNER_TEMP/corpus"
+
+      - name: Build de producción (apps/web)
+        run: pnpm --dir apps/web exec next build
+        env:
+          MANTIJUDICIAL_ROOT: ${{ runner.temp }}/corpus

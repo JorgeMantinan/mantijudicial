@@ -6,14 +6,15 @@ la lista de pendientes. No hace falta releer el historial.
 ## Estado del proyecto
 
 - Todo verde: `pnpm typecheck` (solo `pipeline/`), `pnpm --dir apps/web exec
-  tsc --noEmit`, `pnpm test` (291 tests), `pnpm exec next build` y
-  `powershell -File scripts\smoke.ps1` (32 comprobaciones: rutas, CSV y
-  aislamiento con carlos).
+  tsc --noEmit` (ya con `noUnusedLocals`), `pnpm test` (324 tests),
+  `pnpm --dir apps/web exec next build` y `powershell -File scripts\smoke.ps1`
+  (32 comprobaciones: rutas, CSV y aislamiento con carlos).
 - `main` al día en GitHub. Ramas: `main` = solo código · `data` = corpus +
   identidad sin sesiones (se refresca con `scripts/push-data.ps1`).
 - **CI**: `.github/workflows/ci.yml` (push/PR a `main`): `pnpm typecheck` +
-  `tsc` de `apps/web` + `pnpm test`; sin `next build` (el build exige `cases/`,
-  que no vive en `main`).
+  `tsc` de `apps/web` + `pnpm test` + **`next build` con corpus de juguete**
+  (`scripts/crear-corpus-juguete.mjs` en un temporal y `MANTIJUDICIAL_ROOT`
+  apuntando allí: el runner limpio no tiene `cases/`).
 - **Sin despliegue**: Render preparado (`render.yaml` + bootstrap) sin contratar;
   proyecto de Vercel borrado. Todo corre en local (`pnpm web`).
 - Copias: `scripts/backup.ps1` (retención) y `restore.ps1` (verificado).
@@ -36,6 +37,27 @@ la lista de pendientes. No hace falta releer el historial.
 
 Lotes de 3 ideas → código → `tsc` web + `test` + `next build` → `smoke.ps1` →
 `git commit` + `push` (solo GitHub) → resumen en castellano y "sigue".
+
+## Calidad y deuda técnica (2026-10-07, local, sin despliegue)
+
+- **Tests**: +28 en las 7 libs de `pipeline/lib` que no tenían (`boe_api`,
+  `schema`, `signals`, `siglas`, `prompt`, `paths`, `enrich_schema`) → 324 en
+  total. Ninguna se omitió: `boe_api` se prueba con `fetch` falso (sin red) y
+  `paths`/`signals` con un corpus temporal vía `MANTIJUDICIAL_ROOT`.
+- **Locales sin uso borrados**: 23 marcados por `tsc --noUnusedLocals` (13
+  `orgId` de `defaultOrgId()` en rutas de `app/api/*`, comprobados uno a uno:
+  la llamada no se usaba en ninguna), más `ArgRow`/`rows` de `/patterns` que
+  quedaron huérfanos. `apps/web/tsconfig.json` activa ya `noUnusedLocals`.
+- **`docs/11` §1.4**: ya no es "8 casos 100 % CONTRACTUAL"; distribución real
+  recalculada (script tsx temporal sobre `cases/*/structured/classification.json`):
+  de 79 enriquecidos, CONTRACTUAL 22 (27,8 %), CIVIL_LIABILITY 18,
+  CONSUMER_ABUSIVE_CLAUSES 17, LEASE_PROPERTY 9, PROPERTY_COMMUNITY 6,
+  COMMERCIAL 5, OTHER 1, PROCEDURAL 1 (FAMILY y SUCCESSIONS, 0).
+- **`docs/12` checklist**: marcados los 5 ímites verificables en local (repo
+  privado vía `gh`, `data/` fuera de `main` y sin sesiones en la rama `data`,
+  cookie `secure` en producción, aviso de IA en el pie de `layout.tsx` y BOE
+  "meramente informativo"). Siguen abiertos: MFA (0 de 3 usuarios locales con
+  MFA activo), HTTPS/backup de Render (sin desplegar) y RGPD.
 
 ## Pendientes / ideas no hechas
 

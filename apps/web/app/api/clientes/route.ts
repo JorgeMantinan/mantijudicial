@@ -1,7 +1,7 @@
 import { leerJson } from "@/lib/api-body";
 import { NextResponse } from "next/server";
 import { can, canCreateCase } from "@pipeline/authorization";
-import { defaultOrgId, getActor , recursoCaso } from "@/lib/auth";
+import { getActor, recursoCaso } from "@/lib/auth";
 import { setCliente } from "@/lib/dataset";
 import { loadGrantStore } from "@/lib/grants";
 
@@ -28,7 +28,6 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
   const cliente = typeof body.cliente === "string" ? body.cliente : "";
 
-  const orgId = await defaultOrgId();
   const grants = (await loadGrantStore()).toAuthorizationGrants();
   const recurso = await recursoCaso(caseId);
   // VIEW no basta: un grant de lectura cross-despacho no puede renombrar el

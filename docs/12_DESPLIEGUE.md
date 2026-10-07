@@ -96,18 +96,36 @@ Cualquier máquina Linux con Node 20+ sirve; el pipeline es solo Node.
 
 ## Checklist antes de darlo a un cliente
 
-- [ ] Repo **privado** (ya lo es): la rama `data` contiene el corpus y los hashes
-      de contraseñas. No la hagas pública nunca.
-- [ ] `data/` fuera de `main` (ya) y sin `sessions` en la rama `data` (ya).
-- [ ] HTTPS obligatorio (Render lo termina) y cookie de sesión `secure` en
-      producción (ya).
+Comprobado en local el 7/10/2026 (sin despliegue): los `[x]` están verificados;
+los `[ ]` son acciones o dependen de Render.
+
+- [x] Repo **privado** (verificado con `gh repo view` → `visibility: PRIVATE`):
+      la rama `data` contiene el corpus y los hashes de contraseñas. No la hagas
+      pública nunca.
+- [x] `data/` fuera de `main` (`git ls-files data cases laws` → vacío) y sin
+      `sessions` en la rama `data` (ningún fichero con "session" en
+      `origin/data`).
+- [x] Cookie de sesión `secure` en producción (ya:
+      `app/api/auth/login/route.ts` → `secure: process.env.NODE_ENV ===
+      "production"`, más `httpOnly` y `sameSite: lax`).
+- [ ] HTTPS obligatorio: lo termina Render en cuanto se despliegue (el servicio
+      **aún no está desplegado**; en local no aplica).
 - [ ] MFA activado para los usuarios con acceso (`/users` → Doble factor).
-- [ ] Copia de seguridad de `cases/`, `laws/` y `data/` (disco de Render + local).
+      La función existe y está probada (`pipeline/lib/totp.ts`,
+      `identity.test.ts`), pero hoy **ninguno** de los 3 usuarios locales lo
+      tiene activado: hay que activarlo por la UI.
+- [ ] Copia de seguridad de `cases/`, `laws/` y `data/`: en local hay zips
+      recientes en `backups/`; la del disco de Render queda pendiente de
+      desplegar.
 - [ ] Revisión de RGPD: el texto de las sentencias de clientes se envía al modelo
       de IA — tener contrato/base legítima con el proveedor (ver
       `docs/11_PROBLEMAS_Y_LIMITES.md`).
-- [ ] Aviso en la UI: análisis asistido por IA pendiente de validación profesional.
-- [ ] Los textos del BOE se citan como *meramente informativos* (ya está en la UI).
+- [x] Aviso en la UI: análisis asistido por IA pendiente de validación
+      profesional. Está en el pie de `app/layout.tsx` ("La IA asiste al
+      abogado; no sustituye su revisión") y también en `/cases/[id]/print`,
+      `/cases/[id]/dossier`, `/informes` y `/ayuda`.
+- [x] Los textos del BOE se citan como *meramente informativos* (ya está en la
+      UI): pie de `app/layout.tsx`, `/laws` y `/ayuda`.
 
 ## Qué NO hacer
 

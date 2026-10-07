@@ -38,7 +38,6 @@ export default async function Home() {
   ).length;
 
   const outcomes = groupCount(cases.map((item) => item.outcome));
-  const branches = groupCount(cases.map((item) => item.branch));
   const analyzed = patterns?.cases_analyzed ?? 0;
   const frios = cases.filter(
     (item) => item.reviewStatus === "UNREVIEWED" && diasSinTocar(item) > 30,

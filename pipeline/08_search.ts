@@ -137,7 +137,6 @@ async function loadArticleDocs(): Promise<SearchDoc[]> {
       blocks: Array<{ id: string; tipo: string; titulo: string; texto: string }>;
     }>(path.join(dir, name));
     if (!norm?.blocks) continue;
-    const short = norm.titulo.replace(/\.$/, "");
     for (const block of norm.blocks) {
       if (!block.texto) continue;
       docs.push({
