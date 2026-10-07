@@ -4,7 +4,7 @@ import { pedir } from "@/lib/api-client";
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
-import { REVIEW, label } from "@/lib/labels";
+import { REVIEW } from "@/lib/labels";
 
 interface CurrentReview {
   status?: string;

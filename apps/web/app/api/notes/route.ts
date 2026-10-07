@@ -1,18 +1,30 @@
 import { leerJson } from "@/lib/api-body";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { appendAudit } from "@pipeline/audit";
 import { NoteError, NoteStore } from "@pipeline/notes";
 import { can } from "@pipeline/authorization";
 import { defaultOrgId, getActor, loadIdentity , recursoCaso } from "@/lib/auth";
-import { auditPath, grantsPath, loadGrantStore } from "@/lib/grants";
+import { auditPath, loadGrantStore } from "@/lib/grants";
 import { repoRoot } from "@/lib/dataset";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/** Tope de una nota (mismo límite que NoteStore). */
+const MAX_NOTA = 4000;
+
 function notesPath(caseId: string): string {
   return path.join(repoRoot(), "cases", caseId, "structured", "notes.json");
+}
+
+/**
+ * El directorio del caso tiene que existir de verdad: con el formato válido
+ * pero sin caso, NoteStore.save() crearía `cases/<id>/` fantasma.
+ */
+function casoExiste(caseId: string): boolean {
+  return existsSync(path.join(repoRoot(), "cases", caseId));
 }
 
 async function loadGrants() {
@@ -25,6 +37,9 @@ export async function GET(request: Request): Promise<NextResponse> {
   const caseId = new URL(request.url).searchParams.get("resource");
   if (!caseId || !/^case_\d{6}$/.test(caseId)) {
     return NextResponse.json({ error: "resource no válido" }, { status: 400 });
+  }
+  if (!casoExiste(caseId)) {
+    return NextResponse.json({ error: "Caso no encontrado" }, { status: 404 });
   }
   const orgId = await defaultOrgId();
   const grants = await loadGrants();
@@ -49,6 +64,15 @@ export async function POST(request: Request): Promise<NextResponse> {
   const text = typeof body.text === "string" ? body.text : "";
   if (!/^case_\d{6}$/.test(caseId)) {
     return NextResponse.json({ error: "Caso no válido" }, { status: 400 });
+  }
+  if (text.length === 0 || text.length > MAX_NOTA) {
+    return NextResponse.json(
+      { error: `La nota debe tener entre 1 y ${MAX_NOTA} caracteres` },
+      { status: 400 },
+    );
+  }
+  if (!casoExiste(caseId)) {
+    return NextResponse.json({ error: "Caso no encontrado" }, { status: 404 });
   }
   const orgId = await defaultOrgId();
   const grants = await loadGrants();
@@ -94,6 +118,9 @@ export async function DELETE(request: Request): Promise<NextResponse> {
   const noteId = typeof body.noteId === "string" ? body.noteId : "";
   if (!/^case_\d{6}$/.test(caseId) || !noteId) {
     return NextResponse.json({ error: "Datos no válidos" }, { status: 400 });
+  }
+  if (!casoExiste(caseId)) {
+    return NextResponse.json({ error: "Caso no encontrado" }, { status: 404 });
   }
   const orgId = await defaultOrgId();
   const grants = await loadGrants();

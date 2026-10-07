@@ -30,7 +30,12 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
   const orgId = await defaultOrgId();
   const grants = (await loadGrantStore()).toAuthorizationGrants();
-  if (!can(actor, "VIEW", await recursoCaso(caseId), grants)) {
+  const recurso = await recursoCaso(caseId);
+  // VIEW no basta: un grant de lectura cross-despacho no puede archivar.
+  // Escritura solo del despacho dueño (ownerOrgId con el mismo fallback a
+  // defaultOrgId que canViewCase) o de quien tenga EDIT explícito.
+  const dueno = recurso.ownerOrgId !== null && recurso.ownerOrgId === actor.orgId;
+  if (!can(actor, "VIEW", recurso, grants) || (!dueno && !can(actor, "EDIT", recurso, grants))) {
     return NextResponse.json({ error: "No puedes modificar ese caso" }, { status: 403 });
   }
   const archived = body.archived !== false;

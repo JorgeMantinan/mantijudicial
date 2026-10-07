@@ -52,12 +52,6 @@ export async function POST(request: Request): Promise<NextResponse> {
   if (!canCreateCase(actor)) {
     return NextResponse.json({ error: "Tu rol no permite crear casos" }, { status: 403 });
   }
-  if (jobs.enCola(actor.orgId) >= 5) {
-    return NextResponse.json(
-      { error: "Ya tienes 5 trabajos en cola: espera a que terminen" },
-      { status: 429 },
-    );
-  }
 
   let form: FormData;
   try {
@@ -94,6 +88,17 @@ export async function POST(request: Request): Promise<NextResponse> {
   const uploadPath = path.join(uploadsDir, `${Date.now().toString(36)}_${safeName}`);
   await fs.writeFile(uploadPath, Buffer.from(await file.arrayBuffer()));
 
+  // Tope de cola ATÓMICO: la comprobación y la creación van seguidas (sin
+  // ningún await entre medias), así que dos peticiones concurrentes no pueden
+  // colar la sexta. (Antes se comprobaba antes de leer el formulario y el
+  // hueco con los awaits permitía superar el límite.)
+  if (jobs.enCola(actor.orgId) >= 5) {
+    await fs.rm(uploadPath, { force: true }).catch(() => undefined);
+    return NextResponse.json(
+      { error: "Ya tienes 5 trabajos en cola: espera a que terminen" },
+      { status: 429 },
+    );
+  }
   const job = jobs.create("ingest");
   jobs.patch(job.id, { status: "queued", orgId: actor.orgId });
   jobs.append(job.id, `Recibido: ${file.name} (${file.size} bytes) · fuente=${source}`);

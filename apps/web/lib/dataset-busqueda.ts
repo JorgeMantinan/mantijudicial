@@ -74,7 +74,16 @@ export interface SimilarCase {
   why: string[];
 }
 
-export async function getSimilarCases(caseId: string, limit = 5): Promise<SimilarCase[]> {
+/**
+ * `permitido(caseId)` restringe los similares a los casos que el actor ve
+ * (mismo patrón que getInforme/getTema): sin eso, la ficha pintaba ids y
+ * títulos de casos de otros despachos.
+ */
+export async function getSimilarCases(
+  caseId: string,
+  limit = 5,
+  permitido: (caseId: string) => boolean = () => true,
+): Promise<SimilarCase[]> {
   const detail = await getCase(caseId);
   if (!detail) return [];
 
@@ -84,7 +93,11 @@ export async function getSimilarCases(caseId: string, limit = 5): Promise<Simila
   const query = [detail.headline, detail.subtopic, ...topics].join(" ");
 
   const { index } = await getIndex();
-  const hits = search(index, query, { kinds: ["case"], limit: limit + 6 });
+  const hits = search(index, query, {
+    kinds: ["case"],
+    limit: limit + 6,
+    allow: (doc) => permitido(doc.id),
+  });
   const ownLaws = new Set(
     detail.lawRefs
       .map((ref) => ref.boe_id)

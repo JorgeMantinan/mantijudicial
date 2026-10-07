@@ -6,11 +6,14 @@ la lista de pendientes. No hace falta releer el historial.
 ## Estado del proyecto
 
 - Todo verde: `pnpm typecheck` (solo `pipeline/`), `pnpm --dir apps/web exec
-  tsc --noEmit`, `pnpm test` (241 tests), `pnpm exec next build` y
-  `powershell -File scripts\smoke.ps1` (31 comprobaciones: rutas, CSV y
+  tsc --noEmit`, `pnpm test` (291 tests), `pnpm exec next build` y
+  `powershell -File scripts\smoke.ps1` (32 comprobaciones: rutas, CSV y
   aislamiento con carlos).
 - `main` al día en GitHub. Ramas: `main` = solo código · `data` = corpus +
   identidad sin sesiones (se refresca con `scripts/push-data.ps1`).
+- **CI**: `.github/workflows/ci.yml` (push/PR a `main`): `pnpm typecheck` +
+  `tsc` de `apps/web` + `pnpm test`; sin `next build` (el build exige `cases/`,
+  que no vive en `main`).
 - **Sin despliegue**: Render preparado (`render.yaml` + bootstrap) sin contratar;
   proyecto de Vercel borrado. Todo corre en local (`pnpm web`).
 - Copias: `scripts/backup.ps1` (retención) y `restore.ps1` (verificado).
@@ -41,7 +44,7 @@ Lotes de 3 ideas → código → `tsc` web + `test` + `next build` → `smoke.ps
 - [ ] Despliegue en Render cuando decidas pagar el plan con disco (`docs/12`).
 - [ ] Ideas descartadas por ahora: export DOCX (requiere dependencias), split
   más fino de `dataset.ts` (ya partido en `dataset-estado.ts`).
-- [ ] Posibles siguientes: CSV de `/eval`, comparar dos temas, ordenar más
+- [ ] Posibles siguientes: comparar dos temas, ordenar más
   tablas con `SortTh`, métricas de rendimiento por página.
 
 ## Mapa rápido
@@ -126,7 +129,7 @@ más útil, por este orden (y siempre avisando antes del coste estimado):
   imprimible con botón; `AGENTS.md` al día.
 
 Verificación de esta etapa: `pnpm typecheck` (pipeline) + `tsc` de `apps/web` +
-250 tests + `next build` + `scripts/smoke.ps1` (33 comprobaciones).
+291 tests + `next build` + `scripts/smoke.ps1` (32 comprobaciones).
 
 ## Auditoría de ciberseguridad y calidad (2026-09-30/10-01)
 
@@ -148,7 +151,8 @@ aplicada por tandas. Commits: `0f87ebb`, `2f95a16`, `d6b05fe`, `7136ffb`,
   real.
 - CSV: neutralización de fórmulas (`=`, `+`, `-`, `@`) en las 8 exportaciones.
 - Cabeceras: X-Frame-Options DENY, nosniff, Referrer-Policy, Permissions-
-  Policy, HSTS (CSP pendiente: requiere nonces por los scripts inline de Next).
+  Policy, HSTS y **CSP con nonce por petición** en `proxy.ts` (sin
+  `unsafe-inline` en `script-src`).
 - `docs/12` sin credenciales de demo (rotar al desplegar).
 
 **Propiedad de despacho (tu regla):**
@@ -175,5 +179,5 @@ real de `/laws` (antes O(n²) y nunca visible).
    `lib/texto.ts` (migrados 3 + 5 usos con script) y `PAPELES` en
    `labels.ts`.
 
-**Fuera de alcance decidido:** CSP estricta (pendiente de nonces), Supabase y
-Render (hasta su aviso), embeddings (proveedor no los da).
+**Fuera de alcance decidido:** Supabase y Render (hasta su aviso), embeddings
+(proveedor no los da).

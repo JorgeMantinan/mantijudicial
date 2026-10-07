@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { PrintButton } from "@/components/print-button";
 import { CopyButton } from "@/components/copy-button";
-import { canViewCase, requireActor , contextoVisibilidad } from "@/lib/auth";
+import { canViewCase, contextoVisibilidad } from "@/lib/auth";
 import { getCase, getComparisons } from "@/lib/dataset";
 import { ARG_OUTCOME, label } from "@/lib/labels";
 

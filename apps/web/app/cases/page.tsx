@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { canCreateCase } from "@pipeline/authorization";
-import { canViewCase, contextoVisibilidad, filtrarCasos, defaultOrgId, requireActor } from "@/lib/auth";
+import { contextoVisibilidad, casosVisibles, filtrarCasos } from "@/lib/auth";
 import { diasSinTocar, getClientes, getVistas, listCases } from "@/lib/dataset";
 import { VistasGuardadas } from "./vistas-guardadas";
 import { BRANCH, OUTCOME, REVIEW, SIDE, label } from "@/lib/labels";
@@ -61,6 +61,15 @@ export default async function CasesPage({
     cliente: params.cliente,
   });
   const clientesMap = await getClientes();
+  // Desplegable con los clientes de los casos que este despacho ve: con
+  // Object.values(clientesMap) salían también los de casos ajenos.
+  const clientesVisibles = [
+    ...new Set(
+      (await casosVisibles(actor, orgId, grants))
+        .map((caso) => clientesMap[caso.id])
+        .filter((nombre): nombre is string => Boolean(nombre)),
+    ),
+  ].sort();
   const vistas = await getVistas(actor.orgId);
 
   const sort = (SORTS as readonly string[]).includes(params.sort ?? "")
@@ -148,7 +157,7 @@ export default async function CasesPage({
           Cliente
           <select name="cliente" defaultValue={params.cliente ?? ""}>
             <option value="">Todos</option>
-            {[...new Set(Object.values(clientesMap))].sort().map((nombre) => (
+            {clientesVisibles.map((nombre) => (
               <option key={nombre} value={nombre}>
                 {nombre}
               </option>

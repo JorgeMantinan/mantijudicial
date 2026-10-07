@@ -1,5 +1,6 @@
 import { leerJson } from "@/lib/api-body";
 import { revalidatePath } from "next/cache";
+import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
@@ -24,6 +25,11 @@ export async function POST(request: Request): Promise<NextResponse> {
   const caseId = (body as { caseId?: unknown } | null)?.caseId;
   if (typeof caseId !== "string" || !/^case_\d{6}$/.test(caseId)) {
     return NextResponse.json({ error: "caseId no válido" }, { status: 400 });
+  }
+  // El caso tiene que existir de verdad: con el formato válido pero sin
+  // directorio, el mkdir de abajo crearía un `cases/<id>/` fantasma.
+  if (!existsSync(path.join(repoRoot(), "cases", caseId))) {
+    return NextResponse.json({ error: "Caso no encontrado" }, { status: 404 });
   }
 
   const orgId = await defaultOrgId();

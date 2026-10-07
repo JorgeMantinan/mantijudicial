@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Bar } from "@/components/bar";
 import { PrintButton } from "@/components/print-button";
 import { CopyButton } from "@/components/copy-button";
-import { canViewCase, requireActor , contextoVisibilidad } from "@/lib/auth";
+import { canViewCase, contextoVisibilidad } from "@/lib/auth";
 import { filtrarFrasesDelTema, getGruposFrases, getInforme, getVigenciaAlerts, listCases } from "@/lib/dataset";
 import { BRANCH, OUTCOME, label } from "@/lib/labels";
 import { SortTh } from "@/lib/sort-th";

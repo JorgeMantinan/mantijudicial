@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireActor } from "@/lib/auth";
-import { ARG_OUTCOME, OUTCOME, REVIEW, label } from "@/lib/labels";
+import { ARG_OUTCOME, OUTCOME, REVIEW } from "@/lib/labels";
 import { PrintButton } from "@/components/print-button";
 import { FiltroAyuda } from "@/components/filtro-ayuda";
 

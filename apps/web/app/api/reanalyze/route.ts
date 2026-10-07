@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import { appendAudit } from "@pipeline/audit";
 import { can, canCreateCase } from "@pipeline/authorization";
 import { defaultOrgId, getActor , recursoCaso } from "@/lib/auth";
-import { auditPath, grantsPath, loadGrantStore } from "@/lib/grants";
+import { auditPath, loadGrantStore } from "@/lib/grants";
 import { jobs } from "@/lib/jobs";
 import { repoRoot } from "@/lib/dataset";
 
@@ -49,18 +49,20 @@ export async function POST(request: Request): Promise<NextResponse> {
   if (!canCreateCase(actor)) {
     return NextResponse.json({ error: "Tu rol no permite reanalizar casos" }, { status: 403 });
   }
-  if (jobs.enCola(actor.orgId) >= 5) {
-    return NextResponse.json(
-      { error: "Ya tienes 5 trabajos en cola: espera a que terminen" },
-      { status: 429 },
-    );
-  }
   const orgId = await defaultOrgId();
   const grants = (await loadGrantStore()).toAuthorizationGrants();
   if (!can(actor, "ANALYZE", await recursoCaso(caseId), grants)) {
     return NextResponse.json({ error: "No puedes analizar este caso" }, { status: 403 });
   }
 
+  // Tope de cola ATÓMICO: comprobación y creación seguidas, sin awaits
+  // intermedios, para que dos peticiones concurrentes no pasen de 5.
+  if (jobs.enCola(actor.orgId) >= 5) {
+    return NextResponse.json(
+      { error: "Ya tienes 5 trabajos en cola: espera a que terminen" },
+      { status: 429 },
+    );
+  }
   const job = jobs.create("reanalyze");
   jobs.patch(job.id, { status: "queued", caseId, orgId: actor.orgId });
   jobs.append(job.id, `Reanálisis solicitado por ${actor.userId} (~$0,01 de IA)`);

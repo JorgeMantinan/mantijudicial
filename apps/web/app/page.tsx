@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Bar } from "@/components/bar";
-import { canViewCase, defaultOrgId , contextoVisibilidad } from "@/lib/auth";
+import { canViewCase, contextoVisibilidad, loadIdentity } from "@/lib/auth";
 import { computePatterns, diasSinTocar, getAuditoria, getLawUsage, getReviewStats, getVigenciaAlerts, listCases, listLaws } from "@/lib/dataset";
-import { AUDIT, BRANCH, OUTCOME, label } from "@/lib/labels";
+import { AUDIT, OUTCOME, label } from "@/lib/labels";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +29,10 @@ export default async function Home() {
   ]);
 
   const pendientes = reviewStats.pending.filter((item) => canViewCase(actor, item.id, orgId, grants));
+  const siguiente =
+    reviewStats.next && canViewCase(actor, reviewStats.next.id, orgId, grants)
+      ? reviewStats.next
+      : null;
   const leyesCambiadas = vigencia.filter((alerta) =>
     alerta.casos.some((caso) => canViewCase(actor, caso.caseId, orgId, grants)),
   ).length;
@@ -41,9 +45,23 @@ export default async function Home() {
   ).length;
 
   const hoyStr = new Date().toISOString().slice(0, 10);
-  const actividadHoy = (await getAuditoria(300)).filter(
-    (entrada) => (entrada.at ?? "").slice(0, 10) === hoyStr,
+  // Actividad de auditoría del día, acotada a lo que a ti te toca: los
+  // registros con recurso-caso pasan por `canViewCase` y el resto solo si el
+  // actor es un usuario de MISOS despachos (los intentos de login fallidos
+  // van con el correo escrito, no con un userId, así que no se cuentan aquí).
+  const identity = await loadIdentity();
+  const mios = new Set(
+    identity
+      .listMemberships()
+      .filter((membresia) => actor.orgIds.includes(membresia.firmId))
+      .map((membresia) => membresia.userId),
   );
+  const actividadHoy = (await getAuditoria(300)).filter((entrada) => {
+    if ((entrada.at ?? "").slice(0, 10) !== hoyStr) return false;
+    const recurso = entrada.resource ?? "";
+    if (recurso.startsWith("case_")) return canViewCase(actor, recurso, orgId, grants);
+    return entrada.actor === actor.userId || mios.has(entrada.actor) || mios.has(recurso);
+  });
   const porAccion = new Map<string, number>();
   for (const entrada of actividadHoy) {
     porAccion.set(entrada.action, (porAccion.get(entrada.action) ?? 0) + 1);
@@ -91,11 +109,11 @@ export default async function Home() {
           </li>
           <li>
             <Link href="/review">Revisión humana</Link>
-            {reviewStats.next ? (
+            {siguiente ? (
               <>
                 {" "}
-                — siguiente pendiente:{" "}
-                <Link href={`/cases/${reviewStats.next.id}`}>{reviewStats.next.id}</Link>
+                - siguiente pendiente:{" "}
+                <Link href={`/cases/${siguiente.id}`}>{siguiente.id}</Link>
               </>
             ) : (
               " — todo revisado"

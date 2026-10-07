@@ -1,3 +1,8 @@
+# apps/web es paquete del workspace: sin esto, `pnpm install` en la raíz no
+# instala next/react y `pnpm --dir apps/web exec tsc --noEmit` falla (CI).
+# Coincide con el importer `apps/web` que ya trae pnpm-lock.yaml.
+packages:
+  - "apps/*"
 allowBuilds:
   esbuild: true
 verifyDepsBeforeRun: false

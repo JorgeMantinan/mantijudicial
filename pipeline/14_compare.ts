@@ -11,7 +11,6 @@ import {
   buildComparePrompt,
   compareSchema,
   normalizeCompareInput,
-  type CaseSignals,
 } from "./lib/compare.js";
 
 const DEFAULT_MODEL = "opencode-go/mimo-v2.6-flash";

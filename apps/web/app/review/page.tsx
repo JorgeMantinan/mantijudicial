@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Bar } from "@/components/bar";
 import { PrintButton } from "@/components/print-button";
-import { canViewCase, casosVisibles, defaultOrgId, loadIdentity, requireActor , contextoVisibilidad, porStatus } from "@/lib/auth";
-import { getMapaOrgs, getRevisionPorPersona, listCases } from "@/lib/dataset";
+import { canViewCase, casosVisibles, defaultOrgId, loadIdentity, contextoVisibilidad, porStatus } from "@/lib/auth";
+import { getMapaOrgs, getRevisionPorPersona } from "@/lib/dataset";
 import { BRANCH, REVIEW, label } from "@/lib/labels";
 import { ReviewTable } from "./review-table";
 

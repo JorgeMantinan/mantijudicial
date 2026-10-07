@@ -1,7 +1,7 @@
-import { canViewCase, requireActor , contextoVisibilidad } from "@/lib/auth";
+import { canViewCase, contextoVisibilidad } from "@/lib/auth";
 import { PrintButton } from "@/components/print-button";
-import { computePatterns, getContradicciones, getExitoArgumentos, getGruposFrases, getLawUsage, listCases } from "@/lib/dataset";
-import { ARG_OUTCOME, ARG_TYPE, BRANCH, INSTANCE, OUTCOME, SIDE, label } from "@/lib/labels";
+import { computePatterns, filtrarFrasesDelTema, getContradicciones, getExitoArgumentos, getGruposFrases, getLawUsage, listCases } from "@/lib/dataset";
+import { ARG_TYPE, BRANCH, INSTANCE, OUTCOME, SIDE, label } from "@/lib/labels";
 import { OutcomeBadge } from "@/lib/ui";
 import Link from "next/link";
 
@@ -31,21 +31,17 @@ function dist(counts: Record<string, number> | undefined, map: Record<string, st
 }
 
 export default async function PatternsPage() {
-  const { actor, orgId, grants } = await contextoVisibilidad();
+  const { actor, orgId, grants, permitido } = await contextoVisibilidad();
   const cases = (await listCases()).filter((item) => canViewCase(actor, item.id, orgId, grants));
+  const visibles = new Set(cases.map((item) => item.id));
   const computed = await computePatterns(cases.map((item) => item.id));
   const usage = await getLawUsage(cases.map((item) => item.id));
   const casosPorNorma = new Map(usage.byNorm.map((row) => [row.boe_id, row.cases]));
-  const exito = await getExitoArgumentos();
-  const gruposFrases = await getGruposFrases();
-  const contradictorio = (await getContradicciones())
-    .map((tema) => ({
-      ...tema,
-      ejemplos: tema.ejemplos.filter((ejemplo) =>
-        canViewCase(actor, ejemplo.caseId, orgId, grants),
-      ),
-    }))
-    .filter((tema) => tema.ejemplos.length > 0);
+  const exito = await getExitoArgumentos(cases.map((item) => item.id));
+  // Grupos recuentados sobre los casos visibles: ejemplos, ramas e instancias
+  // del corpus entero se colaban en la tabla.
+  const gruposFrases = filtrarFrasesDelTema(await getGruposFrases(), visibles, 50);
+  const contradictorio = await getContradicciones(3, permitido);
   const patterns = computed
     ? { generated_at: new Date().toISOString(), disclaimer: DISCLAIMER, ...computed }
     : null;

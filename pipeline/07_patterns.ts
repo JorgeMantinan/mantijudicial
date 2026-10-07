@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { aggregate, type CaseSignals, type Patterns } from "./lib/patterns.js";
+import { aggregate, type CaseSignals } from "./lib/patterns.js";
 import { CASES_DIR } from "./lib/paths.js";
 
 const DEFAULT_MIN_SUPPORT = 5;

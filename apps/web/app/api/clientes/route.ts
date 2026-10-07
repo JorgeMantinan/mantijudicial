@@ -30,7 +30,11 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   const orgId = await defaultOrgId();
   const grants = (await loadGrantStore()).toAuthorizationGrants();
-  if (!can(actor, "VIEW", await recursoCaso(caseId), grants)) {
+  const recurso = await recursoCaso(caseId);
+  // VIEW no basta: un grant de lectura cross-despacho no puede renombrar el
+  // cliente de un caso ajeno. Solo el despacho dueño o quien tenga EDIT.
+  const dueno = recurso.ownerOrgId !== null && recurso.ownerOrgId === actor.orgId;
+  if (!can(actor, "VIEW", recurso, grants) || (!dueno && !can(actor, "EDIT", recurso, grants))) {
     return NextResponse.json({ error: "No puedes modificar ese caso" }, { status: 403 });
   }
 

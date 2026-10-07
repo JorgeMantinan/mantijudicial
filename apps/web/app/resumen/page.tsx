@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { PrintButton } from "@/components/print-button";
-import { canViewCase, loadIdentity, requireActor , contextoVisibilidad } from "@/lib/auth";
+import { canViewCase, loadIdentity, contextoVisibilidad } from "@/lib/auth";
 import { getContradicciones, getHistorialAlertas, getReviewStats, getVigenciaAlerts, listCases } from "@/lib/dataset";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +13,9 @@ export default async function ResumenPage() {
     listCases(),
     getReviewStats(),
     getVigenciaAlerts(),
-    getContradicciones(),
+    // Los conteos (estimados/desestimados/cases) también van con `puedeVer`:
+    // sin él, los totales del tema sumaban casos de otros despachos.
+    getContradicciones(3, puedeVer),
     loadIdentity(),
   ]);
 
@@ -23,7 +25,10 @@ export default async function ResumenPage() {
   const temas = contradictorio.filter((tema) =>
     tema.ejemplos.some((ejemplo) => puedeVer(ejemplo.caseId)),
   );
-  const revisados = (stats.byStatus.REVIEWED ?? 0) + (stats.byStatus.MODIFIED ?? 0);
+  // Recuento sobre los casos visibles: `stats.byStatus` es global.
+  const revisados = casos.filter(
+    (item) => item.reviewStatus === "REVIEWED" || item.reviewStatus === "MODIFIED",
+  ).length;
   const hoy = new Date().toLocaleDateString("es-ES", {
     day: "2-digit",
     month: "long",
@@ -31,8 +36,10 @@ export default async function ResumenPage() {
   });
 
   const hace7 = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
-  const analizados7 = todos.filter((item) => (item.generatedAt ?? "").slice(0, 10) >= hace7).length;
-  const revisiones7 = todos.filter((item) => (item.reviewedAt ?? "").slice(0, 10) >= hace7).length;
+  const analizados7 = casos.filter((item) => (item.generatedAt ?? "").slice(0, 10) >= hace7).length;
+  const revisiones7 = casos.filter((item) => (item.reviewedAt ?? "").slice(0, 10) >= hace7).length;
+  // Histórico de alertas: global por diseño (data/alertas_historial.json no
+  // guarda casoId ni orgId, así que no hay nada que filtrar).
   const semana = (await getHistorialAlertas()).filter((dia) => dia.fecha >= hace7);
   const maxAlertasSemana = semana.reduce((max, dia) => Math.max(max, dia.total), 0);
 

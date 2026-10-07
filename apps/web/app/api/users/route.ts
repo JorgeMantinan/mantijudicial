@@ -4,6 +4,7 @@ import { appendAudit } from "@pipeline/audit";
 import type { Role } from "@pipeline/authorization";
 import { IdentityError } from "@pipeline/identity";
 import { auditPath } from "@/lib/grants";
+import { conLock } from "@/lib/lock";
 import { getActor, identityPath, loadIdentity } from "@/lib/auth";
 
 export const runtime = "nodejs";
@@ -80,9 +81,15 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   try {
-    const user = identity.registerUser({ email, name, password });
-    identity.addMembership(user.id, firmId, role);
-    await identity.save(identityPath());
+    // load→mutate→save en cadena: dos altas simultáneas no se pisan (y la
+    // comprobación de correo duplicado se hace sobre el estado ya fresco).
+    const user = await conLock(identityPath(), async () => {
+      const almacen = await loadIdentity();
+      const nuevo = almacen.registerUser({ email, name, password });
+      almacen.addMembership(nuevo.id, firmId, role);
+      await almacen.save(identityPath());
+      return nuevo;
+    });
     await appendAudit(auditPath(), {
       actor: actor?.userId ?? "desconocido",
       action: "user.create",

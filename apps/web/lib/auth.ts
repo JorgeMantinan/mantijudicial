@@ -148,7 +148,7 @@ export function canViewCase(
   orgId: string | null,
   grants: Grant[] = [],
 ): boolean {
-  if (!caseId.startsWith("case_")) return false;
+  if (!/^case_\d{6}$/.test(caseId)) return false;
   // El dueño es el despacho que subió el caso; nunca el "primer despacho"
   // por defecto. Sin registro, se respeta el org heredado (corpus antiguo).
   const dueno = orgDelCasoSync(caseId) ?? orgId;

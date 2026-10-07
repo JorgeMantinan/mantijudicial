@@ -53,4 +53,16 @@ describe("agruparFrases", () => {
     const nave = grupos.find((grupo) => grupo.ejemplo.includes("nave"));
     expect(nave?.total).toBe(3);
   });
+
+  it("conserva la frase de cada caso (para elegir ejemplo según lo que se ve)", () => {
+    const grupos = agruparFrases(frases, 3);
+    const nave = grupos.find((grupo) => grupo.ejemplo.includes("nave"));
+    expect(nave).toBeTruthy();
+    const textos = (nave?.casos ?? []).map((caso) => caso.texto);
+    expect(textos).toContain(frases[1]!.texto);
+    expect(textos).toContain(frases[2]!.texto);
+    // El ejemplo siempre es la frase de alguno de los casos del grupo.
+    expect(textos).toContain(nave!.ejemplo);
+    expect(nave?.casos.every((caso) => caso.caseId.startsWith("case_"))).toBe(true);
+  });
 });

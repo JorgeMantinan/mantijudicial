@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { PrintButton } from "@/components/print-button";
-import { canViewCase, requireActor , contextoVisibilidad } from "@/lib/auth";
+import { canViewCase, contextoVisibilidad } from "@/lib/auth";
 import { getEvolucion } from "@/lib/dataset";
 import { BRANCH, OUTCOME, label } from "@/lib/labels";
 import { SortTh } from "@/lib/sort-th";

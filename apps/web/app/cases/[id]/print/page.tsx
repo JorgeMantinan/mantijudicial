@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { canViewCase, requireActor , contextoVisibilidad } from "@/lib/auth";
+import { canViewCase, contextoVisibilidad } from "@/lib/auth";
 import { getCase, getVias, listLaws } from "@/lib/dataset";
 import { ARG_OUTCOME, BRANCH, CLAIM_OUTCOME, INSTANCE, KIND, OUTCOME, RESULT, SIDE, label } from "@/lib/labels";
 

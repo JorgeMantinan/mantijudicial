@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { canViewCase, requireActor , contextoVisibilidad } from "@/lib/auth";
+import { canViewCase, contextoVisibilidad } from "@/lib/auth";
 import { getEvolucion, getTema } from "@/lib/dataset";
 import { OUTCOME, label } from "@/lib/labels";
 import { OutcomeBadge } from "@/lib/ui";

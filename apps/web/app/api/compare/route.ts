@@ -53,12 +53,6 @@ export async function POST(request: Request): Promise<NextResponse> {
   if (!canCreateCase(actor)) {
     return NextResponse.json({ error: "Tu rol no permite generar análisis" }, { status: 403 });
   }
-  if (jobs.enCola(actor.orgId) >= 5) {
-    return NextResponse.json(
-      { error: "Ya tienes 5 trabajos en cola: espera a que terminen" },
-      { status: 429 },
-    );
-  }
 
   const orgId = await defaultOrgId();
   const grants = (await loadGrantStore()).toAuthorizationGrants();
@@ -69,6 +63,14 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "No puedes analizar esos casos" }, { status: 403 });
   }
 
+  // Tope de cola ATÓMICO: comprobación y creación seguidas, sin awaits
+  // intermedios, para que dos peticiones concurrentes no pasen de 5.
+  if (jobs.enCola(actor.orgId) >= 5) {
+    return NextResponse.json(
+      { error: "Ya tienes 5 trabajos en cola: espera a que terminen" },
+      { status: 429 },
+    );
+  }
   const job = jobs.create("compare");
   jobs.patch(job.id, { status: "queued", caseId, orgId: actor.orgId });
   jobs.append(job.id, `Comparando ${caseId} con ${otherId} (≈$0,003 de IA)`);

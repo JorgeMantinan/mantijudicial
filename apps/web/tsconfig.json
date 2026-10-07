@@ -35,7 +35,6 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    "../../pipeline/lib/search.ts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],

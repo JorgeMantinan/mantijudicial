@@ -1,35 +1,19 @@
-import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
-import {
-  boeIdsInText,
-  detectOutcomeFromText,
-  detectSiglasInText,
-  falloSection,
-  type GoldenEntry,
-} from "@pipeline/eval";
 import { matchWithCorpus } from "@pipeline/sentencias";
-import { aggregate, normalizeKey, type CaseSignals } from "@pipeline/patterns";
-import { buildIndex, search, type SearchDoc, type SearchHit } from "@pipeline/search";
+import { aggregate, type CaseSignals } from "@pipeline/patterns";
 import { agruparFrases, type FraseCaso } from "@pipeline/frases";
-import type { CompareReport } from "@pipeline/compare";
 import {
   type CaseListItem,
-  type EvolucionCaso,
   type EvolucionTema,
-  type LawIndexEntry,
   getEvolucion,
-  caseNames,
-  isArchived,
-  isStale,
   listCases,
   listLaws,
-  readFirstJson,
   readJson,
   repoRoot,
   section,
-  setArchived,
 } from "./dataset-base";
+import { conLock } from "./lock";
 export * from "./dataset-base";
 export * from "./dataset-busqueda";
 export * from "./dataset-salidas";
@@ -198,21 +182,31 @@ export interface Contradiccion {
 /**
  * Temas donde el TS se ha pronunciado en sentidos opuestos: base para la
  * alerta de "criterio dividido" (asociación, no causalidad).
+ * `permitido(caseId)` acota los conteos y los ejemplos a los casos que ve el
+ * actor: los totales globales contaban casos de otros despachos.
  */
-export async function getContradicciones(minPorLado = 3): Promise<Contradiccion[]> {
+export async function getContradicciones(
+  minPorLado = 3,
+  permitido: (caseId: string) => boolean = () => true,
+): Promise<Contradiccion[]> {
   const temas = await getEvolucion();
   return temas
     .map((tema) => {
-      const estimados = tema.distribution.ESTIMED ?? 0;
-      const desestimados = tema.distribution.DISMISSED ?? 0;
-      const parciales = tema.distribution.PARTIALLY_ESTIMATED ?? 0;
+      const entries = tema.entries.filter((entry) => permitido(entry.caseId));
+      const distribution: Record<string, number> = {};
+      for (const entry of entries) {
+        distribution[entry.outcome] = (distribution[entry.outcome] ?? 0) + 1;
+      }
+      const estimados = distribution.ESTIMED ?? 0;
+      const desestimados = distribution.DISMISSED ?? 0;
+      const parciales = distribution.PARTIALLY_ESTIMATED ?? 0;
       const ejemplos = [
-        ...tema.entries.filter((entry) => entry.outcome === "ESTIMED").slice(0, 2),
-        ...tema.entries.filter((entry) => entry.outcome === "DISMISSED").slice(0, 2),
+        ...entries.filter((entry) => entry.outcome === "ESTIMED").slice(0, 2),
+        ...entries.filter((entry) => entry.outcome === "DISMISSED").slice(0, 2),
       ];
       return {
         topic: tema.topic,
-        cases: tema.cases,
+        cases: entries.length,
         estimados,
         desestimados,
         parciales,
@@ -463,7 +457,16 @@ export interface GrupoFrasesView {
   distribucion: Record<string, number>;
   instancias: Array<{ instancia: string; demandante: number; demandado: number; parcial: number }>;
   ramas: Record<string, number>;
-  casos: Array<{ caseId: string; outcome: string; headline: string }>;
+  casos: Array<{
+    caseId: string;
+    outcome: string;
+    headline: string;
+    /** Rama, frase y decisiones de ESTE caso: permiten recalcular el grupo
+     * sobre los casos visibles sin arrastrar totales globales. */
+    branch: string;
+    frase: string;
+    decisiones: Array<{ instance: string; result: string }>;
+  }>;
 }
 
 let frasesCache: { value: GrupoFrasesView[]; at: number } | null = null;
@@ -572,8 +575,12 @@ export async function getGruposFrases(): Promise<GrupoFrasesView[]> {
             return acc;
           }, {}),
           casos: grupo.casos.map((caso) => ({
-            ...caso,
+            caseId: caso.caseId,
+            outcome: caso.outcome,
+            frase: caso.texto,
             headline: titulos.get(caso.caseId) ?? caso.caseId,
+            branch: ramas.get(caso.caseId) ?? "UNKNOWN",
+            decisiones: mapaInstancias.get(caso.caseId) ?? [],
           })),
         };
       });
@@ -641,68 +648,106 @@ export interface ExitoArgumento {
   exito: number;
 }
 
-let exitoCache: { value: ExitoArgumento[]; at: number } | null = null;
+const exitoCache = new Map<string, { at: number; value: ExitoArgumento[] }>();
 
-/** Éxito global de cada tipo de argumento y de cada lado (cache 60 s). */
-export async function getExitoArgumentos(): Promise<ExitoArgumento[]> {
-  if (exitoCache && Date.now() - exitoCache.at < 60_000) return exitoCache.value;
-
-  const mapa = new Map<string, ExitoArgumento>();
-  for (const item of await listCases()) {
-    const args = await section<{
-      arguments?: Array<{ type?: string; side?: string; outcome?: string }>;
-    }>(item.id, "arguments.json");
-    for (const argumento of args?.arguments ?? []) {
-      const tipo = (argumento.type ?? "UNKNOWN").toUpperCase();
-      const lado = (argumento.side ?? "UNKNOWN").toUpperCase();
-      const key = `${tipo}|${lado}`;
-      const fila =
-        mapa.get(key) ??
-        ({ tipo, lado, aceptados: 0, rechazados: 0, parciales: 0, sinAnalizar: 0, total: 0, exito: 0 } satisfies ExitoArgumento);
-      fila.total += 1;
-      const outcome = (argumento.outcome ?? "").toUpperCase();
-      if (outcome === "ACCEPTED") fila.aceptados += 1;
-      else if (outcome === "REJECTED") fila.rechazados += 1;
-      else if (outcome === "PARTIALLY_ACCEPTED") fila.parciales += 1;
-      else fila.sinAnalizar += 1;
-      mapa.set(key, fila);
+/** Éxito de cada tipo de argumento y de cada lado sobre `caseIds` (los que ve
+ * el actor): recorrer el corpus entero mezclaba agregados de otros despachos. */
+export async function getExitoArgumentos(caseIds: string[]): Promise<ExitoArgumento[]> {
+  return memoPorClave(exitoCache, caseIds.join(","), 60_000, async () => {
+    const mapa = new Map<string, ExitoArgumento>();
+    for (const id of caseIds) {
+      const args = await section<{
+        arguments?: Array<{ type?: string; side?: string; outcome?: string }>;
+      }>(id, "arguments.json");
+      for (const argumento of args?.arguments ?? []) {
+        const tipo = (argumento.type ?? "UNKNOWN").toUpperCase();
+        const lado = (argumento.side ?? "UNKNOWN").toUpperCase();
+        const key = `${tipo}|${lado}`;
+        const fila =
+          mapa.get(key) ??
+          ({ tipo, lado, aceptados: 0, rechazados: 0, parciales: 0, sinAnalizar: 0, total: 0, exito: 0 } satisfies ExitoArgumento);
+        fila.total += 1;
+        const outcome = (argumento.outcome ?? "").toUpperCase();
+        if (outcome === "ACCEPTED") fila.aceptados += 1;
+        else if (outcome === "REJECTED") fila.rechazados += 1;
+        else if (outcome === "PARTIALLY_ACCEPTED") fila.parciales += 1;
+        else fila.sinAnalizar += 1;
+        mapa.set(key, fila);
+      }
     }
-  }
 
-  const value = [...mapa.values()]
-    .map((fila) => ({
-      ...fila,
-      exito:
-        fila.aceptados + fila.rechazados > 0
-          ? Math.round((fila.aceptados * 100) / (fila.aceptados + fila.rechazados))
-          : 0,
-    }))
-    .filter((fila) => fila.aceptados + fila.rechazados >= 3)
-    .sort((a, b) => b.aceptados + b.rechazados - (a.aceptados + a.rechazados));
-  exitoCache = { value, at: Date.now() };
-  return value;
+    return [...mapa.values()]
+      .map((fila) => ({
+        ...fila,
+        exito:
+          fila.aceptados + fila.rechazados > 0
+            ? Math.round((fila.aceptados * 100) / (fila.aceptados + fila.rechazados))
+            : 0,
+      }))
+      .filter((fila) => fila.aceptados + fila.rechazados >= 3)
+      .sort((a, b) => b.aceptados + b.rechazados - (a.aceptados + a.rechazados));
+  });
 }
 
-/** Los grupos globales de frases recontados sobre los casos de un tema. */
+/**
+ * Los grupos de frases recuentados sobre un conjunto de casos (los visibles,
+ * los de un periodo, los de un tema…). TODO lo que pinta después —ejemplo,
+ * ramas, instancias, distribución— se recalcula aquí: antes se quedaban los
+ * totales globales del grupo y se colaban datos de casos ajenos.
+ */
 export function filtrarFrasesDelTema(
   grupos: GrupoFrasesView[],
   caseIds: Set<string>,
   limite = 5,
 ): GrupoFrasesView[] {
   return grupos
-    .map((grupo) => ({ ...grupo, casos: grupo.casos.filter((caso) => caseIds.has(caso.caseId)) }))
     .map((grupo) => {
+      const casos = grupo.casos.filter((caso) => caseIds.has(caso.caseId));
+      if (casos.length === 0) return null;
+
       const distribucion: Record<string, number> = {};
-      for (const caso of grupo.casos) distribucion[caso.outcome] = (distribucion[caso.outcome] ?? 0) + 1;
-      const maximo = grupo.casos.length > 0 ? Math.max(...Object.values(distribucion)) : 0;
+      for (const caso of casos) distribucion[caso.outcome] = (distribucion[caso.outcome] ?? 0) + 1;
+      const maximo = Math.max(...Object.values(distribucion));
+
+      const porInstancia = new Map<
+        string,
+        { demandante: number; demandado: number; parcial: number }
+      >();
+      const ramas: Record<string, number> = {};
+      for (const caso of casos) {
+        ramas[caso.branch] = (ramas[caso.branch] ?? 0) + 1;
+        for (const decision of caso.decisiones) {
+          const fila =
+            porInstancia.get(decision.instance) ?? { demandante: 0, demandado: 0, parcial: 0 };
+          if (decision.result === "FAVOR_PLAINTIFF") fila.demandante += 1;
+          else if (decision.result === "FAVOR_DEFENDANT") fila.demandado += 1;
+          else if (decision.result === "PARTIAL") fila.parcial += 1;
+          porInstancia.set(decision.instance, fila);
+        }
+      }
+
+      // El ejemplo tiene que ser texto de un caso del conjunto: si el original
+      // venía de un caso ajeno, se sustituye por la frase de uno de los suyos.
+      const propio = casos.find((caso) => caso.frase === grupo.ejemplo);
+      const ejemplo = propio
+        ? propio.frase
+        : (casos.find((caso) => caso.frase)?.frase ?? grupo.ejemplo);
+
       return {
         ...grupo,
+        ejemplo,
+        casos,
         distribucion,
-        homogenea: grupo.casos.length > 0 ? Math.round((maximo * 100) / grupo.casos.length) : 0,
-        total: grupo.casos.length,
+        homogenea: Math.round((maximo * 100) / casos.length),
+        total: casos.length,
+        ramas,
+        instancias: [...porInstancia.entries()].map(([instancia, fila]) => ({
+          instancia,
+          ...fila,
+        })),
       };
     })
-    .filter((grupo) => grupo.total >= 2)
+    .filter((grupo): grupo is GrupoFrasesView => grupo !== null && grupo.total >= 2)
     .sort((a, b) => b.homogenea - a.homogenea || b.total - a.total)
     .slice(0, limite);
 }
@@ -825,17 +870,25 @@ export async function getHistorialAlertas(): Promise<EntradaHistorialAlertas[]> 
   return Array.isArray(list) ? list : [];
 }
 
-/** Guarda el snapshot del día (solo uno por día; conserva 180). */
+/**
+ * Guarda el snapshot del día. Escritura idempotente condicionada: solo
+ * escribe si AÚN no hay entrada de hoy (el primer visitante del día), así
+ * que una segunda petición del mismo día no vuelve a tocar el fichero. La
+ * lectura y la escritura van dentro de la cadena para que dos GET
+ * simultáneos (el primero de ambos días) no dupliquen la entrada.
+ */
 export async function registrarAlertasDelDia(
   entrada: EntradaHistorialAlertas,
 ): Promise<EntradaHistorialAlertas[]> {
-  const historial = await getHistorialAlertas();
-  const ultimo = historial[historial.length - 1];
-  if (ultimo?.fecha === entrada.fecha) return historial;
-  const siguiente = [...historial, entrada].slice(-180);
-  await fs.mkdir(path.dirname(historialAlertasPath()), { recursive: true });
-  await fs.writeFile(historialAlertasPath(), `${JSON.stringify(siguiente, null, 2)}\n`, "utf8");
-  return siguiente;
+  return conLock(historialAlertasPath(), async () => {
+    const historial = await getHistorialAlertas();
+    const ultimo = historial[historial.length - 1];
+    if (ultimo?.fecha === entrada.fecha) return historial;
+    const siguiente = [...historial, entrada].slice(-180);
+    await fs.mkdir(path.dirname(historialAlertasPath()), { recursive: true });
+    await fs.writeFile(historialAlertasPath(), `${JSON.stringify(siguiente, null, 2)}\n`, "utf8");
+    return siguiente;
+  });
 }
 
 /** Días desde la última revisión (o desde el análisis si no se ha revisado). */
@@ -895,18 +948,22 @@ export interface Recomendaciones {
 /**
  * Qué ha funcionado en los casos parecidos: frases homogéneas que aparecen en
  * ellos, argumentos aceptados y leyes verificadas citadas. Gratis (solo JSON).
+ * `permitido(caseId)` descarta cualquier similar que el actor no vea: los
+ * argumentos y leyes que salen de aquí son texto de otros casos.
  */
 export async function getRecomendaciones(
   caseId: string,
   similares: string[],
+  permitido: (caseId: string) => boolean = () => true,
 ): Promise<Recomendaciones> {
-  const conjunto = new Set([caseId, ...similares]);
+  const visibles = similares.filter((id) => permitido(id));
+  const conjunto = new Set([caseId, ...visibles]);
   const frases = filtrarFrasesDelTema(await getGruposFrases(), conjunto, 12);
 
   const argumentos: Recomendaciones["argumentos"] = [];
   const leyesMap = new Map<string, Recomendaciones["leyes"][number]>();
 
-  for (const id of similares.slice(0, 6)) {
+  for (const id of visibles.slice(0, 6)) {
     const [args, refs] = await Promise.all([
       section<{
         arguments?: Array<{

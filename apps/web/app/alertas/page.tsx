@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PrintButton } from "@/components/print-button";
 import { CopyButton } from "@/components/copy-button";
 import { FiltroAlertas } from "./filtro-alertas";
-import { canViewCase, requireActor , contextoVisibilidad } from "@/lib/auth";
+import { canViewCase, contextoVisibilidad } from "@/lib/auth";
 import { filtrarFrasesDelTema, getBusquedas, getCalidadCorpus, getContradicciones, getDuplicados, getGruposFrases, getHistorialAlertas, getPatronesVistos, getReviewStats, getVigenciaAlerts, diasSinTocar, listCases, registrarAlertasDelDia, runSearch } from "@/lib/dataset";
 import { MarcarVistoButton, RestaurarPatronesButton } from "@/components/patron-visto";
 import { ResolvedorDuplicado } from "@/components/resolvedor-duplicado";
@@ -33,7 +33,10 @@ export default async function AlertasPage({
 
   const [vigenciaBruta, contradictorioBruto, reviewBruto, calidad] = await Promise.all([
     getVigenciaAlerts(),
-    getContradicciones(),
+    // `puedeVer` acota también los CONTEOS del tema (estimados, desestimados
+    // y cases): sin él, los badges sumaban casos de otros despachos aunque
+    // los ejemplos sí se filtraran después.
+    getContradicciones(3, puedeVer),
     getReviewStats(),
     getCalidadCorpus(),
   ]);
@@ -72,9 +75,14 @@ export default async function AlertasPage({
   };
   const stale = calidad.stale.filter(puedeVer);
   const escaneados = calidad.escaneados.filter(puedeVer);
+  // Mismo filtro que /api/jobs:13-18 (despacho y caso visible).
   const fallos = jobs
     .list()
-    .filter((job) => job.status === "error")
+    .filter((job) => {
+      if (job.orgId && job.orgId !== actor.orgId) return false;
+      if (job.caseId && !puedeVer(job.caseId)) return false;
+      return job.status === "error";
+    })
     .slice()
     .reverse();
 
@@ -162,6 +170,8 @@ export default async function AlertasPage({
     calidad: stale.length + escaneados.length,
     emergentes: visiblesEmergentes.length,
   });
+  // Histórico de alertas: global por diseño (data/alertas_historial.json
+  // guarda un contador por día, sin caseId ni orgId: no hay nada que filtrar).
   const historial = (await getHistorialAlertas()).slice(-14);
 
   const resumenAlertas = [

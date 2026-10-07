@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { canViewCase, requireActor , contextoVisibilidad } from "@/lib/auth";
-import { getGruposFrases, listCases } from "@/lib/dataset";
+import { canViewCase, contextoVisibilidad } from "@/lib/auth";
+import { filtrarFrasesDelTema, getGruposFrases, listCases } from "@/lib/dataset";
 import { BRANCH, INSTANCE, OUTCOME, label } from "@/lib/labels";
 import { OutcomeBadge } from "@/lib/ui";
 
@@ -18,12 +18,25 @@ export default async function FrasePage({
   const ejemplo = (sp.e ?? "").trim();
   if (!ejemplo) redirect("/patterns");
 
-  const grupo = (await getGruposFrases()).find((item) => item.ejemplo === ejemplo);
-  if (!grupo) redirect("/patterns");
+  // Los enlaces traen el ejemplo ya recortado a los casos visibles: se
+  // localiza el grupo por ese texto o, si acaso, por la frase de alguno de
+  // sus casos (el parámetro recibido no se pinta nunca).
+  const grupos = await getGruposFrases();
+  const bruto = grupos.find(
+    (item) => item.ejemplo === ejemplo || item.casos.some((caso) => caso.frase === ejemplo),
+  );
+  if (!bruto) redirect("/patterns");
 
-  const ramas = new Map((await listCases()).map((item) => [item.id, item.branch]));
-  const casos = grupo.casos.filter((caso) => canViewCase(actor, caso.caseId, orgId, grants));
-  if (casos.length === 0) redirect("/patterns");
+  const visibles = new Set(
+    (await listCases())
+      .filter((item) => canViewCase(actor, item.id, orgId, grants))
+      .map((item) => item.id),
+  );
+  // Todo lo que se pinta (ejemplo, totales, ramas, instancias) sale recalcu-
+  // lado sobre los casos visibles: los totales globales del grupo se colaban.
+  const [grupo] = filtrarFrasesDelTema([bruto], visibles, 1);
+  if (!grupo) redirect("/patterns");
+  const casos = grupo.casos;
 
   return (
     <>

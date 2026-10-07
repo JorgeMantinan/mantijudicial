@@ -19,6 +19,7 @@ export class JobRegistry {
   private counter = 0;
 
   create(kind: string): JobRecord {
+    this.purgar();
     this.counter += 1;
     const job: JobRecord = {
       id: `job_${String(this.counter).padStart(4, "0")}_${Date.now().toString(36)}`,
@@ -29,6 +30,18 @@ export class JobRegistry {
     };
     this.jobs.set(job.id, job);
     return job;
+  }
+
+  /**
+   * Los terminados hace más de 24 h se olvidan (el mapa no crece sin límite);
+   * el historial reciente de la sesión se conserva.
+   */
+  private purgar(ahora = Date.now()): void {
+    for (const [id, job] of this.jobs) {
+      if (job.status !== "done" && job.status !== "error") continue;
+      if (!job.finishedAt) continue;
+      if (ahora - Date.parse(job.finishedAt) > 24 * 3_600_000) this.jobs.delete(id);
+    }
   }
 
   get(id: string): JobRecord | null {

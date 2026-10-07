@@ -16,12 +16,19 @@ Documentación de diseño: `docs/00_README.md` (índice), `docs/12_DESPLIEGUE.md
 ## Comandos (desde la raíz)
 
 ```bash
-pnpm typecheck                # tsc --noEmit (raíz + apps/web)
-pnpm test                     # vitest: pipeline/lib/*.test.ts
+pnpm typecheck                # tsc --noEmit (solo pipeline/; para la web:
+                              #   pnpm --dir apps/web exec tsc --noEmit)
+pnpm test                     # vitest: pipeline/lib/*.test.ts + apps/web/lib/*.test.ts
 pnpm exec next build          # build de producción (o pnpm --dir apps/web build)
 pnpm web                      # next dev en :3000
 pnpm web:build / web:start
 ```
+
+CI: `.github/workflows/ci.yml` (push y PR a `main`) con pnpm 11 + Node 20:
+`pnpm typecheck`, `tsc --noEmit` de `apps/web` y `pnpm test`. **Sin `next
+build`**: el build necesita el corpus (`cases/`), que no está en `main`.
+Para que esa comprobación funcione, `pnpm-workspace.yaml` declara
+`packages: ["apps/*"]` (si no, `pnpm install` en la raíz no instala la web).
 
 Pipeline (CLI, `tsx`): `pnpm hygiene|extract|metadata|enrich|laws|match|
 patterns|search|vias|ingest|seed|eval|supplement|compare|escrito`.

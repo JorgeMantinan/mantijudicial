@@ -75,4 +75,24 @@ describe("JobRegistry", () => {
     expect(registry.enCola("org_B")).toBe(1);
     expect(registry.enCola("org_C")).toBe(0);
   });
+
+  it("al crear purga los terminados de hace más de 24 h y conserva el resto", () => {
+    const registry = new JobRegistry();
+    const viejo = registry.create("ingest");
+    registry.patch(viejo.id, {
+      status: "done",
+      finishedAt: new Date(Date.now() - 25 * 3_600_000).toISOString(),
+    });
+    const reciente = registry.create("ingest");
+    registry.patch(reciente.id, {
+      status: "error",
+      finishedAt: new Date(Date.now() - 3_600_000).toISOString(),
+    });
+    const enMarcha = registry.create("ingest"); // sin finishedAt: no se purga
+
+    expect(registry.get(viejo.id)).toBeNull();
+    expect(registry.get(reciente.id)).not.toBeNull();
+    expect(registry.get(enMarcha.id)).not.toBeNull();
+    expect(registry.list()).toHaveLength(2);
+  });
 });

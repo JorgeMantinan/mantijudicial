@@ -1,7 +1,7 @@
 import { leerJson } from "@/lib/api-body";
 import { NextResponse } from "next/server";
 import { getActor } from "@/lib/auth";
-import { deleteVista, saveVista, type VistaGuardada } from "@/lib/dataset";
+import { deleteVista, saveVista } from "@/lib/dataset";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

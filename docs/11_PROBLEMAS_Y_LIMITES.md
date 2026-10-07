@@ -41,11 +41,12 @@ probable):
 Corpus real: **76 sentencias únicas**. Si no se deduplican, los recuentos de
 patrones quedan inflados artificialmente.
 
-### 1.3 Procesamiento al 10%
+### 1.3 Procesamiento casi completo (79/80)
 
-Solo 8/80 tienen `metadata/` + `structured/`. Los 72 restantes solo tienen el
-PDF. No existe ningún índice maestro (manifest) que diga qué está procesado,
-con qué hash y con qué versión de prompt.
+Los 80 casos tienen `metadata/`; **79/80 tienen también `structured/`**
+(enriquecidos). El único que falta es `case_000056`, descartado por corrupto y
+que no se reintenta sin permiso nuevo. El índice maestro (manifest) sí existe:
+`pipeline/lib/manifest.ts`, con `sha256` del PDF y estado `enriched` por caso.
 
 ### 1.4 Muestra pequeña y concentrada
 
@@ -286,7 +287,8 @@ revisadas manualmente) y tests de extracción.
 - Renombrar `CASE-000001` → `JD-000001` en el momento de migrar a BD.
 - Unificar nombres de ficheros de metadata.
 - `extracted/judgment.txt` planificado en la guía y nunca creado.
-- Sin manifest maestro de estado del corpus.
+- ~~Sin manifest maestro~~ ✅ hecho: `pipeline/lib/manifest.ts` (hash y estado
+  por caso).
 - Sin `verification/review.json` (revisión de firmeza y datos de ficha).
 - Codificación: los JSON están bien en UTF-8 (la corrupción visible en
   PowerShell 5.1 es solo de consola); usar siempre UTF-8 sin BOM y leer con
@@ -316,7 +318,7 @@ revisadas manualmente) y tests de extracción.
 - **Embeddings / búsqueda semántica**: pendiente de proveedor.
 - **Copias de seguridad**: `scripts/backup.ps1` (retención) y
   `scripts/restore.ps1` (verificado: 80 casos, identidad OK), fuera de git.
-- **Verificación**: `scripts/smoke.ps1` (33 comprobaciones de rutas, CSV y
+- **Verificación**: `scripts/smoke.ps1` (32 comprobaciones de rutas, CSV y
   aislamiento) + `pnpm typecheck` + `pnpm test` + `next build`.
 - **`case_000056`**: descartado ("corrupto": el modelo no devuelve JSON válido);
   queda sin enriquecer y **no se reintenta** sin permiso nuevo.

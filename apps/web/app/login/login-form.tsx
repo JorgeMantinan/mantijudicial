@@ -35,7 +35,11 @@ export function LoginForm() {
     }
     setMfaRequired(false);
     const next = params.get("next");
-    startTransition(() => router.push(next && next.startsWith("/") ? next : "/"));
+    // Solo rutas del propio sitio: "//host" y "/\host" (el navegador trata la
+    // barra invertida como barra) serían una redirección abierta a otro dominio.
+    const rutaPropia =
+      next !== null && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\");
+    startTransition(() => router.push(rutaPropia && next ? next : "/"));
   }
 
   return (

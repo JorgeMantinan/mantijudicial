@@ -1,4 +1,4 @@
-import { canViewCase, requireActor , contextoVisibilidad } from "@/lib/auth";
+import { canViewCase, contextoVisibilidad } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PrintButton } from "@/components/print-button";

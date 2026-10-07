@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { PrintButton } from "@/components/print-button";
 import { Sumario } from "@/components/sumario";
 import { InternoToggle } from "./interno-toggle";
-import { canViewCase, loadIdentity, requireActor , contextoVisibilidad } from "@/lib/auth";
+import { canViewCase, loadIdentity, contextoVisibilidad } from "@/lib/auth";
 import { getAuditoria, getCase, getEscrito, getVias, getVigenciaChecks, listLaws } from "@/lib/dataset";
 import { fechaEs } from "@/lib/texto";
 import {

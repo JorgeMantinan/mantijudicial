@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { canViewCase, requireActor , contextoVisibilidad } from "@/lib/auth";
+import { canViewCase, contextoVisibilidad } from "@/lib/auth";
 import { getClientes, listCases } from "@/lib/dataset";
 import { OUTCOME, label } from "@/lib/labels";
 import { PrintButton } from "@/components/print-button";

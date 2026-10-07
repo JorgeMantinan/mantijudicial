@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { canCreateCase, canShareResource } from "@pipeline/authorization";
-import { canViewCase, loadIdentity, requireActor , recursoCaso , contextoVisibilidad } from "@/lib/auth";
-import type { Argument, Claim, Citation, Event, Fact, Holding, Party, Ref } from "@/lib/dataset";
+import { canViewCase, loadIdentity, recursoCaso, contextoVisibilidad } from "@/lib/auth";
 import { getAuditoria, getCase, getClientes, getComparisons, getDoctrinaCitada, getEscrito, getGoldenInfo, getRecomendaciones, getReviewStats, getSentenciasCitadas, getSimilarCases, getVigenciaChecks, getVias, listLaws } from "@/lib/dataset";
 import { loadGrantStore } from "@/lib/grants";
 import {
@@ -52,7 +51,7 @@ export default async function CaseDetailPage({
 }) {
   const { id } = await params;
   if (!/^case_\d{6}$/.test(id)) notFound();
-  const { actor, orgId, grants } = await contextoVisibilidad();
+  const { actor, orgId, grants, permitido } = await contextoVisibilidad();
   if (!canViewCase(actor, id, orgId, grants)) redirect("/cases");
   const detail = await getCase(id);
   if (!detail) notFound();
@@ -60,7 +59,7 @@ export default async function CaseDetailPage({
   const [laws, similar, vias, comparisons, identity, grantStore, golden, sentencias, vigencias, escrito, reviewStats, actividadCaso, doctrina, clientes] =
     await Promise.all([
       listLaws(),
-      getSimilarCases(id, 5),
+      getSimilarCases(id, 5, permitido),
       getVias(id),
       getComparisons(id),
       loadIdentity(),
@@ -78,14 +77,28 @@ export default async function CaseDetailPage({
   const recomendaciones = await getRecomendaciones(
     id,
     similar.map((item) => item.id),
+    permitido,
   );
-  const nextPendiente = reviewStats.pending.find((item) => item.id !== id)?.id ?? null;
+  // El "siguiente" de la revisión apunta al primer pendiente VISIBLE: sin
+  // filtrar, el atajo N y el botón "Siguiente" llevaban a casos de otro despacho.
+  const nextPendiente =
+    reviewStats.pending.find((item) => item.id !== id && permitido(item.id))?.id ?? null;
 
-  const users = identity.listUsers().map((user) => ({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-  }));
+  // Solo los usuarios con membresía en MISMOS despachos: el directorio
+  // completo dejaba todos los correos de todos los despachos en las props.
+  const orgIds = new Set(actor.orgIds);
+  const users = identity
+    .listUsers()
+    .map((user) => ({
+      user,
+      membership: identity.listMemberships(user.id).find((m) => orgIds.has(m.firmId)),
+    }))
+    .filter((row) => Boolean(row.membership))
+    .map((row) => ({
+      id: row.user.id,
+      name: row.user.name,
+      email: row.user.email,
+    }));
   const userLabels = new Map(users.map((user) => [user.id, `${user.name} <${user.email}>`]));
   const firmLabels = new Map(identity.listFirms().map((firm) => [firm.id, firm.name]));
   const shareGrants: ShareGrantView[] = grantStore.list(id).map((grant) => ({

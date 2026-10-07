@@ -1,0 +1,40 @@
+# Verificación mínima en CI: tipos + tests. NO se ejecuta `next build` aquí:
+# el build necesita el corpus real (cases/, laws/), que está fuera de la rama
+# main (viven en la rama `data`), así que fallaría en un runner limpio.
+# El build completo se hace en local antes de cada commit (AGENTS.md).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          # Misma versión mayor que en local (el lockfile es de pnpm 11).
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck (pipeline/)
+        run: pnpm typecheck
+
+      - name: Typecheck (apps/web)
+        run: pnpm --dir apps/web exec tsc --noEmit
+
+      # Sin `next build`: requiere el corpus cases/ que no está en main.
+      - name: Tests (vitest)
+        run: pnpm test

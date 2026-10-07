@@ -19,9 +19,39 @@ function Check([string]$name, [bool]$ok) {
   }
 }
 
+$nodosPrevios = @(Get-CimInstance Win32_Process -Filter "Name='node.exe'" -ErrorAction SilentlyContinue |
+  ForEach-Object { [int]$_.ProcessId })
+
 $proc = Start-Process -FilePath "pnpm.cmd" -ArgumentList "exec","next","start","-p","$Port" `
   -WorkingDirectory (Join-Path $root "apps\web") -WindowStyle Hidden -PassThru
 Start-Sleep -Seconds 7
+
+# Procesos de este script: el árbol descendiente de $proc más los node.exe que
+# no existían antes de arrancar (todos del servidor que acabamos de lanzar).
+function Get-PidsPropios {
+  $propios = New-Object "System.Collections.Generic.HashSet[int]"
+  [void]$propios.Add([int]$proc.Id)
+  $cola = New-Object "System.Collections.Generic.Queue[int]"
+  $cola.Enqueue([int]$proc.Id)
+  while ($cola.Count -gt 0) {
+    $padre = $cola.Dequeue()
+    $hijos = @(Get-CimInstance Win32_Process -Filter "ParentProcessId=$padre" -ErrorAction SilentlyContinue)
+    foreach ($hijo in $hijos) {
+      if ($propios.Add([int]$hijo.ProcessId)) { $cola.Enqueue([int]$hijo.ProcessId) }
+    }
+  }
+  foreach ($n in @(Get-CimInstance Win32_Process -Filter "Name='node.exe'" -ErrorAction SilentlyContinue)) {
+    if ($nodosPrevios -contains [int]$n.ProcessId) { continue }
+    # Solo si además es de ESTA prueba (puerto o directorio de la web); los
+    # node.exe de otros programas que arranquen mientras tanto se ignoran.
+    $cmd = $n.CommandLine
+    if ($cmd -and (($cmd -like "*$Port*") -or ($cmd -like "*apps\web*"))) {
+      [void]$propios.Add([int]$n.ProcessId)
+    }
+  }
+  return $propios
+}
+$pidsPropios = Get-PidsPropios
 
 $jarA = Join-Path $env:TEMP "smoke-admin.txt"
 $jarC = Join-Path $env:TEMP "smoke-carlos.txt"
@@ -34,6 +64,9 @@ try {
     -d '{\"email\":\"admin@local.test\",\"password\":\"mantijudicial\"}'
   Check "login admin" ($login -match '"ok":true')
 
+  # NB: los textos esperados son los del corpus actual (p. ej.
+  # "falta por concretar" es el literal de case_000034): si cambia el corpus
+  # hay que actualizarlos a mano.
   $rutas = [ordered]@{
     "/"                                             = "Accesos directos"
     "/cases"                                        = "descargar CSV"
@@ -64,6 +97,8 @@ try {
 
   curl.exe -s -b $jarA "$base/api/export/casos" -o $csv
   $filas = (Get-Content $csv -Encoding UTF8)
+  # NB: el umbral 81 (= 80 casos del corpus + cabecera) es del corpus actual,
+  # no un número universal: sube si entran casos y baja si se archivan.
   Check ("csv casos (" + ($filas.Count - 1) + " filas)") ($filas.Count -ge 81)
 
   curl.exe -s -b $jarA "$base/api/export/informe?desde=2026-01-01&hasta=2026-12-31" -o $csv
@@ -90,9 +125,12 @@ try {
   $codigo = curl.exe -s -o $html -w "%{http_code}" "$base/cases"
   Check "sin sesión → login (307)" ($codigo -eq "307")
 } finally {
-  Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
-  Get-CimInstance Win32_Process -Filter "Name='node.exe'" |
-    ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+  # Solo se matan los procesos arrancados por ESTE script (sus PIDs): nunca se
+  # toca el resto de node.exe de la máquina.
+  $finales = Get-PidsPropios
+  foreach ($id in @($pidsPropios) + @($finales)) {
+    if ($null -ne $id) { Stop-Process -Id $id -Force -ErrorAction SilentlyContinue }
+  }
   Remove-Item $jarA, $jarC, $html, $csv -ErrorAction SilentlyContinue
 }
 

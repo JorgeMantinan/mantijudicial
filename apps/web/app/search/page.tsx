@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { canViewCase, requireActor , contextoVisibilidad } from "@/lib/auth";
+import { canViewCase, contextoVisibilidad } from "@/lib/auth";
 import { getBusquedas, getEvolucion, listCases, runSearch } from "@/lib/dataset";
 import { findByIdentifier } from "@/lib/identifier";
 import { BRANCH, OUTCOME, SEARCH_KIND, label } from "@/lib/labels";
@@ -97,13 +97,21 @@ export default async function SearchPage({
       .split(/\s+/)
       .filter((palabra) => palabra.length >= 4);
     const puntuados = (await getEvolucion())
-      .map((tema) => ({
-        topic: tema.topic,
-        casos: tema.cases,
-        score:
-          palabras.filter((palabra) => tema.topic.toLowerCase().includes(palabra)).length * 10 +
-          Math.min(tema.cases / 100, 0.9),
-      }))
+      .map((tema) => {
+        // El nº de casos se recuenta sobre los que ves: `tema.cases` es global
+        // y "tema X · N casos" se estaba llevando el tamaño del corpus ajeno.
+        const casos = tema.entries.filter((entrada) =>
+          canViewCase(actor, entrada.caseId, orgId, grants),
+        ).length;
+        return {
+          topic: tema.topic,
+          casos,
+          score:
+            palabras.filter((palabra) => tema.topic.toLowerCase().includes(palabra)).length * 10 +
+            Math.min(casos / 100, 0.9),
+        };
+      })
+      .filter((tema) => tema.casos > 0)
       .sort((a, b) => b.score - a.score);
     const afines = puntuados.filter((tema) => tema.score >= 1).slice(0, 5);
     sugerencias = (afines.length > 0 ? afines : puntuados.slice(0, 5)).map(({ topic, casos }) => ({

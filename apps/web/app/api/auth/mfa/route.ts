@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { appendAudit } from "@pipeline/audit";
 import { RateLimiter, ipDe } from "@pipeline/rate_limit";
 import { auditPath } from "@/lib/grants";
+import { conLock } from "@/lib/lock";
 import { getActor, identityPath, loadIdentity } from "@/lib/auth";
 
 export const runtime = "nodejs";
@@ -41,24 +42,33 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
-  const identity = await loadIdentity();
-
   try {
     if (action === "status") {
-      return NextResponse.json({ enabled: identity.mfaEnabled(actor.userId) });
+      const soloLectura = await loadIdentity();
+      return NextResponse.json({ enabled: soloLectura.mfaEnabled(actor.userId) });
     }
 
+    // Cada mutación va con load→mutate→save dentro de la cadena: sin ella,
+    // dos peticiones simultáneas se comen el cambio la una a la otra.
     if (action === "setup") {
-      const { secret, uri } = identity.setupMfa(actor.userId);
-      await identity.save(identityPath());
+      const { secret, uri } = await conLock(identityPath(), async () => {
+        const identity = await loadIdentity();
+        const datos = identity.setupMfa(actor.userId);
+        await identity.save(identityPath());
+        return datos;
+      });
       mfaLimiter.liberar(claveMfa);
       return NextResponse.json({ secret, uri, enabled: false });
     }
 
     if (action === "verify") {
-      const ok = identity.confirmMfa(actor.userId, code);
+      const ok = await conLock(identityPath(), async () => {
+        const identity = await loadIdentity();
+        if (!identity.confirmMfa(actor.userId, code)) return false;
+        await identity.save(identityPath());
+        return true;
+      });
       if (!ok) return NextResponse.json({ error: "Código incorrecto" }, { status: 400 });
-      await identity.save(identityPath());
       mfaLimiter.liberar(claveMfa);
       await appendAudit(auditPath(), {
         actor: actor.userId,
@@ -70,9 +80,13 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     if (action === "disable") {
-      const ok = identity.disableMfa(actor.userId, code);
+      const ok = await conLock(identityPath(), async () => {
+        const identity = await loadIdentity();
+        if (!identity.disableMfa(actor.userId, code)) return false;
+        await identity.save(identityPath());
+        return true;
+      });
       if (!ok) return NextResponse.json({ error: "Código incorrecto" }, { status: 400 });
-      await identity.save(identityPath());
       mfaLimiter.liberar(claveMfa);
       await appendAudit(auditPath(), {
         actor: actor.userId,

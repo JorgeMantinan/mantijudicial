@@ -11,7 +11,7 @@ import {
   type ActualCase,
   type GoldenEntry,
 } from "./lib/eval.js";
-import { CASES_DIR, LAWS_DIR } from "./lib/paths.js";
+import { CASES_DIR } from "./lib/paths.js";
 
 interface Args {
   seedGolden: boolean;

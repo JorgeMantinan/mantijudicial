@@ -76,15 +76,23 @@ export async function verificarAuditoria(
   return { total, alteradas };
 }
 
+/** Cola en proceso: dos appends simultáneos (p. ej. dos logins) no deben
+ * leer la misma última marca y romper la cadena de hash. */
+let colaAudit: Promise<unknown> = Promise.resolve();
+
 export async function appendAudit(
   filePath: string,
   entry: Omit<AuditEntry, "at">,
 ): Promise<AuditEntry> {
-  const record: AuditEntry = { at: new Date().toISOString(), ...entry };
-  record.hash = calcularHash(await ultimaMarca(filePath), record);
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.appendFile(filePath, `${JSON.stringify(record)}\n`, "utf8");
-  return record;
+  const tarea = colaAudit.then(async (): Promise<AuditEntry> => {
+    const record: AuditEntry = { at: new Date().toISOString(), ...entry };
+    record.hash = calcularHash(await ultimaMarca(filePath), record);
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.appendFile(filePath, `${JSON.stringify(record)}\n`, "utf8");
+    return record;
+  });
+  colaAudit = tarea.catch(() => undefined);
+  return tarea;
 }
 
 export async function readAudit(filePath: string, limit = 200): Promise<AuditEntry[]> {
