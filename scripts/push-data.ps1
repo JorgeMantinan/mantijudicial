@@ -1,5 +1,6 @@
 # Sube los datos (cases/ laws/ data/identity.json data/grants.json) a la rama
-# 'data' del repositorio, que es la que usa Render para poblar su disco.
+# 'data' del repositorio privado mantijudicial-data (fuera de este repo, que es
+# solo código).
 # No toca la rama main ni modifica tu working tree.
 #
 #   powershell -ExecutionPolicy Bypass -File scripts/push-data.ps1
@@ -48,7 +49,8 @@ try {
 
 Write-Output "commit de datos: $commit ($((git ls-tree -r data --name-only | Measure-Object -Line).Lines) ficheros)"
 # La rama 'data' se genera entera cada vez (es un volcado de datos), por eso
-# se fuerza el push: solo este script la escribe.
-git push --force origin data:refs/heads/data
+# se fuerza el push: solo este script la escribe. El destino es el repo
+# privado mantijudicial-data (este repo es solo código).
+git push --force https://github.com/JorgeMantinan/mantijudicial-data.git data:refs/heads/data
 if ($LASTEXITCODE -ne 0) { throw "push falló" }
 Write-Output "Rama 'data' actualizada en GitHub."

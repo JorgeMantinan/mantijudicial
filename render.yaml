@@ -1,7 +1,8 @@
 # Blueprint de Render para MantiJudicial (https://render.com/blueprints)
 #
 # El corpus (cases/), la legislación (laws/) y la identidad (data/identity.json)
-# NO viajan por la rama main: están en la rama 'data' del mismo repo y este
+# NO viajan por la rama main: viven en la rama 'data' del repo privado
+# mantijudicial-data (ver DATA_REPO en scripts/render-bootstrap.sh) y este
 # script los copia al disco persistente la primera vez.
 services:
   - type: web

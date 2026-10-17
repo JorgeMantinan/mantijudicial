@@ -1,5 +1,6 @@
 # Verificación en CI: tipos + tests + `next build` de la web.
-# El corpus real (cases/, laws/) vive en la rama `data` y no está en main,
+# El corpus real (cases/, laws/) vive en el repo privado mantijudicial-data
+# (rama `data`) y no está en main,
 # así que ANTES del build se crea un corpus de juguete en un directorio
 # temporal (scripts/crear-corpus-juguete.mjs) y `MANTIJUDICIAL_ROOT` apunta a
 # él: `repoRoot()` lo encuentra y el build no toca ningún dato real.

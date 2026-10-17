@@ -53,9 +53,11 @@ Casos concretos: `pnpm eval -- --show`, `pnpm compare -- --a=case_000034`,
 ## Datos y ramas
 
 - `main` **solo código**. `cases/`, `laws/` y `data/` están en `.gitignore`.
-- Los datos viven en la **rama `data`** del mismo repo (privado). Subirlos:
+- Los datos viven en la **rama `data`** del repo privado
+  [`JorgeMantinan/mantijudicial-data`](https://github.com/JorgeMantinan/mantijudicial-data)
+  (este repo es solo código, para ser público). Subirlos:
   `powershell -ExecutionPolicy Bypass -File scripts/push-data.ps1`
-  (push con `--force`: solo ese script la escribe).
+  (push con `--force` a ese repo: solo ese script la escribe).
 - `MANTIJUDICIAL_ROOT` cambia la raíz del corpus (la usan `apps/web/lib/dataset.ts`
   y `pipeline/lib/paths.ts`; en Render apunta al disco). Local: no hace falta.
 - En local no se versionan `data/identity.json` (usuarios+hashes+MFA) ni
