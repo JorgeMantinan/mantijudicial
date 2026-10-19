@@ -28,10 +28,15 @@ const filas = [];
 let conStructured = 0;
 let conFrases = 0;
 let conReview = 0;
-let golden = 0;
+let goldenFlag = 0;
+let goldenConfirmadas = 0;
 let revisados = 0;
 let tokensTotales = 0;
 const porPrompt = new Map();
+
+// Golden real: cases/golden.json (confirmed), no el flag de review.json.
+const goldenJson = leerJson(path.join(CASES, "golden.json"));
+const goldenPorId = new Map((goldenJson?.entries ?? []).map((e) => [e.caseId, e]));
 
 for (const caso of casos) {
   const dir = path.join(CASES, caso);
@@ -43,7 +48,10 @@ for (const caso of casos) {
   const nFrases = Array.isArray(frases?.frases) ? frases.frases.length : 0;
   if (nFrases > 0) conFrases++;
   if (review) conReview++;
-  if (review?.golden?.isGoldenDataset) golden++;
+  if (review?.golden?.isGoldenDataset) goldenFlag++;
+  const entradaGolden = goldenPorId.get(caso);
+  const confirmada = entradaGolden?.confirmed === true;
+  if (confirmada) goldenConfirmadas++;
   if (review?.review?.status === "REVIEWED") revisados++;
   tokensTotales += review?.extraction?.tokens?.total ?? 0;
   const prompt = review?.extraction?.prompt_version ?? "—";
@@ -53,7 +61,7 @@ for (const caso of casos) {
     structured: hayStructured ? "si" : "NO",
     prompt,
     estado: review?.review?.status ?? "sin review.json",
-    golden: review?.golden?.isGoldenDataset ? "si" : "",
+    golden: confirmada ? "si" : entradaGolden ? "auto" : "",
     frases: nFrases || "",
     tokens: review?.extraction?.tokens?.total ?? "",
   });
@@ -69,7 +77,9 @@ const resumen = {
   casos: casos.length,
   conStructured,
   conReview,
-  golden,
+  goldenConfirmadas,
+  goldenAuto: (goldenJson?.entries ?? []).length - goldenConfirmadas,
+  goldenFlagReviewJson: goldenFlag,
   revisados,
   conFrases,
   tokensTotales,
@@ -86,7 +96,9 @@ const md = [
   "## Resumen",
   "",
   `- Casos: **${casos.length}** · con structured/: **${conStructured}** · con review.json: **${conReview}` +
-    `** · REVIEWED: **${revisados}** · golden: **${golden}**`,
+    `** · REVIEWED: **${revisados}**`,
+  `- Golden (cases/golden.json): **${goldenConfirmadas} confirmadas** / ` +
+    `${(goldenJson?.entries ?? []).length} entradas (flags review.json: ${goldenFlag})`,
   `- Con frases_candidatas.json: **${conFrases}/${casos.length}**`,
   `- Tokens históricos (suma de extraction.tokens.total): **${tokensTotales.toLocaleString("es-ES")}**`,
   `- Prompts: ${Object.entries(porPrompt).map(([k, v]) => `${k}×${v}`).join(", ")}`,

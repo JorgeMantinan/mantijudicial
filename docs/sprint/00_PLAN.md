@@ -36,9 +36,14 @@
 - `pnpm eval -- --show` → métricas actuales por caso y global.
 - `node scripts/sprint/estado-sprint.mjs` → guarda una copia de la tabla
   (`docs/sprint/PROGRESO.md`) como punto de partida.
-- Decidir el **golden set**: los casos ya marcados en `review.json`
-  (`golden.isGoldenDataset`) + los que el dueño elija. Sin golden set no hay
-  forma de medir "mejorar resultados".
+- **Golden set (preparado el 2026-10-18)**: capa mecánica ya aplicada con
+  `pipeline/sprint_golden.ts --aplicar` → **58 entradas confirmadas**
+  (reglas de fallo + outcome.json + citas BOE concordantes con judgment.txt;
+  ver `docs/sprint/GOLDEN_SET.md`; backups `cases/golden.json.bak-*`). Las
+  **21 BAJA** (las reglas no detectan fallo) y la auditoría de las58 son
+  trabajo del sprint con el protocolo forense de
+  `.opencode/skills/golden-set/SKILL.md` — el dueño no valida a mano salvo
+  que quiera veto explícito.
 
 ### Fase 2 — Reanálisis riguroso por lotes (el gasto principal)
 - Lotes de **3–5 casos** por sesión del comando `/sprint`
