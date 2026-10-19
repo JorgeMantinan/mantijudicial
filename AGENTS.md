@@ -125,6 +125,13 @@ carlos está en **Despacho_B**, sirve para probar el aislamiento).
 
 ## Pendientes / decisiones abiertas
 
+- **Sprint de frases candidatas** (ventana de4 días autorizada por el dueño
+  para gastar tokens de opencode): runbook en `docs/sprint/00_PLAN.md`;
+  rubric del análisis en `.opencode/skills/frases-candidatas/SKILL.md`;
+  comando `/sprint`; estado/progreso con
+  `node scripts/sprint/estado-sprint.mjs`. Durante el sprint la política de
+  coste es la del plan (proveedor `opencode`, sin `AI_API_KEY`).
+
 - **Subir casos sin gastar**: `pnpm ingest -- --file=X.pdf --skip-enrich` (CLI,
   solo extracción/reglas, 0 €) y enriquecer después con
   `pnpm enrich -- --cases=case_XXXXXX` cuando él lo autorice. Por la web la
