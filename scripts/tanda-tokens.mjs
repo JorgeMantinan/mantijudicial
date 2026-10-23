@@ -87,14 +87,25 @@ function tsxCli(script, cliArgs) {
 }
 
 let gastado = 0;
+let fallosSeguidos = 0;
+function anotarFallo(caseId, error) {
+  fallosSeguidos += 1;
+  console.log(`${caseId}: FALLO ${String(error).slice(0, 120)}`);
+  if (fallosSeguidos >= 5) {
+    console.log("\n5 fallos seguidos: muy probable que se haya agotado la cuota. Paro aquí; el resto queda pendiente (resumible).");
+    process.exit(2);
+  }
+}
+
 if (solo !== "vias") {
   console.log(`\n--- Comparaciones (${planCompare.length}) ---`);
   for (const [i, caseId] of planCompare.entries()) {
     try {
       const out = tsxCli("14_compare.ts", [`--a=${caseId}`]);
+      fallosSeguidos = 0;
       console.log(`[${i + 1}/${planCompare.length}] ${caseId}: ${out.trim().split("\n").pop()}`);
     } catch (error) {
-      console.log(`[${i + 1}/${planCompare.length}] ${caseId}: FALLO ${String(error).slice(0, 120)}`);
+      anotarFallo(caseId, error);
     }
     const ficheros = fs.readdirSync(estructurado(caseId)).filter((f) => /^compare_.*\.json$/.test(f));
     for (const f of ficheros) gastado += coste(caseId, f);
@@ -106,9 +117,10 @@ if (solo !== "compare") {
     const lote = planVias.slice(i, i + 10);
     try {
       tsxCli("10_vias.ts", [`--cases=${lote.join(",")}`]);
+      fallosSeguidos = 0;
       console.log(`[${Math.min(i + 10, planVias.length)}/${planVias.length}] lote ${lote[0]}…${lote[lote.length - 1]} ok`);
     } catch (error) {
-      console.log(`lote ${lote[0]}… FALLO ${String(error).slice(0, 120)}`);
+      anotarFallo(lote[0], error);
     }
   }
   for (const caseId of planVias) gastado += coste(caseId, "vias.json");
