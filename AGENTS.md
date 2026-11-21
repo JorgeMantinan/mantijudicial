@@ -19,7 +19,7 @@ Documentación de diseño: `docs/00_README.md` (índice), `docs/12_DESPLIEGUE.md
 pnpm typecheck                # tsc --noEmit (solo pipeline/; para la web:
                               #   pnpm --dir apps/web exec tsc --noEmit)
 pnpm test                     # vitest: pipeline/lib/*.test.ts + apps/web/lib/*.test.ts
-pnpm exec next build          # build de producción (o pnpm --dir apps/web build)
+pnpm --dir apps/web build     # build de producción (next está solo en apps/web)
 pnpm web                      # next dev en :3000
 pnpm web:build / web:start
 ```
@@ -45,7 +45,7 @@ Casos concretos: `pnpm eval -- --show`, `pnpm compare -- --a=case_000034`,
 1. `pnpm typecheck` — **solo cubre `pipeline/`** (el tsconfig de la raíz no
    incluye `apps/web`).
 2. `pnpm test`
-3. `pnpm exec next build` — compila la web **y** hace su typecheck: es la
+3. `pnpm --dir apps/web build` — compila la web **y** hace su typecheck: es la
    comprobación real de `apps/web` (o `pnpm --dir apps/web exec tsc --noEmit`
    si solo quieres el typecheck).
 4. Si hay UI nueva: arrancar el server y comprobarlo (ver "Pruebas manuales").

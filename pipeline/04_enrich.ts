@@ -66,6 +66,7 @@ async function moveLegacyStructured(casePath: string): Promise<void> {
     "frases_candidatas.json",
     "escrito.json",
     "vias.json",
+    "notes.json",
   ]);
   let entries: string[];
   try {
