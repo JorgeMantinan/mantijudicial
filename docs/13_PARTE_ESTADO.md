@@ -3,6 +3,29 @@
 Para **arrancar una sesión nueva barata**: léete esto + `AGENTS.md` y sigue con
 la lista de pendientes. No hace falta releer el historial.
 
+## Sprint de frases candidatas — CERRADO (2026-11-21)
+
+- **Frases**: 80/80 casos con `structured/frases_candidatas.json` → **592
+  frases** verbatim (463 ALTA, 129 MEDIA; 315 CRITERIO, 158 DOCTRINA, 105
+  RAZONAMIENTO, 14 DECISION), rubric `frases-v1`, proveedor `opencode`,
+  **coste 0** (ventana de 4 días autorizada: 2026-11-20/21).
+- **Entregable para letrados**: `docs/sprint/INFORME_FRASES.md` — frases
+  agrupadas por outcome (ESTIMED / PARTIALLY_ESTIMATED / DISMISSED) con
+  `por_que` y fuente; punto de partida para afrontar casos nuevos.
+- **Golden set**: 78/79 confirmadas (20 verificadas en profundidad el
+  2026-11-20 con cita del dispositivo); `case_000032` sin confirmar (la
+  casación no se resolvió). `docs/sprint/GOLDEN_SET.md`.
+- **Validación**: script propio → 0 errores de esquema, 0 avisos de
+  verbatim (19 falsos positivos por andamiaje del extractor resueltos;
+  3 correcciones reales: 000003, 000010, 000061). `pnpm patterns`
+  refrescado (`cases/patterns.json`, 79 casos).
+- **Política de coste vigente**: FIN de la ventana de sprint → vuelve la
+  regla del 2026-09-30: **NO gastar IA de pago salvo que el dueño la lance**.
+  `case_000056` sigue excluido (extracción corrupta; NO reintentar).
+- Trazas: `docs/sprint/DIARIO.md`, `docs/sprint/PROGRESO.md`, backups
+  `cases/golden.json.bak-2026-11-20` + 20 `review.json.bak-*`, tag
+  `sprint-frases-20261121`.
+
 ## Estado del proyecto
 
 - Todo verde: `pnpm typecheck` (solo `pipeline/`), `pnpm --dir apps/web exec
