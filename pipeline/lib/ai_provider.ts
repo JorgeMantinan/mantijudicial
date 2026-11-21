@@ -38,8 +38,14 @@ function resolveOpenCodeBinary(): string {
   if (explicit && fs.existsSync(explicit)) return explicit;
   const appData = process.env.APPDATA;
   if (appData) {
-    const candidate = path.join(appData, "npm", "node_modules", "opencode-ai", "bin", "opencode.exe");
-    if (fs.existsSync(candidate)) return candidate;
+    // Instalación clásica (paquete opencode-ai) y actual (@opencode/cli).
+    const candidates = [
+      path.join(appData, "npm", "node_modules", "opencode-ai", "bin", "opencode.exe"),
+      path.join(appData, "npm", "node_modules", "@opencode", "cli", "bin", "opencode.exe"),
+    ];
+    for (const candidate of candidates) {
+      if (fs.existsSync(candidate)) return candidate;
+    }
   }
   throw new Error(
     "No se ha encontrado el binario de opencode. Define la variable OPENCODE_BIN con su ruta.",

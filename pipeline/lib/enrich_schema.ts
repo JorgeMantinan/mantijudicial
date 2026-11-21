@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const PROMPT_VERSION = "enrich-v1";
+export const PROMPT_VERSION = "enrich-v2";
 
 const pageSources = z.array(z.object({ page: z.number().int().positive() }));
 const importance = z.number().int().min(1).max(5);

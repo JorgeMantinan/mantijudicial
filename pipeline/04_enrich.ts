@@ -57,14 +57,25 @@ function parseArgs(argv: string[]): EnrichArgs {
 
 async function moveLegacyStructured(casePath: string): Promise<void> {
   const structuredDir = path.join(casePath, "structured");
-  const keep = new Set<string>([...Object.values(SECTION_FILES), "review.json"]);
+  // No archivar los productos de otros pasos del pipeline (match, sprint de
+  // frases, vias, compare, escrito): solo se apartan .json realmente ajenos.
+  const keep = new Set<string>([
+    ...Object.values(SECTION_FILES),
+    "review.json",
+    "law_refs.json",
+    "frases_candidatas.json",
+    "escrito.json",
+    "vias.json",
+  ]);
   let entries: string[];
   try {
     entries = await fs.readdir(structuredDir);
   } catch {
     return;
   }
-  const legacy = entries.filter((name) => name.endsWith(".json") && !keep.has(name));
+  const legacy = entries.filter(
+    (name) => name.endsWith(".json") && !keep.has(name) && !name.startsWith("compare_"),
+  );
   if (legacy.length === 0) return;
   const legacyDir = path.join(structuredDir, "legacy_v1");
   await fs.mkdir(legacyDir, { recursive: true });
