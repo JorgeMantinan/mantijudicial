@@ -110,22 +110,46 @@ function lastIndexMatching(text: string, pattern: RegExp): number {
  */
 export function detectOutcomeFromText(text: string): PredictedOutcome {
   const section = falloSection(text).toLowerCase();
-  if (!section.includes("casaci")) return "UNKNOWN";
+  if (!section.includes("casaci")) {
+    // Sentencias de revisión: no hay recurso de casación que resolver, pero el
+    // dispositivo estima o desestima la demanda de revisión.
+    if (/\bestim\w*\s+la\s+demand[ao]\s+de\s+revisi/.test(section)) return "ESTIMED";
+    if (/\bdesestim\w*\s+la\s+demand[ao]\s+de\s+revisi/.test(section)) return "DISMISSED";
+    return "UNKNOWN";
+  }
 
-  const CASACION = /recurso\s+(?:de\s+)?casaci/;
-  const estimated = lastIndexMatching(
-    section,
-    /(?:\bestim\w*\s+(?:el\s+)?recurso\s+(?:de\s+)?casaci)|(?:recurso\s+(?:de\s+)?casaci[\s\S]{0,80}?\bestim\w*)/,
+  const estimated = Math.max(
+    lastIndexMatching(
+      section,
+      /(?:\bestim\w*\s+(?:el\s+)?recurso\s+(?:de\s+)?casaci)|(?:recurso\s+(?:de\s+)?casaci[\s\S]{0,80}?\bestim\w*)/,
+    ),
+    // Dispositivos en infinitivo con el recurso extraordinario delante:
+    // "Estimar el recurso extraordinario por infracción procesal y el recurso de casación".
+    lastIndexMatching(
+      section,
+      /(?:\bestim\w*\s+(?:el\s+)?recurso\s+extraordinario[\s\S]{0,90}?casaci)|(?:\bestim\w*\s+los\s+recursos\s+extraordinarios[\s\S]{0,90}?casaci)/,
+    ),
   );
-  const dismissed = lastIndexMatching(
-    section,
-    /(?:\bdesestim\w*\s+(?:el\s+)?recurso\s+(?:de\s+)?casaci)|(?:recurso\s+(?:de\s+)?casaci[\s\S]{0,80}?\bdesestim\w*)/,
+  const dismissed = Math.max(
+    lastIndexMatching(
+      section,
+      /(?:\bdesestim\w*\s+(?:el\s+)?recurso\s+(?:de\s+)?casaci)|(?:recurso\s+(?:de\s+)?casaci[\s\S]{0,80}?\bdesestim\w*)/,
+    ),
+    lastIndexMatching(
+      section,
+      /(?:\bdesestim\w*\s+(?:el\s+)?recurso\s+extraordinario[\s\S]{0,90}?casaci)|(?:\bdesestim\w*\s+los\s+recursos[\s\S]{0,90}?casaci)/,
+    ),
   );
-  const partial = lastIndexMatching(
-    section,
-    /(?:\bestim\w*\s+(?:en\s+parte|parcialmente)[\s\S]{0,60}?)?recurso\s+(?:de\s+)?casaci[\s\S]{0,60}?(?:en\s+parte|parcialmente)/,
+  const partial = Math.max(
+    lastIndexMatching(
+      section,
+      /(?:\bestim\w*\s+(?:en\s+parte|parcialmente)[\s\S]{0,60}?)?recurso\s+(?:de\s+)?casaci[\s\S]{0,60}?(?:en\s+parte|parcialmente)/,
+    ),
+    lastIndexMatching(
+      section,
+      /\bestim\w*\s+(?:en\s+parte|parcialmente)\s+(?:el\s+)?recurso\s+(?:de\s+)?casaci/,
+    ),
   );
-  void CASACION;
 
   const best = Math.max(estimated, dismissed);
   if (partial >= 0 && partial >= best) return "PARTIALLY_ESTIMATED";

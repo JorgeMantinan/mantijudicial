@@ -66,6 +66,7 @@ const SIGLAS: Record<string, string> = {
   "ley cambiaria y del cheque": "BOE-A-1985-14880",
   lgdcu: "BOE-A-2007-20555",
   trlgdcu: "BOE-A-2007-20555",
+  trlcu: "BOE-A-2007-20555",
   "rdl 1/2007": "BOE-A-2007-20555",
   "rdleg 1/2007": "BOE-A-2007-20555",
   "real decreto legislativo 1/2007": "BOE-A-2007-20555",
@@ -282,4 +283,30 @@ export function checkQuote(articleText: string, quote: string | undefined | null
   if (words.length === 0) return "NOT_CHECKED";
   const hits = words.filter((word) => hay.includes(word)).length;
   return hits / words.length >= 0.8 ? "MATCH" : "MISMATCH";
+}
+
+/**
+ * Comprueba una quote contra el DOCUMENTO del caso (no contra el texto BOE):
+ * el prompt de enriquecimiento pide quotes fieles al documento del caso, de modo
+ * que esta comprobación mide el cumplimiento de esa instrucción. Tolera el
+ * andamiaje del extractor (marcadores y números de página) y la puntuación,
+ * pero no parafrasis: si la frase no está, es MISMATCH.
+ */
+export function checkQuoteInDocument(documentText: string, quote: string | undefined | null): QuoteCheck {
+  if (!quote || quote === "UNKNOWN" || quote.trim().length < 25) return "NOT_CHECKED";
+  const strip = (raw: string): string =>
+    raw
+      .replace(/^\s*\d+\s*$/gm, " ")
+      .replace(/={3,}\s*pagina\s+\d+\s*={3,}/gi, " ")
+      .replace(/\bjurisprudencia\b/gi, " ")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  const hay = strip(documentText);
+  const needle = strip(quote);
+  if (!needle) return "NOT_CHECKED";
+  return hay.includes(needle) ? "MATCH" : "MISMATCH";
 }

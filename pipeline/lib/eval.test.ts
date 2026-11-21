@@ -72,6 +72,32 @@ describe("detectOutcomeFromText", () => {
     const text = `Por todo lo expuesto, debemos y desestimamos el recurso de casación interpuesto, con costas.`;
     expect(detectOutcomeFromText(text)).toBe("DISMISSED");
   });
+
+  it("detecta dispositivos en infinitivo con recurso extraordinario", () => {
+    expect(
+      detectOutcomeFromText(
+        "Por todo lo expuesto: 1.º Desestimar el recurso extraordinario por infracción procesal y de casación interpuestos por la parte demandada.",
+      ),
+    ).toBe("DISMISSED");
+    expect(
+      detectOutcomeFromText(
+        "Por todo lo expuesto, esta sala ha decidido: 1.º Estimar el recurso extraordinario por infracción procesal y el recurso de casación interpuesto por la actora, que casamos.",
+      ),
+    ).toBe("ESTIMED");
+  });
+
+  it("detecta «estimar en parte el recurso de casación» y la demanda de revisión", () => {
+    expect(
+      detectOutcomeFromText(
+        "Por todo lo expuesto: 1.º Estimar en parte el recurso de casación interpuesto por la aseguradora.",
+      ),
+    ).toBe("PARTIALLY_ESTIMATED");
+    expect(
+      detectOutcomeFromText(
+        "Por todo lo expuesto, esta sala ha decidido: 1.º Estimar la demanda de revisión formulada por la parte demandante.",
+      ),
+    ).toBe("ESTIMED");
+  });
 });
 
 function actual(overrides: Partial<ActualCase>): ActualCase {

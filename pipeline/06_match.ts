@@ -3,6 +3,7 @@ import path from "node:path";
 import {
   buildArticleIndex,
   checkQuote,
+  checkQuoteInDocument,
   parseArticleNumbers,
   resolveNorma,
   splitCombinedNorma,
@@ -146,6 +147,7 @@ function buildRef(
   norms: Map<string, LawNorm>,
   numeroOficial: Map<string, NormaRef[]>,
   byId: Map<string, NormaRef>,
+  caseText: string,
 ): Ref {
   const norma = citation.norma ?? "";
   const articleRaw = citation.article ?? "";
@@ -198,10 +200,16 @@ function buildRef(
 
   let quoteCheck: Ref["quote_check"] = "NOT_CHECKED";
   const quote = citation.quote ?? "UNKNOWN";
+  // Doble comprobación: la quote es buena si aparece literalmente en el
+  // DOCUMENTO del caso (el prompt pide quotes fieles al documento) o, si la IA
+  // citó el texto de la norma, en el bloque BOE correspondiente. MISMATCH =
+  // no está en ninguna de las dos fuentes (fabricación o paráfrasis real).
   const firstBlockId = articles[0]?.block_id;
-  if (loaded && quote !== "UNKNOWN" && quote.trim().length > 0 && firstBlockId) {
-    const block = loaded.blocks.find((item) => item.id === firstBlockId);
-    if (block) quoteCheck = checkQuote(block.texto, quote);
+  const block = loaded && firstBlockId ? loaded.blocks.find((item) => item.id === firstBlockId) : undefined;
+  if (quote !== "UNKNOWN" && quote.trim().length >= 25 && (caseText || block)) {
+    const enDocumento = caseText ? checkQuoteInDocument(caseText, quote) : "NOT_CHECKED";
+    const enNorma = block ? checkQuote(block.texto, quote) : "NOT_CHECKED";
+    quoteCheck = enDocumento === "MATCH" || enNorma === "MATCH" ? "MATCH" : "MISMATCH";
   }
 
   return {
@@ -250,8 +258,14 @@ async function main(): Promise<void> {
     if (!data || !Array.isArray(data.citations)) continue;
     processed += 1;
 
+    let caseText = "";
+    try {
+      caseText = await fs.readFile(path.join(CASES_DIR, caseName, "extracted", "judgment.txt"), "utf8");
+    } catch {
+      caseText = "";
+    }
     const refs = data.citations.map((citation) =>
-      buildRef(citation, index, norms, byNumero, byId),
+      buildRef(citation, index, norms, byNumero, byId, caseText),
     );
     const counts: Record<string, number> = {};
     for (const ref of refs) {

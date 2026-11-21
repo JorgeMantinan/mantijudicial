@@ -17,6 +17,21 @@ describe("detectSiglasInText", () => {
       .not.toContain("CE");
     expect(detectSiglasInText("Según el artículo 14 de la Constitución")).toContain("CE");
   });
+
+  it("detecta referencias de artículo en plural (arts. / artículos)", () => {
+    // Casos reales del corpus que el detector anterior no veía.
+    expect(
+      detectSiglasInText("con base en los arts. 1089 y ss., 1124 y 1254 y ss. del Código Civil"),
+    ).toContain("CC");
+    expect(
+      detectSiglasInText("«Infracción de los artículos 325 y 326 del Código de Comercio.»"),
+    ).toContain("CCom");
+    expect(
+      detectSiglasInText(
+        "INFRACCION DE LOS ARTICULOS 80.1 Y 82 DE LA LEY GENERAL PARA LA DEFENSA DE LOS CONSUMIDORES Y USUARIOS",
+      ),
+    ).toContain("LGDCU");
+  });
 });
 
 describe("boeIdsInText", () => {
@@ -32,6 +47,15 @@ describe("boeIdsInText", () => {
     expect(boeIdsInText("Se aplica la Ley 26/1984 y el artículo 1 LEC.")).toEqual([
       "BOE-A-2000-323",
     ]);
+  });
+
+  it("reconoce la denominación larga de 1984 y aun así excluye su id", () => {
+    expect(detectSiglasInText("anterior (la Ley de Consumidores y Usuarios de 1984).")).toContain(
+      "LGDCU",
+    );
+    expect(
+      boeIdsInText("Se aplicó la Ley de Consumidores y Usuarios de 1984 y el artículo 1 LEC."),
+    ).toEqual(["BOE-A-2000-323"]);
   });
 });
 
