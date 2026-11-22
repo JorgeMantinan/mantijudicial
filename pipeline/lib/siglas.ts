@@ -58,7 +58,7 @@ export const CHECKABLE_SIGLAS: SiglaEntry[] = [
     sigla: "CE",
     boe_id: "BOE-A-1978-31229",
     pattern:
-      /(?<![\w/])\bCE\b(?![\w/])|constituci[oó]n espa[nñ]ola|arts?\.?\s*(?:[íi]culos?)?\.?\s*\d+[\s\S]{0,60}?constituci[oó]n/i,
+      /(?<![\w/(]|\/\s)(?-i:\bCE\b)(?![\w/])|constituci[oó]n espa[nñ]ola|arts?\.?\s*(?:[íi]culos?)?\.?\s*\d+[\s\S]{0,60}?constituci[oó]n/i,
     names: ["constitucion espanola", "constitucion"],
   },
   {

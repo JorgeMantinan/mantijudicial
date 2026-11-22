@@ -26,6 +26,33 @@ la lista de pendientes. No hace falta releer el historial.
   `cases/golden.json.bak-2026-11-20` + 20 `review.json.bak-*`, tag
   `sprint-frases-20261121`.
 
+## Enriquecimiento v2 — CERRADO (2026-11-22)
+
+- **79/79 casos re-enriquecidos con `enrich-v2`** (76 en tandas normales +
+  3 recuperados; `000032` y `000072` acabados con `mimo-v2.6-pro` tras
+  cortes repetidos del backend). `case_000056` sigue excluido.
+- Cambios del prompt v2: quotes **literales del documento**, `boe_id` solo
+  de una lista blanca del catálogo, y solo preceptos citados en el texto.
+- Resultados (antes → después): ids inventados **377 → 0**, contradichos
+  **374 → 0**, quotes MATCH **481 → 1161 (95%)** y MISMATCH **44 → 29**,
+  `ARTICLE_NOT_FOUND` 23 → 10, `TEXT_MISSING` 45 → 17.
+- **Golden 355/355 (100%)** tras corregir4 expect CE falsas
+  (`000035/000042/000045/000065`: sufijos europeos «(CE)», «ce contrat»,
+  «ceñirse» — backup `golden.json.bak-2026-11-22`) y **endurecer el
+  detector CE** de `siglas.ts` (mayúsculas, guarda «(CE)» y salto de
+  línea). Cruce reglas↔IA **78/78**; frases **592 intactas** (0 avisos).
+- Incidencias resueltas en el camino: cortes del backend (4 rondas de
+  reintentos; ~45 min por timeout), 2 reinicios de servidor sin daños,
+  `moveLegacyStructured` archivaba productos de otros pasos y
+  `notes.json` (corregido + restaurado), binario opencode movido a
+  `@opencode/cli`, flags `review.golden` restaurados (78).
+- Nota de coste: los `review.json` de v2 no reportan tokens (opencode
+  suscripción) → el histórico de enrich ($0,92 / 6,86 M tokens) queda en
+  este documento y en el historial git de `data`; el resto de costes
+  (`vias` $0,51) sigue en `/eval`. Sin `AI_API_KEY`.
+- Conocido: la IA v2 sobrecita «Constitución» en ~26 casos (flagados en
+  el cross-check, 97,1%) — candidato a prompt v2.1 si interesa.
+
 ## Estado del proyecto
 
 - Todo verde: `pnpm typecheck` (solo `pipeline/`), `pnpm --dir apps/web exec

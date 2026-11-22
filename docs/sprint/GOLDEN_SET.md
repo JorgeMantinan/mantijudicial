@@ -1,6 +1,6 @@
 # Golden set — verificación mecánica (sprint_golden v1)
 
-> Generado el 2026-11-21 por `pipeline/sprint_golden.ts` (propuesta).
+> Generado el 2026-11-22 por `pipeline/sprint_golden.ts` (propuesta).
 > Criterio: sólo se confirman entradas con reglas de fallo, outcome.json y citas
 > BOE concordantes con `judgment.txt`. La verificación jurídica profunda (leer el
 > fallo y juzgar rama/citas) la hace el agente en el sprint:
@@ -45,20 +45,20 @@
 | case_000029 | ALTA | DISMISSED | DISMISSED | DISMISSED | 4/4 | — | Reglas, IA y citas concordantes con el texto. |
 | case_000030 | ALTA | DISMISSED | DISMISSED | DISMISSED | 3/3 | — | Reglas, IA y citas concordantes con el texto. |
 | case_000031 | ALTA | DISMISSED | DISMISSED | DISMISSED | 6/6 | — | Reglas, IA y citas concordantes con el texto. |
-| case_000032 | BAJA | — | ESTIMED | UNKNOWN | 4/4 | — | Las reglas no detectan fallo en el texto. |
+| case_000032 | BAJA | — | PARTIALLY_ESTIMATED | UNKNOWN | 4/4 | — | Las reglas no detectan fallo en el texto. |
 | case_000033 | ALTA | DISMISSED | DISMISSED | DISMISSED | 2/2 | — | Reglas, IA y citas concordantes con el texto. |
 | case_000034 | ALTA | ESTIMED | ESTIMED | ESTIMED | 1/1 | — | Reglas, IA y citas concordantes con el texto. |
-| case_000035 | ALTA | ESTIMED | ESTIMED | ESTIMED | 3/3 | — | Reglas, IA y citas concordantes con el texto. |
+| case_000035 | ALTA | ESTIMED | ESTIMED | ESTIMED | 2/2 | — | Reglas, IA y citas concordantes con el texto. |
 | case_000036 | ALTA | DISMISSED | DISMISSED | DISMISSED | 2/2 | — | Reglas, IA y citas concordantes con el texto. |
 | case_000037 | ALTA | ESTIMED | ESTIMED | ESTIMED | 2/2 | — | Reglas, IA y citas concordantes con el texto. |
 | case_000038 | ALTA | ESTIMED | ESTIMED | ESTIMED | 4/4 | — | Reglas, IA y citas concordantes con el texto. |
 | case_000039 | ALTA | ESTIMED | ESTIMED | ESTIMED | 4/4 | — | Reglas, IA y citas concordantes con el texto. |
 | case_000040 | ALTA | ESTIMED | ESTIMED | ESTIMED | 2/2 | — | Reglas, IA y citas concordantes con el texto. |
 | case_000041 | ALTA | DISMISSED | DISMISSED | DISMISSED | 2/2 | — | Reglas, IA y citas concordantes con el texto. |
-| case_000042 | ALTA | ESTIMED | ESTIMED | ESTIMED | 3/3 | — | Reglas, IA y citas concordantes con el texto. |
+| case_000042 | ALTA | ESTIMED | ESTIMED | ESTIMED | 2/2 | — | Reglas, IA y citas concordantes con el texto. |
 | case_000043 | ALTA | DISMISSED | DISMISSED | DISMISSED | 4/4 | — | Reglas, IA y citas concordantes con el texto. |
 | case_000044 | ALTA | DISMISSED | DISMISSED | DISMISSED | 3/3 | — | Reglas, IA y citas concordantes con el texto. |
-| case_000045 | ALTA | DISMISSED | DISMISSED | DISMISSED | 4/4 | — | Reglas, IA y citas concordantes con el texto. |
+| case_000045 | ALTA | DISMISSED | DISMISSED | DISMISSED | 3/3 | — | Reglas, IA y citas concordantes con el texto. |
 | case_000046 | ALTA | DISMISSED | DISMISSED | DISMISSED | 3/3 | — | Reglas, IA y citas concordantes con el texto. |
 | case_000047 | ALTA | DISMISSED | DISMISSED | DISMISSED | 3/3 | — | Reglas, IA y citas concordantes con el texto. |
 | case_000048 | ALTA | DISMISSED | DISMISSED | DISMISSED | 4/4 | — | Reglas, IA y citas concordantes con el texto. |
@@ -78,7 +78,7 @@
 | case_000062 | ALTA | ESTIMED | ESTIMED | ESTIMED | 2/2 | — | Reglas, IA y citas concordantes con el texto. |
 | case_000063 | ALTA | ESTIMED | ESTIMED | ESTIMED | 5/5 | — | Reglas, IA y citas concordantes con el texto. |
 | case_000064 | ALTA | DISMISSED | DISMISSED | DISMISSED | 5/5 | — | Reglas, IA y citas concordantes con el texto. |
-| case_000065 | ALTA | DISMISSED | DISMISSED | DISMISSED | 6/6 | — | Reglas, IA y citas concordantes con el texto. |
+| case_000065 | ALTA | DISMISSED | DISMISSED | DISMISSED | 5/5 | — | Reglas, IA y citas concordantes con el texto. |
 | case_000066 | ALTA | DISMISSED | DISMISSED | DISMISSED | 3/3 | — | Reglas, IA y citas concordantes con el texto. |
 | case_000067 | ALTA | DISMISSED | DISMISSED | DISMISSED | 4/4 | — | Reglas, IA y citas concordantes con el texto. |
 | case_000068 | ALTA | DISMISSED | DISMISSED | DISMISSED | 6/6 | — | Reglas, IA y citas concordantes con el texto. |

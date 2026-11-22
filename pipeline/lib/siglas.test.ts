@@ -32,6 +32,22 @@ describe("detectSiglasInText", () => {
       ),
     ).toContain("LGDCU");
   });
+
+  it("no confunde los sufijos europeos ni las palabras en minúscula con la CE", () => {
+    expect(
+      detectSiglasInText("Se aplica el Reglamento (CE) n.º 593/2008 del Parlamento Europeo."),
+    ).not.toContain("CE");
+    expect(detectSiglasInText("Directiva 2001/24/CE del Parlamento Europeo y del Consejo.")).not.toContain(
+      "CE",
+    );
+    // Salto de línea del extractor entre la barra y la sigla.
+    expect(detectSiglasInText("Directiva 2001/24/\nCE del Parlamento Europeo.")).not.toContain("CE");
+    // Minúsculas (francés «ce», «ceñirse»): la sigla CE es siempre mayúscula.
+    expect(detectSiglasInText("de ce contrat et de ceñirse a lo pactado")).not.toContain("CE");
+    expect(detectSiglasInText("Según el artículo 24 CE, en relación con la Constitución Española.")).toContain(
+      "CE",
+    );
+  });
 });
 
 describe("boeIdsInText", () => {
