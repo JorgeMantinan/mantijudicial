@@ -52,6 +52,14 @@ la lista de pendientes. No hace falta releer el historial.
   (`vias` $0,51) sigue en `/eval`. Sin `AI_API_KEY`.
 - Conocido: la IA v2 sobrecita «Constitución» en ~26 casos (flagados en
   el cross-check, 97,1%) — candidato a prompt v2.1 si interesa.
+- **Ampliación v2.1 (2026-11-22)**: reglas añadidas (solo citar CE con
+  cita formal; «article» con número si consta en el documento) y
+  re-enriquecimiento **80/80 en3 rondas** con auto-reintentos. Resultado:
+  siglas en PDF **97,1% → 100% (948/948)** — ruido CE eliminado —,
+  golden **355/355**, cruce **79/79** (`case_000056` por fin enriquecido
+  OK y concordante), inventados/contradichos **0**, frases **592
+  intactas**, flags **78/78**. Artefactos derivados (vias/compare/
+  escrito) en regeneración sobre v2.1 (tanda-force.mjs).
 
 ## Estado del proyecto
 

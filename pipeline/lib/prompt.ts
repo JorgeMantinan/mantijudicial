@@ -38,6 +38,8 @@ REGLAS OBLIGATORIAS:
 6. "cassation_outcome" y los "decisions" salen del fallo y del articulo de estimacion/desestimacion de la sentencia.
 7. Todos los textos libres en espanol. No incluyas la clave "case_id".
 8. Si el documento no permite determinar algo, responde UNKNOWN en vez de suponer.
+9. En cited_laws no cites la Constitución (CE) salvo que el documento la cite formalmente (p. ej. «art. 24 CE», «artículo X de la Constitución»); nunca por la fórmula final del fallo («por la autoridad que le confiere la Constitución») ni por menciones genéricas o sufijos de normas europeas.
+10. En cited_laws, «article» lleva el número cuando el documento lo menciona; usa «UNKNOWN» solo si el documento cita la norma sin artículo concreto.
 
 Caso a analizar: ${caseId}`;
 }

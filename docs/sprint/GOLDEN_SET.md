@@ -8,8 +8,8 @@
 
 ## Resumen
 
-- Casos: 80 · ALTA confirmadas: 78 · ALTA sin entrada (creadas): 0
-- MEDIA (revisión profunda en el sprint): 0 · BAJA: 1 · sin entrada: 1 · sin texto: 0
+- Casos: 80 · ALTA confirmadas: 79 · ALTA sin entrada (creadas): 1
+- MEDIA (revisión profunda en el sprint): 0 · BAJA: 1 · sin entrada: 0 · sin texto: 0
 - Ejecuta `pnpm exec tsx pipeline/sprint_golden.ts --aplicar` para confirmar las ALTA.
 
 | caso | veredicto | expect | ia | reglas | citas | headline | nota |
@@ -69,7 +69,7 @@
 | case_000053 | ALTA | DISMISSED | DISMISSED | DISMISSED | 3/3 | — | Reglas, IA y citas concordantes con el texto. |
 | case_000054 | ALTA | ESTIMED | ESTIMED | ESTIMED | 2/2 | — | Reglas, IA y citas concordantes con el texto. |
 | case_000055 | ALTA | ESTIMED | ESTIMED | ESTIMED | 4/4 | — | Reglas, IA y citas concordantes con el texto. |
-| case_000056 | SIN-ENTRADA | — | SIN_OUTCOME | DISMISSED | — | — | Sin expect en golden.json. |
+| case_000056 | ALTA-sin-entrada | — | DISMISSED | DISMISSED | — | — | Candidata a crearse: reglas e IA concordantes. |
 | case_000057 | ALTA | DISMISSED | DISMISSED | DISMISSED | 3/3 | — | Reglas, IA y citas concordantes con el texto. |
 | case_000058 | ALTA | ESTIMED | ESTIMED | ESTIMED | 4/4 | — | Reglas, IA y citas concordantes con el texto. |
 | case_000059 | ALTA | ESTIMED | ESTIMED | ESTIMED | 3/3 | — | Reglas, IA y citas concordantes con el texto. |
