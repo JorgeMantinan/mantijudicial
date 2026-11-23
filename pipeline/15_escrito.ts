@@ -145,10 +145,13 @@ async function runEscrito(provider: AIProvider, args: Args): Promise<string> {
           },
           report,
         };
-        const outPath = path.join(caseDir(args.caseId), "structured", "escrito.json");
+        // Cada tipo guarda su propio fichero; RECURSO_CASACION sigue en
+        // escrito.json (es el que lee la web) por compatibilidad.
+        const base = args.tipo === "RECURSO_CASACION" ? "escrito" : `escrito_${args.tipo.toLowerCase()}`;
+        const outPath = path.join(caseDir(args.caseId), "structured", `${base}.json`);
         await fs.mkdir(path.dirname(outPath), { recursive: true });
         await fs.writeFile(outPath, `${JSON.stringify(output, null, 2)}\n`, "utf8");
-        const txtPath = path.join(caseDir(args.caseId), "structured", "escrito.txt");
+        const txtPath = path.join(caseDir(args.caseId), "structured", `${base}.txt`);
         await fs.writeFile(txtPath, renderEscritoText(report), "utf8");
         return `tipo=${report.tipo} bloques=${report.cuerpo.length} pedidos=${report.pedidos.length} citas=${report.citas.length} comprobar=${report.comprobar_antes.length} leyes=${leyes.length} similares=${similares.length} intentos=${attempts}`;
       }
@@ -179,7 +182,8 @@ async function main(): Promise<void> {
     return;
   }
 
-  const outFile = path.join(caseDir(args.caseId), "structured", "escrito.json");
+  const base = args.tipo === "RECURSO_CASACION" ? "escrito" : `escrito_${args.tipo.toLowerCase()}`;
+  const outFile = path.join(caseDir(args.caseId), "structured", `${base}.json`);
   const exists = await fs
     .stat(outFile)
     .then(() => true)
