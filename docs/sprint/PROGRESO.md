@@ -1,6 +1,6 @@
 # Progreso del sprint de frases (generado)
 
-> Generado por `scripts/sprint/estado-sprint.mjs` el 2026-11-22. NO editar a mano:
+> Generado por `scripts/sprint/estado-sprint.mjs` el 2026-11-23. NO editar a mano:
 > se regenera en cada pasada del sprint.
 
 ## Resumen

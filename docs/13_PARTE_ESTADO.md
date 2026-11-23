@@ -58,8 +58,13 @@ la lista de pendientes. No hace falta releer el historial.
   siglas en PDF **97,1% → 100% (948/948)** — ruido CE eliminado —,
   golden **355/355**, cruce **79/79** (`case_000056` por fin enriquecido
   OK y concordante), inventados/contradichos **0**, frases **592
-  intactas**, flags **78/78**. Artefactos derivados (vias/compare/
-  escrito) en regeneración sobre v2.1 (tanda-force.mjs).
+  intactas**, flags **78/78**.
+- **Fase A — artefactos derivados (2026-11-23)**: `vias`, `compare` y
+  `escrito` regenerados **80/80** sobre v2.1 con `tanda-force.mjs`
+  (pool6, retries=1, rondas de auto-sanación; supervivió a un reinicio
+  de servidor y a ventanas malas del backend). El corpus queda íntegro y
+  coherente en una sola versión de prompt: enrich-v2.1 + frases + golden
+  + vias/compare/escrito.
 
 ## Estado del proyecto
 
