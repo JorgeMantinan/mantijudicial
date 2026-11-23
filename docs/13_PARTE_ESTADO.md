@@ -65,6 +65,11 @@ la lista de pendientes. No hace falta releer el historial.
   de servidor y a ventanas malas del backend). El corpus queda íntegro y
   coherente en una sola versión de prompt: enrich-v2.1 + frases + golden
   + vias/compare/escrito.
+- **Fase X — escritos en3 tipos (2026-11-24)**: `15_escrito.ts` escribe
+  `escrito_<tipo>.json/.txt` para tipos no-default (RECURSO sigue en
+  `escrito.json`). Generados **ALEGACIONES 80/80 y OPOSICION 80/80**
+  (160 borradores ≈6-7 M tokens). Pendiente futuro: selector de tipos en
+  la web.
 
 ## Estado del proyecto
 
